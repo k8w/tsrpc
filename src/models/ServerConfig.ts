@@ -26,30 +26,45 @@ export default interface ServerConfig {
     apiPath?: string,
 
     /**
-     * show error id in errmsg (it is convinient to location a specific error in log)
+     * If true, request id would be append to errmsg (it is convinient to location a specific error in log)
      */
-    showErrId: boolean;
+    showErrorReqId: boolean;
 
     /**
-     * If true, all request will be logged; otherwise only log those with error response
+     * If true, every request param would appear in log
      */
-    logAllRequest: boolean;
+    logRequestDetail: boolean;
+
+    /**
+     * If true, full response will appear in log (may be large size)
+     */
+    logResponseDetail: boolean;
 
     /**
      * If use strictNullChecks to validate request, need agree with that in tsconfig
      */
     ptlStrictNullChecks: boolean;
 
-    //transfer body encoder, would encode to JSON if this is not assigned
-    ptlEncoder: (content: object) => string;
+    /**
+     * If true, `ptlEncoder` and `ptlDecoder` should use `ArrayBuffer` instead of `string`, vice versa.
+     */
+    binaryTransport: boolean;
 
-    //transfer body decoder, body would be treated as JSON if this is not assigned
-    ptlDecoder: (content: string) => object;
+    //transfer body encoder, would encode to JSON string if this is not assigned
+    ptlEncoder: (content: object) => ArrayBuffer | string;
+
+    //transfer body decoder, body would be treated as JSON string if this is not assigned
+    ptlDecoder: (content: ArrayBuffer | string) => { [key: string]: any };
 
     /**
      * If true, api path will hide from URL (passed via body)
      */
     hideApiPath: boolean;
+
+    /**
+     * If true, errmsg would like "ParamA must be string" instead of "Invalid Request Parameters" when get invalid input
+     */
+    showParamInvalidReason: boolean;
 }
 
 /**
@@ -60,10 +75,13 @@ export const defaultServerConfig: ServerConfig = {
     urlRootPath: '/',
     protocolPath: '',
     autoImplement: false,
-    showErrId: true,
-    logAllRequest: true,
+    showErrorReqId: true,
+    logRequestDetail: true,
+    logResponseDetail: false,
     ptlStrictNullChecks: true,
+    binaryTransport: false,
     ptlEncoder: JSON.stringify,
     ptlDecoder: JSON.parse,
     hideApiPath: false,
+    showParamInvalidReason: true
 }

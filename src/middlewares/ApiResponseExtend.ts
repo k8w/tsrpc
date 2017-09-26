@@ -7,41 +7,22 @@ function ApiResponseExtend(req: ApiRequest<any>, res: ApiResponse<any>, next: an
     
     //给ApiResponse扩展succ和error方法
     res.succ = (body: any) => {
-        req.rpcServer.conf.logAllRequest && console.debug('[ApiRes]', req.path, req.url, body);
-        res.send(res.rpcServer.conf.ptlEncoder(body));
+        res.rpcOutput = body;
+        res.send(res.rpcServer.config.ptlEncoder(body));
     };
 
     res.error = (errmsg: string, errinfo?: any) => {
-        if (req.backApp.config.showErrId) {
-            let errId = uuid().substr(0, 8);
-            console.error(
-                `[ApiErr] ${req.ptl.originalUrl} ${req.url},`,
-                req.currentUser ? `UserId=${req.currentUser.userId},` : 'NotLogin,',
-                `ErrId=${errId}`,
-                `ErrMsg=${errmsg}`
-            );
-            errmsg += `[${errId}]`;
-        }
-        else {
-            console.error(
-                `[ApiErr] ${req.ptl.originalUrl} ${req.url},`,
-                req.currentUser ? `UserId=${req.currentUser.userId},` : 'NotLogin,',
-                `ErrMsg=${errmsg}`
-            );
+        res.rpcOutput = {
+            errmsg: errmsg,
+            errinfo: errinfo
+        };
+
+        //leave ErrorId in log, it is useful to location error log
+        if (res.rpcServer.config.showErrorReqId) {
+            res.rpcOutput.errmsg += ` [${req.reqId}]`;
         }
 
-        if (res.ptl.noEncrypt) {
-            res.json({
-                errmsg: errmsg,
-                errinfo: errinfo
-            });
-        }
-        else {
-            res.send(res.backApp.config.ptlEncoder({
-                errmsg: errmsg,
-                errinfo: errinfo
-            }));
-        }
+        res.send(res.rpcServer.config.ptlEncoder(res.rpcOutput));
     };
 
     next();

@@ -10,11 +10,16 @@ export default interface ClientConfig {
      */
     hideApiPath: boolean;
 
-    //transfer body encoder, would encode to JSON if this is not assigned
-    ptlEncoder: (content: object) => string;
+    /**
+     * If true, `ptlEncoder` and `ptlDecoder` should use `ArrayBuffer` instead of `string`, vice versa.
+     */
+    binaryTransport: boolean;
 
-    //transfer body decoder, body would be treated as JSON if this is not assigned
-    ptlDecoder: (content: string) => object;
+    //transfer body encoder, would encode to JSON string if this is not assigned
+    ptlEncoder: (content: object) => ArrayBuffer | string;
+
+    //transfer body decoder, body would be treated as JSON string if this is not assigned
+    ptlDecoder: (content: ArrayBuffer | string) => { [key: string]: any };
 }
 
 /**
@@ -23,6 +28,7 @@ export default interface ClientConfig {
 export const defaultClientConfig: ClientConfig = {
     serverUrl: '',
     hideApiPath: false,
+    binaryTransport: false,
     ptlEncoder: JSON.stringify,
     ptlDecoder: JSON.parse
 }

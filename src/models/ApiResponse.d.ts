@@ -1,7 +1,6 @@
 import RpcServer from '../RpcServer';
-import Protocol from './Protocol';
+import { TsRpcPtl, TsRpcRes } from 'tsrpc-protocol';
 import { Response } from 'express';
-import PtlResponse from './Response';
 
 export default interface ApiResponse<T> extends Response {
     /**
@@ -22,5 +21,5 @@ export default interface ApiResponse<T> extends Response {
     /**
      * final output body by res.succ or res.error
      */
-    output?: PtlResponse;
+    rpcOutput?: TsRpcRes;
 }

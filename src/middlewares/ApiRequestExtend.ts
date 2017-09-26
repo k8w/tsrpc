@@ -1,17 +1,19 @@
 import ApiRequest from "../models/ApiRequest";
 import ApiResponse from "../models/ApiResponse";
+import * as uuid from 'uuid';
 
 function ApiRequestExtend(req: ApiRequest<any>, res: ApiResponse<any>, next: any) {
+    req.reqId = uuid().substr(0, 8);
+        
     //解析输入参数
     try {
-        req.args = typeof (req.body) == 'string' ? JSON.parse(req.body) : req.body;
+        req.args = req.rpcServer.config.ptlDecoder(req.body);
     }
     catch (e) {
-        console.error('InvalidInput', req.url, req.body)
-        res.status(400).send('Invalid Request Format');
+        console.error('Invalid Request Body', req.url, req.body)
+        res.status(400).send('Invalid Request Body');
         return;
     }
-
 
     next();
 }
