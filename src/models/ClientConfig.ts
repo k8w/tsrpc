@@ -6,6 +6,11 @@ export default interface ClientConfig {
     serverUrl: string;
 
     /**
+     * Root path of protocols, should be an absolute path
+     */
+    protocolPath: string;
+
+    /**
      * If true, api path will hide from URL (passed via body)
      */
     hideApiPath: boolean;
@@ -16,7 +21,7 @@ export default interface ClientConfig {
     binaryTransport: boolean;
 
     //transfer body encoder, would encode to JSON string if this is not assigned
-    ptlEncoder: (content: object) => ArrayBuffer | string;
+    ptlEncoder: (content: { [key: string]: any }) => ArrayBuffer | string;
 
     //transfer body decoder, body would be treated as JSON string if this is not assigned
     ptlDecoder: (content: ArrayBuffer | string) => { [key: string]: any };
@@ -25,8 +30,9 @@ export default interface ClientConfig {
 /**
  * default client config
  */
-export const defaultClientConfig: ClientConfig = {
+export const DefaultClientConfig: ClientConfig = {
     serverUrl: '',
+    protocolPath: '',
     hideApiPath: false,
     binaryTransport: false,
     ptlEncoder: JSON.stringify,

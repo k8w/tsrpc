@@ -4,11 +4,11 @@ import ApiResponse from './models/ApiResponse';
 import ApiRequestExtend from './middlewares/ApiRequestExtend';
 import ServerConfig from './models/ServerConfig';
 import 'k8w-extend-native';
-import { defaultServerConfig } from './models/ServerConfig';
+import { DefaultServerConfig } from './models/ServerConfig';
 import ApiHandler from './models/ApiHandler';
 import ApiResponseExtend from './middlewares/ApiResponseExtend';
 import ValidatorManager, { IValidator } from 'ts-interface-validator';
-import { TsRpcPtl, TsRpcReq, TsRpcRes } from 'tsrpc-protocol';
+import { TsRpcPtl, TsRpcReq, TsRpcRes, TsRpcError } from 'tsrpc-protocol';
 import * as http from 'http';
 
 export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next?: Function) => void;
@@ -19,7 +19,7 @@ export default class RpcServer {
         if (conf.autoImplement && !conf.apiPath) {
             throw new Error('apiPath must be given when autoImplement is true')
         }
-        this.config = Object.merge({}, defaultServerConfig, conf);
+        this.config = Object.merge({}, DefaultServerConfig, conf);
     }
 
     protected _implementedUrl: {
@@ -51,7 +51,7 @@ export default class RpcServer {
     }
 
     /**
-     * Get url of protocol which is passed in url or request body
+     * Get rpcUrl of protocol
      * Without `/` at the beginning and the end
      * @param ptl 
      */
@@ -132,8 +132,8 @@ export default class RpcServer {
             expressApp.use(handler);
         }
 
-        //api handler
-        expressApp.use((req: ApiRequest<any>, res: ApiResponse<any>, next) => {
+        //api handler (final router)
+        expressApp.use(async (req: ApiRequest<any>, res: ApiResponse<any>) => {
             //log request
             console.log('[ApiReq]', '#' + req.reqId, req.rpcUrl, this.config.logRequestDetail ? req.args : '');
 
@@ -149,15 +149,16 @@ export default class RpcServer {
 
             //do handler
             try {
-                let result = this._implementedUrl[req.path].handler(req, res);
-                if (result instanceof Promise) {
-                    result.catch(e => {
-                        this.onUnhandledApiError(e, req, res);
-                    })
-                }
+                let result = await this._implementedUrl[req.path].handler(req, res);
             }
             catch (e) {
-                this.onUnhandledApiError(e, req, res);
+                //TsRpcError is return to client directly
+                if (e instanceof TsRpcError) {
+                    res.error(e.message, e.info);
+                }
+                else {
+                    this.onUnhandledApiError(e, req, res);
+                }                
             }
 
             //log response

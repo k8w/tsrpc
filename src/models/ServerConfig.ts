@@ -70,7 +70,7 @@ export default interface ServerConfig {
 /**
  * default server config
  */
-export const defaultServerConfig: ServerConfig = {
+export const DefaultServerConfig: ServerConfig = {
     defaultPort: 3000,
     urlRootPath: '/',
     protocolPath: '',
