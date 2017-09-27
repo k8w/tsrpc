@@ -7,4 +7,11 @@ let server = new RpcServer({
     protocolPath: path.resolve(__dirname, 'protocol')
 });
 server.implementPtl(PtlHelloWorld, ApiHelloWorld);
-server.start(3010);
+server.start();
+
+console.trace('trace')
+console.debug('debug')
+console.log('log')
+console.info('info')
+console.warn('warn')
+console.error('error')

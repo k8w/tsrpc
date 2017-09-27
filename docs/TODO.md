@@ -1,5 +1,5 @@
 - [ ] ts-interface-validator node_modules
-- [ ] LOG
+- [x] LOG
 - [ ] BinaryTransport
 - [ ] Client Hooks
  

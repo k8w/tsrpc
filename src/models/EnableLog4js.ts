@@ -1,6 +1,7 @@
 import ServerConfig from './ServerConfig';
 import MkdirPSync from './MkdirPSync';
 import * as path from 'path';
+import * as uuid from 'uuid';
 const log4js = require('log4js');
 
 /**
@@ -8,56 +9,50 @@ const log4js = require('log4js');
  * @param logFiles 
  */
 export default function EnableLog4js(logFiles: ServerConfig['logFiles']) {
+    let instanceId = '<' + uuid().substr(-4) + '>';
+
     //stdout & stderr
-    let appenders: any = {
-        stdout_out: { type: 'stdout' },
-        stdout: {
+    let appenders: any = [
+        {
             type: 'logLevelFilter',
             level: 'trace',
             maxLevel: 'info',
-            appender: 'stdout_out'
+            appender: { type: 'stdout' },
+            category: instanceId
         },
-        stderr_out: { type: 'stderr' },
-        stderr: {
+        {
             type: 'logLevelFilter',
             level: 'warn',
-            appender: 'stderr_out'
+            appender: { type: 'stderr' },
+            category: instanceId
         }
-    }
-    
+    ]
+
     logFiles && logFiles.forEach((logFile, i) => {
         //mkdir -p
         MkdirPSync(logFile.path);
 
         //appender
-        appenders['logFile_out_' + i] = {
-            type: 'dateFile',
-            filename: path.resolve(logFile.path, logFile.filename),
-            daysToKeep: logFile.keepDays,
-            pattern: '-yyyyMMdd',
-            alwaysIncludePattern: true
-        }
-        appenders['logFile_' + i] = {
+        appenders.push({
             type: 'logLevelFilter',
             level: logFile.level,
-            appender: 'logFile_out_' + i
-        }
+            appender: {
+                type: 'dateFile',
+                filename: path.resolve(logFile.path, logFile.filename),
+                daysToKeep: logFile.keepDays,
+                pattern: '-yyyyMMdd',
+                alwaysIncludePattern: true
+            },
+            category: instanceId
+        })
     })
 
     log4js.configure({
-        appenders: appenders,
-        categories: {
-            default: {
-                appenders: (logFiles ? logFiles.map((v, i) => 'logFile_' + i) : []).concat('stdout', 'stderr'),
-                level: 'trace'
-            }
-        },
-        pm2: true
+        appenders: appenders
     });
 
     //replace console
-    let logger = log4js.getLogger();
-    console.trace = logger.trace.bind(logger);
+    let logger = log4js.getLogger(instanceId);
     console.debug = logger.debug.bind(logger);
     console.log = logger.info.bind(logger);
     console.info = logger.info.bind(logger);

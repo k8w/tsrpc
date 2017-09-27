@@ -17,6 +17,7 @@ export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next?:
 
 export default class RpcServer {
     readonly config: ServerConfig;
+    
     constructor(conf: Partial<ServerConfig> & { protocolPath: string }) {
         this.config = Object.merge({}, DefaultServerConfig, conf);
 
@@ -34,13 +35,13 @@ export default class RpcServer {
             console.log('Start auto implement protocol...');
             let result = AutoImplementProtocol(this, this.config.protocolPath, this.config.apiPath);
             if (result == null) {
-                console.log('Auto implement protocol succ')
+                console.log('√ Auto implement protocol succ')
             }
             else {
                 for (let msg of result) {
                     console.error(msg);
                 }
-                console.error('Auto implement protocol failed')
+                console.error('× Auto implement protocol failed')
                 process.exit(-1);
             }
         }
@@ -201,15 +202,26 @@ export default class RpcServer {
             this.onApiComplete && this.onApiComplete(req, res);
         })
 
-        console.log('TSRPC inited succ.')
+        console.log('√ TSRPC inited succ')
     }
 
     private _server: http.Server;
-    start(port?: number) {
+    async start(port?: number) {
         this.init();
         port = port || this.config.defaultPort;
-        this._server = this._expressApp.listen(port);
-        this._server.listening ? console.log(`Server started at ${port}...`) : console.error(`Port ${port} is already in use.`);
+
+        return new Promise<void>((rs, rj) => {
+            try {
+                this._server = this._expressApp.listen(port, () => {
+                    console.log(`√ Server started at ${port}...`)
+                    rs();
+                }); 
+            }
+            catch(e){
+                rj(`× Port ${port} is already in use.`)
+            }
+            
+        })               
     }
 
     stop() {

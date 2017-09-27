@@ -69,6 +69,7 @@ export default interface ServerConfig {
     /**
      * Set this to write log files.
      * Default use log4js, set this to null to disable log4js.
+     * If you want to use default log4js, but don't want any file output, set this to `[]`.
      * Note: log4js will replace native console, if you don't need this, just set `logFiles` to `null`.
      *  `logFile.level` is the minimal level of log to record
      *  `logFile.filename` is prefix of log filename, the actual name is like `${filename}-20170926`
