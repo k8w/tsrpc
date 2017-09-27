@@ -32,8 +32,9 @@
     "express": "^4.15.5",
     "k8w-extend-native": "^0.1.0",
     "k8w-super-promise": "^0.1.1",
+    "log4js": "^2.3.4",
     "ts-interface-validator": "^0.1.5",
-    "tsrpc-protocol": "^0.1.0",
+    "tsrpc-protocol": "^0.2.2",
     "uuid": "^3.1.0"
   }
 }

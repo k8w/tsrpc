@@ -22,7 +22,7 @@ export default class RpcClient {
         this._serverUrl = new URL(this.config.serverUrl);
     }
 
-    callApi<Req, Res>(ptl: TsRpcPtl<Req, Res>, req: Req = {} as Req, headers: object = {}): SuperPromise<Res> {
+    callApi<Req, Res>(ptl: TsRpcPtl<Req, Res>, req: Req = {} as Req, headers: object = {}): SuperPromise<Res, TsRpcError> {
         const options: any = {
             hostname: this._serverUrl.hostname,
             port: this._serverUrl.port,
@@ -33,7 +33,7 @@ export default class RpcClient {
             method: 'POST'
         };
 
-        let output = new SuperPromise<Res>((rs, rj) => {
+        let output = new SuperPromise<Res, TsRpcError>((rs, rj) => {
             const httpReq = http.request(options, res => {
                 let data = '';
                 res.setEncoding('utf8');

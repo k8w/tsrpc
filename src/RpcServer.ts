@@ -10,16 +10,40 @@ import ApiResponseExtend from './middlewares/ApiResponseExtend';
 import ValidatorManager, { IValidator } from 'ts-interface-validator';
 import { TsRpcPtl, TsRpcReq, TsRpcRes, TsRpcError } from 'tsrpc-protocol';
 import * as http from 'http';
+import AutoImplementProtocol from './models/AutoImplementProtocol';
+import EnableLog4js from './models/EnableLog4js';
 
 export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next?: Function) => void;
 
 export default class RpcServer {
     readonly config: ServerConfig;
     constructor(conf: Partial<ServerConfig> & { protocolPath: string }) {
-        if (conf.autoImplement && !conf.apiPath) {
-            throw new Error('apiPath must be given when autoImplement is true')
-        }
         this.config = Object.merge({}, DefaultServerConfig, conf);
+
+        //Enable log4js
+        if (this.config.logFiles) {
+            EnableLog4js(this.config.logFiles);
+        }
+
+        //auto implement protocol
+        if (this.config.autoImplement) {
+            if (!this.config.apiPath) {
+                throw new Error('Must set apiPath when autoImplement is enabled')
+            }
+
+            console.log('Start auto implement protocol...');
+            let result = AutoImplementProtocol(this, this.config.protocolPath, this.config.apiPath);
+            if (result == null) {
+                console.log('Auto implement protocol succ')
+            }
+            else {
+                for (let msg of result) {
+                    console.error(msg);
+                }
+                console.error('Auto implement protocol failed')
+                process.exit(-1);
+            }
+        }
     }
 
     protected _implementedUrl: {
@@ -41,7 +65,7 @@ export default class RpcServer {
             console.warn('You are implementing a duplicated protocol: ' + protocol.filename, 'url=' + url);
         }
         //get request validator
-        let reqValidator = ValidatorManager.instance.getValidator('Req' + protocol.name, protocol.filename);
+        let reqValidator = ValidatorManager.instance.getValidator('Req' + protocol.name, protocol.filename.replace(/\.js$/, '.ts'));
         //do register
         this._implementedUrl[url] = {
             protocol: protocol,
@@ -125,7 +149,7 @@ export default class RpcServer {
             //OK: Protocol registered
             req.rpcPtl = this._implementedUrl[req.path].protocol;
             next();
-        });        
+        });
 
         //preUsedRouterHandlers
         for (let handler of this._preUsedRouterHandlers) {
@@ -158,7 +182,7 @@ export default class RpcServer {
                 }
                 else {
                     this.onUnhandledApiError(e, req, res);
-                }                
+                }
             }
 
             //log response

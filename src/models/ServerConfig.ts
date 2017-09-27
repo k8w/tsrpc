@@ -65,6 +65,21 @@ export default interface ServerConfig {
      * If true, errmsg would like "ParamA must be string" instead of "Invalid Request Parameters" when get invalid input
      */
     showParamInvalidReason: boolean;
+
+    /**
+     * Set this to write log files.
+     * Default use log4js, set this to null to disable log4js.
+     * Note: log4js will replace native console, if you don't need this, just set `logFiles` to `null`.
+     *  `logFile.level` is the minimal level of log to record
+     *  `logFile.filename` is prefix of log filename, the actual name is like `${filename}-20170926`
+     *  `logFile.path` The folder must be exists
+     */
+    logFiles: {
+        level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR',
+        filename: string,
+        path: string,
+        keepDays: number
+    }[] | null | undefined
 }
 
 /**
@@ -83,5 +98,11 @@ export const DefaultServerConfig: ServerConfig = {
     ptlEncoder: JSON.stringify,
     ptlDecoder: JSON.parse,
     hideApiPath: false,
-    showParamInvalidReason: true
+    showParamInvalidReason: true,
+    logFiles: [{
+        level: 'INFO',
+        filename: 'log',
+        path: 'logs',
+        keepDays: 15
+    }]
 }

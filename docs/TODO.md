@@ -10,6 +10,7 @@ console.error('[ApiErr]', req.rpcUrl, res.output);
 
 
 ### TEST
-- [ ] TSRPC Error 直接返回给前台 不500
-- [ ] 500
-- [ ] 404
+- [x] TSRPC Error 直接返回给前台 不500
+- [x] 500
+- [x] 404
+- [ ] Use

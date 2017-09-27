@@ -7,17 +7,18 @@ import RpcClient from '../../src/RpcClient';
 import PtlHelloKing from './protocol/PtlHelloKing';
 import { TsRpcError } from 'tsrpc-protocol';
 
-describe('RpcServer', function () {
+describe('AutoImplement', function () {
     let server: RpcServer;
     let client: RpcClient;
 
     before(function () {
         server = new RpcServer({
+            autoImplement: true,
+            apiPath: path.resolve(__dirname, 'api'),
             protocolPath: path.resolve(__dirname, 'protocol'),
             logRequestDetail: true,
             logResponseDetail: true
         });
-        server.implementPtl(PtlHelloWorld, ApiHelloWorld);
         server.start();
 
         client = new RpcClient({
