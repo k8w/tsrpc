@@ -13,11 +13,11 @@ import * as http from 'http';
 import AutoImplementProtocol from './models/AutoImplementProtocol';
 import EnableLog4js from './models/EnableLog4js';
 
-export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next?: Function) => void;
+export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next: Function) => void;
 
 export default class RpcServer {
     readonly config: ServerConfig;
-    
+
     constructor(conf: Partial<ServerConfig> & { protocolPath: string }) {
         this.config = Object.merge({}, DefaultServerConfig, conf);
 
@@ -38,11 +38,7 @@ export default class RpcServer {
                 console.log('√ Auto implement protocol succ')
             }
             else {
-                for (let msg of result) {
-                    console.error(msg);
-                }
-                console.error('× Auto implement protocol failed')
-                process.exit(-1);
+                throw new Error('× Auto implement protocol failed:\n' + result.map((v, i) => `    ${i + 1}. ` + v).join('\n'))
             }
         }
     }
@@ -152,10 +148,8 @@ export default class RpcServer {
             next();
         });
 
-        //preUsedRouterHandlers
-        for (let handler of this._preUsedRouterHandlers) {
-            expressApp.use(handler);
-        }
+        //_routerBeforeApiHandler
+        expressApp.use(this._routerBeforeApiHandler);
 
         //api handler (final router)
         expressApp.use(async (req: ApiRequest<any>, res: ApiResponse<any>) => {
@@ -215,13 +209,13 @@ export default class RpcServer {
                 this._server = this._expressApp.listen(port, () => {
                     console.log(`√ Server started at ${port}...`)
                     rs();
-                }); 
+                });
             }
-            catch(e){
+            catch (e) {
                 rj(`× Port ${port} is already in use.`)
             }
-            
-        })               
+
+        })
     }
 
     stop() {
@@ -229,13 +223,22 @@ export default class RpcServer {
         delete this._server;
     }
 
-    private _preUsedRouterHandlers: RouterHandler[] = [];
-    use(routerHandler: RouterHandler) {
-        //一经init 不能再use
-        if (this._expressApp) {
-            throw new Error('Can only call use before server start.')
-        }
-        this._preUsedRouterHandlers.push(routerHandler);
+    //get、post、use it will use before api handler
+    private _routerBeforeApiHandler = Express.Router();
+    use(handler: RouterHandler):void;
+    use(path: string, handler: RouterHandler): void;
+    use() {
+        this._routerBeforeApiHandler.use.apply(this._routerBeforeApiHandler, arguments);
+    }
+    get(handler: RouterHandler): void;
+    get(path: string, handler: RouterHandler): void;
+    get() {
+        this._routerBeforeApiHandler.get.apply(this._routerBeforeApiHandler, arguments);
+    }
+    post(handler: RouterHandler): void;
+    post(path: string, handler: RouterHandler): void;
+    post() {
+        this._routerBeforeApiHandler.post.apply(this._routerBeforeApiHandler, arguments);
     }
 
     //hooks

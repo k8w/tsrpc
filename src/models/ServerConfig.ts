@@ -1,3 +1,4 @@
+import { Log4jsConfig } from './EnableLog4js';
 export default interface ServerConfig {
     /**
      * default port to start server
@@ -75,12 +76,7 @@ export default interface ServerConfig {
      *  `logFile.filename` is prefix of log filename, the actual name is like `${filename}-20170926`
      *  `logFile.path` The folder must be exists
      */
-    logFiles: {
-        level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR',
-        filename: string,
-        path: string,
-        keepDays: number
-    }[] | null | undefined
+    logFiles: Log4jsConfig[] | null | undefined;
 }
 
 /**

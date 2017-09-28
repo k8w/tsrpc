@@ -1,16 +1,13 @@
+### Basic
 - [ ] ts-interface-validator node_modules
 - [x] LOG
 - [ ] BinaryTransport
-- [ ] Client Hooks
- 
-```
-req.rpcServer.config.logAllRequest && console.debug('[ApiRes]', req.rpcUrl, body);
-console.error('[ApiErr]', req.rpcUrl, res.output);
-```
+- [x] Client Hooks
 
-
-### TEST
+### Test Case
 - [x] TSRPC Error 直接返回给前台 不500
 - [x] 500
 - [x] 404
-- [ ] Use
+- [x] Use
+- [x] ptlEncoder & ptlDecoder
+- [ ] BinaryTransport

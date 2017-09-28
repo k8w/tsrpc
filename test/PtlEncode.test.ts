@@ -1,13 +1,21 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import RpcServer from '../../src/RpcServer';
+import RpcServer from '../src/RpcServer';
 import PtlHelloWorld from './protocol/PtlHelloWorld';
 import ApiHelloWorld from './api/ApiHelloWorld';
-import RpcClient from '../../src/RpcClient';
+import RpcClient from '../src/RpcClient';
 import PtlHelloKing from './protocol/PtlHelloKing';
 import { TsRpcError } from 'tsrpc-protocol';
 
-describe('RpcServer', function () {
+function encode(content: object): string {
+    return global.escape(JSON.stringify(content)).split('').map(v => String.fromCharCode(v.charCodeAt(0) * -1)).reverse().join('')
+}
+
+function decode(content: string): any {
+    return JSON.parse(global.unescape(content.split('').map(v => String.fromCharCode(v.charCodeAt(0) * -1)).reverse().join('')))
+}
+
+describe('PtlEncode', function () {
     let server: RpcServer;
     let client: RpcClient;
 
@@ -15,19 +23,43 @@ describe('RpcServer', function () {
         server = new RpcServer({
             protocolPath: path.resolve(__dirname, 'protocol'),
             logRequestDetail: true,
-            logResponseDetail: true
+            logResponseDetail: true,
+            ptlEncoder: encode,
+            ptlDecoder: decode
         });
         server.implementPtl(PtlHelloWorld, ApiHelloWorld);
         server.start();
 
         client = new RpcClient({
             serverUrl: 'http://localhost:3000',
-            protocolPath: path.resolve(__dirname, 'protocol')
+            protocolPath: path.resolve(__dirname, 'protocol'),
+            ptlEncoder: encode,
+            ptlDecoder: decode
         })
     })
 
+    it('encode & decode', function () {
+        let src = {a:1,b:2};
+        let encoded = encode(src);
+        let decoded = decode(encoded);
+        assert.notDeepEqual(encoded, JSON.stringify(src));
+        assert.notDeepEqual(encoded, String(src));
+        assert.deepEqual(decoded, src)
+    })
+
     it('client call', async function () {
+        let reqStr = '', resStr = '';
+        client.onRequest = () => {
+            reqStr = 'reqStr';
+        }
+        client.onResponse = () => {
+            resStr = 'resStr'
+        }
         assert.equal((await client.callApi(PtlHelloWorld, { name: 'Peter' })).reply, 'Hello, Peter!')
+        assert.equal(reqStr, 'reqStr')
+        assert.equal(resStr, 'resStr')
+
+        client.onRequest = client.onResponse = undefined;
     })
 
     it('default param', async function () {

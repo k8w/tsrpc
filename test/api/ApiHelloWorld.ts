@@ -1,6 +1,6 @@
-import ApiRequest from '../../../src/models/ApiRequest';
+import ApiRequest from '../../src/models/ApiRequest';
 import { ReqHelloWorld, ResHelloWorld } from '../protocol/PtlHelloWorld';
-import ApiResponse from '../../../src/models/ApiResponse';
+import ApiResponse from '../../src/models/ApiResponse';
 import { TsRpcError } from 'tsrpc-protocol';
 export default async function ApiHelloWorld(req: ApiRequest<ReqHelloWorld>, res: ApiResponse<ResHelloWorld>) {
     if (req.args.name == 'Error') {

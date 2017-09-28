@@ -4,11 +4,18 @@ import * as path from 'path';
 import * as uuid from 'uuid';
 const log4js = require('log4js');
 
+export interface Log4jsConfig {
+    level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR',
+    filename: string,
+    path: string,
+    keepDays: number
+}
+
 /**
- * Configure log4js and replace native console
+ * Configure log4js@1.x and replace native console
  * @param logFiles 
  */
-export default function EnableLog4js(logFiles: ServerConfig['logFiles']) {
+export default function EnableLog4js(logFiles: Log4jsConfig[]) {
     let instanceId = '<' + uuid().substr(-4) + '>';
 
     //stdout & stderr

@@ -23,6 +23,8 @@ export default class RpcClient {
     }
 
     callApi<Req, Res>(ptl: TsRpcPtl<Req, Res>, req: Req = {} as Req, headers: object = {}): SuperPromise<Res, TsRpcError> {
+        this.onRequest && this.onRequest(ptl, req);
+
         const options: any = {
             hostname: this._serverUrl.hostname,
             port: this._serverUrl.port,
@@ -43,6 +45,7 @@ export default class RpcClient {
                 res.on('end', () => {
                     try {
                         let result = this.config.ptlDecoder(data);
+                        this.onResponse && this.onResponse(ptl, req, result as any);
                         result.errmsg == null ? rs(result as Res) : rj(new TsRpcError(result.errmsg, result.errinfo));
                     }
                     catch (e) {
@@ -80,8 +83,8 @@ export default class RpcClient {
     }
 
     //hooks
-    // onRequest?: (ptl: TsRpcPtl<any, any>, req: TsRpcReq) => void;
-    // onResponse?: (ptl: TsRpcPtl<any, any>, req: TsRpcReq, res: TsRpcRes) => void;
+    onRequest: ((ptl: TsRpcPtl<any, any>, req: TsRpcReq) => void) | null | undefined;
+    onResponse: ((ptl: TsRpcPtl<any, any>, req: TsRpcReq, res: TsRpcRes) => void) | null | undefined;
 }
 
 

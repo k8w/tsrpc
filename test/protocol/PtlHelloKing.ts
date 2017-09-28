@@ -8,7 +8,7 @@ const PtlHelloKing = new TsRpcPtl<ReqHelloKing, ResHelloKing>(__filename);
 export default PtlHelloKing;
 
 export interface ReqHelloKing {
-    name?: string;
+    
 }
 
 export interface ResHelloKing {
