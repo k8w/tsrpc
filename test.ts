@@ -1,10 +1,11 @@
 import * as path from 'path';
 import RpcServer from './src/RpcServer';
-import PtlHelloWorld from './test/HelloWorld/protocol/PtlHelloWorld';
-import ApiHelloWorld from './test/HelloWorld/api/ApiHelloWorld';
+import PtlHelloWorld from './test/protocol/PtlHelloWorld';
+import ApiHelloWorld from './test/api/ApiHelloWorld';
 
 let server = new RpcServer({
-    protocolPath: path.resolve(__dirname, 'test/HelloWorld/protocol')
+    protocolPath: path.resolve(__dirname, 'test/protocol'),
+    binaryTransport: true
 });
 server.implementPtl(PtlHelloWorld, ApiHelloWorld);
 server.start();

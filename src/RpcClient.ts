@@ -37,20 +37,23 @@ export default class RpcClient {
 
         let output = new SuperPromise<Res, TsRpcError>((rs, rj) => {
             const httpReq = http.request(options, res => {
-                let data = '';
-                res.setEncoding('utf8');
+                if (!this.config.binaryTransport) {
+                    res.setEncoding('utf8');
+                }
+
+                let data: any[] = [];
                 res.on('data', (chunk: any) => {
-                    data += chunk;
+                    data.push(chunk);
                 });
                 res.on('end', () => {
                     try {
-                        let result = this.config.ptlDecoder(data);
+                        let result = this.config.binaryTransport ? this.config.binaryDecoder(Buffer.concat(data)) : this.config.ptlDecoder(data.join(''));
                         this.onResponse && this.onResponse(ptl, req, result as any);
                         result.errmsg == null ? rs(result as Res) : rj(new TsRpcError(result.errmsg, result.errinfo));
                     }
                     catch (e) {
-                        console.error('Reponse cannot be decoded.', e);
-                        rj(new Error('Reponse cannot be decoded'))
+                        console.error('Response cannot be decoded');
+                        throw (e);
                     }
                 })
             });
@@ -60,7 +63,8 @@ export default class RpcClient {
                 rj(e.message);
             });
 
-            httpReq.write(this.config.ptlEncoder(req));
+            let reqBody = this.config.binaryTransport ? this.config.binaryEncoder(req) : this.config.ptlEncoder(req);
+            httpReq.write(reqBody);
             httpReq.end();
         })
 

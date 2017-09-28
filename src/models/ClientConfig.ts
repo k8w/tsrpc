@@ -36,7 +36,7 @@ export default interface ClientConfig {
      * To make this work, `binaryTransport` must be true.
      * Default is string `BinaryCoder.json2buffer`.
      */
-    binaryEncoder: (content: object) => Buffer;
+    binaryEncoder: (content: any) => Buffer;
 
     /**
      * To make this work, `binaryTransport` must be true.

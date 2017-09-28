@@ -12,6 +12,7 @@ import { TsRpcPtl, TsRpcReq, TsRpcRes, TsRpcError } from 'tsrpc-protocol';
 import * as http from 'http';
 import AutoImplementProtocol from './models/AutoImplementProtocol';
 import EnableLog4js from './models/EnableLog4js';
+const bodyParser = require('body-parser');
 
 export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next: Function) => void;
 
@@ -79,7 +80,7 @@ export default class RpcServer {
     private getPtlUrl(ptl: TsRpcPtl<any, any>): string {
         let filename = ptl.filename.replace(/\.js$/, '.ts');
         if (!filename.startsWith(this.config.protocolPath) || !filename.endsWith('.ts')) {
-            throw new Error('Error protocol filename (not in the protocolPath) : ' + filename);
+            throw new Error('Protocol is not in the protocolPath : ' + filename);
         }
         return filename.substr(this.config.protocolPath.length, filename.length - this.config.protocolPath.length - 3)  // /root/a/b/PtlC.ts -> /a/b/PtlC
             .replace(/\\/g, '/').replace(/Ptl(\w+)$/, '$1'); // /a/b/PtlC -> /a/b/C
@@ -98,8 +99,8 @@ export default class RpcServer {
         //the frontest init
         //optimize useless header
         expressApp.disable('x-powered-by');
-        //parse all type as text
-        expressApp.use(require('body-parser').text({ limit: Infinity, type: () => true }));
+        //parse body
+        expressApp.use(bodyParser[this.config.binaryTransport ? 'raw' : 'text']({ limit: Infinity, type: () => true }))
         //extend rpcServer for req and res
         expressApp.use((req: ApiRequest<any>, res: ApiResponse<any>, next) => {
             req.rpcServer = this;
@@ -225,7 +226,7 @@ export default class RpcServer {
 
     //get、post、use it will use before api handler
     private _routerBeforeApiHandler = Express.Router();
-    use(handler: RouterHandler):void;
+    use(handler: RouterHandler): void;
     use(path: string, handler: RouterHandler): void;
     use() {
         this._routerBeforeApiHandler.use.apply(this._routerBeforeApiHandler, arguments);

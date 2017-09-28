@@ -7,7 +7,14 @@ function ApiRequestExtend(req: ApiRequest<any>, res: ApiResponse<any>, next: any
         
     //解析输入参数
     try {
-        req.args = req.rpcServer.config.ptlDecoder(req.body);
+        if (req.rpcServer.config.binaryTransport) {
+            //body is binary
+            req.args = req.rpcServer.config.binaryDecoder(req.body);
+        }
+        else {
+            //body is plain text
+            req.args = req.rpcServer.config.ptlDecoder(req.body);
+        }
     }
     catch (e) {
         console.error('Invalid Request Body', req.url, req.body)

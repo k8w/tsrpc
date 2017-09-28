@@ -2,13 +2,22 @@ import ApiRequest from '../models/ApiRequest';
 import ApiResponse from '../models/ApiResponse';
 const uuid = require('uuid');
 
-function ApiResponseExtend(req: ApiRequest<any>, res: ApiResponse<any>, next: any) {
-    res.set('Content-Type', 'text/plain');
-    
+function flushOutput(res: ApiResponse<any>) {
+    if (res.rpcServer.config.binaryTransport) {
+        res.set('Content-Type', 'application/octet-stream')
+        res.send(res.rpcServer.config.binaryEncoder(res.rpcOutput));
+    }
+    else {
+        res.set('Content-Type', 'text/plain');
+        res.send(res.rpcServer.config.ptlEncoder(res.rpcOutput));
+    }
+}
+
+function ApiResponseExtend(req: ApiRequest<any>, res: ApiResponse<any>, next: any) {    
     //给ApiResponse扩展succ和error方法
     res.succ = (body: any) => {
         res.rpcOutput = body;
-        res.send(res.rpcServer.config.ptlEncoder(body));
+        flushOutput(res);
     };
 
     res.error = (errmsg: string, errinfo?: any) => {
@@ -22,7 +31,7 @@ function ApiResponseExtend(req: ApiRequest<any>, res: ApiResponse<any>, next: an
             res.rpcOutput.errmsg += ` [${req.reqId}]`;
         }
 
-        res.send(res.rpcServer.config.ptlEncoder(res.rpcOutput));
+        flushOutput(res);
     };
 
     next();
