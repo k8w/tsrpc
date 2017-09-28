@@ -1,3 +1,4 @@
+import BinaryTextCoder from './BinaryTextCoder';
 export default interface ClientConfig {
     /**
      * TSRPC Server Root URL
@@ -16,15 +17,32 @@ export default interface ClientConfig {
     hideApiPath: boolean;
 
     /**
-     * If true, `ptlEncoder` and `ptlDecoder` should use `ArrayBuffer` instead of `string`, vice versa.
+     * Plain text body encoder, default is `JSON.stringify`
+     */
+    ptlEncoder: (content: any) => string;
+
+    /**
+     * Plain text body decoder, default is `JSON.parse`
+     */
+    ptlDecoder: (content: string) => { [key: string]: any };
+
+    /**
+     * If true, transportation would be in binary instead of text.
+     * `binaryEncoder` and `binaryDecoder` must be set, and `ptlEncoder` and `ptlDecoder` would not be used.
      */
     binaryTransport: boolean;
 
-    //transfer body encoder, would encode to JSON string if this is not assigned
-    ptlEncoder: (content: { [key: string]: any }) => ArrayBuffer | string;
+    /**
+     * To make this work, `binaryTransport` must be true.
+     * Default is string `BinaryCoder.json2buffer`.
+     */
+    binaryEncoder: (content: object) => Buffer;
 
-    //transfer body decoder, body would be treated as JSON string if this is not assigned
-    ptlDecoder: (content: ArrayBuffer | string) => { [key: string]: any };
+    /**
+     * To make this work, `binaryTransport` must be true.
+     * Default is string `BinaryCoder.buffer2json`.
+     */
+    binaryDecoder: (content: Buffer) => { [key: string]: any };
 }
 
 /**
@@ -34,7 +52,9 @@ export const DefaultClientConfig: ClientConfig = {
     serverUrl: '',
     protocolPath: '',
     hideApiPath: false,
-    binaryTransport: false,
     ptlEncoder: JSON.stringify,
-    ptlDecoder: JSON.parse
+    ptlDecoder: JSON.parse,
+    binaryTransport: false,
+    binaryEncoder: BinaryTextCoder.encode,
+    binaryDecoder: BinaryTextCoder.decode
 }
