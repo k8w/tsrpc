@@ -110,7 +110,9 @@ async function main(){
 
 ## Usage (Browser)
 
-`npm install tsrpc-browser`
+```
+npm install tsrpc-browser
+```
 
 ```typescript
 import {RpcClient} from 'tsrpc-browser';
