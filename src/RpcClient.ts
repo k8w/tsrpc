@@ -39,7 +39,7 @@ export default class RpcClient {
             method: 'POST'
         };
 
-        let output = new SuperPromise<Res, TsRpcError>((rs, rj) => {
+        let output = new SuperPromise<Res, TsRpcError>(async (rs, rj) => {
             const httpReq = http.request(options, res => {
                 if (!this.config.binaryTransport) {
                     res.setEncoding('utf8');
@@ -49,9 +49,11 @@ export default class RpcClient {
                 res.on('data', (chunk: any) => {
                     data.push(chunk);
                 });
-                res.on('end', () => {
+                res.on('end', async () => {
                     try {
-                        let result = this.config.binaryTransport ? this.config.binaryDecoder(Buffer.concat(data)) : this.config.ptlDecoder(data.join(''));
+                        let result = this.config.binaryTransport
+                            ? await this.config.binaryDecoder(Buffer.concat(data))
+                            : await this.config.ptlDecoder(data.join(''));
                         this.onResponse && this.onResponse(ptl, req, result as any);
                         result.errmsg == null ? rs(result as Res) : rj(new TsRpcError(result.errmsg, result.errinfo));
                     }
@@ -67,7 +69,7 @@ export default class RpcClient {
                 rj(e.message);
             });
 
-            let reqBody = this.config.binaryTransport ? this.config.binaryEncoder(req) : this.config.ptlEncoder(req);
+            let reqBody = this.config.binaryTransport ? await this.config.binaryEncoder(req) : await this.config.ptlEncoder(req);
             httpReq.write(reqBody);
             httpReq.end();
         })

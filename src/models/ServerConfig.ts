@@ -50,12 +50,12 @@ export default interface ServerConfig {
     /**
      * Plain text body encoder, default is `JSON.stringify`
      */
-    ptlEncoder: (content: any) => string;
+    ptlEncoder: (content: any) => string | Promise<string>;
 
     /**
      * Plain text body decoder, default is `JSON.parse`
      */
-    ptlDecoder: (content: string) => { [key: string]: any };
+    ptlDecoder: (content: string) => any | Promise<any>;
 
     /**
      * If true, transportation would be in binary instead of text.
@@ -67,13 +67,13 @@ export default interface ServerConfig {
      * To make this work, `binaryTransport` must be true.
      * Default is string `BinaryCoder.json2buffer`.
      */
-    binaryEncoder: (content: any) => Buffer;
+    binaryEncoder: (content: any) => Buffer | Promise<Buffer>;
 
     /**
      * To make this work, `binaryTransport` must be true.
      * Default is string `BinaryCoder.buffer2json`.
      */
-    binaryDecoder: (content: Buffer) => { [key: string]: any };
+    binaryDecoder: (content: Buffer) => any | Promise<any>;
 
     /**
      * If true, api path will hide from URL (passed via body)

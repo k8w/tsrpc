@@ -3,6 +3,7 @@
 - [x] LOG
 - [x] BinaryTransport
 - [x] Client Hooks
+- [ ] Client Cancel
 
 ### Browser
 - [ ] BinaryTransport

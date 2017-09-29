@@ -11,12 +11,12 @@ export default interface ApiResponse<T> extends Response {
     /**
      * Send successful response
      */
-    succ: (body: T) => void;
+    succ: (body: T) => Promise<void>;
 
     /**
      * Send error response
      */
-    error: (errmsg?: string, errinfo?: any) => void;
+    error: (errmsg?: string, errinfo?: any) => Promise<void>;
 
     /**
      * final output body by res.succ or res.error
