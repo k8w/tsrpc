@@ -18,6 +18,10 @@ export default class RpcClient {
         serverUrl: string,
         protocolPath: string,
     }) {
+        if (typeof window != 'undefined' && typeof document != 'undefined' && typeof global == 'undefined') {
+            throw new Error('You are using a NodeJS version of TSRPC, for browser usage, please npm install tsrpc-browser.')
+        }
+
         this.config = Object.merge({}, DefaultClientConfig, config);
         this._serverUrl = new URL(this.config.serverUrl);
     }
