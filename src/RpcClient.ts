@@ -10,6 +10,8 @@ export default class RpcClient {
     readonly config: ClientConfig;
     private _serverUrl: URL;
 
+    private _sn = 0;
+
     /**
      * must set serverUrl and protocolPath
      * @param conf Partial<ClientConfig>
@@ -27,6 +29,13 @@ export default class RpcClient {
     }
 
     callApi<Req, Res>(ptl: TsRpcPtl<Req, Res>, req: Req = {} as Req, headers: object = {}): SuperPromise<Res, TsRpcError> {
+        let sn = ++this._sn;
+        let rpcUrl = this.getPtlUrl(ptl);
+
+        //debug log
+        this.config.showDebugLog && console.debug('[ApiReq]', `#${sn}`, rpcUrl, req);
+
+        //hook
         this.onRequest && this.onRequest(ptl, req);
 
         const options: any = {
@@ -34,11 +43,12 @@ export default class RpcClient {
             port: this._serverUrl.port,
             path: this.config.hideApiPath ?
                 this._serverUrl.pathname
-                : (this._serverUrl.pathname.replace(/\/+$/, '') + this.getPtlUrl(ptl)),
+                : (this._serverUrl.pathname.replace(/\/+$/, '') + rpcUrl),
             headers: headers,
             method: 'POST'
         };
 
+        let rs, rj;
         let output = new SuperPromise<Res, TsRpcError>(async (rs, rj) => {
             const httpReq = http.request(options, res => {
                 if (!this.config.binaryTransport) {
@@ -47,14 +57,23 @@ export default class RpcClient {
 
                 let data: any[] = [];
                 res.on('data', (chunk: any) => {
+                    console.log('recv', chunk)
                     data.push(chunk);
                 });
                 res.on('end', async () => {
                     try {
+                        //parse
                         let result = this.config.binaryTransport
                             ? await this.config.binaryDecoder(Buffer.concat(data))
                             : await this.config.ptlDecoder(data.join(''));
+
+                        //log
+                        this.config.showDebugLog && console.debug(result.errmsg ? '[ApiErr]' : '[ApiRes]', `#${sn}`, rpcUrl, result);
+
+                        //hook
                         this.onResponse && this.onResponse(ptl, req, result as any);
+
+                        //callback
                         result.errmsg == null ? rs(result as Res) : rj(new TsRpcError(result.errmsg, result.errinfo));
                     }
                     catch (e) {
@@ -65,13 +84,20 @@ export default class RpcClient {
             });
 
             httpReq.on('error', (e: Error) => {
-                console.error('HTTP request error', e.message);
-                rj(e.message);
+                if (!httpReq.aborted) {
+                    this.config.showDebugLog && console.error('[ApiErr]', '#' + sn, rpcUrl, e);
+                    rj(e);
+                }
             });
 
             let reqBody = this.config.binaryTransport ? await this.config.binaryEncoder(req) : await this.config.ptlEncoder(req);
             httpReq.write(reqBody);
             httpReq.end();
+
+            output.onCancel = () => {
+                this.config.showDebugLog && console.debug('[ApiCancel]', '#' + sn, rpcUrl)
+                httpReq.abort();
+            }
         })
 
         return output;

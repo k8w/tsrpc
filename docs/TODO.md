@@ -3,7 +3,7 @@
 - [x] LOG
 - [x] BinaryTransport
 - [x] Client Hooks
-- [ ] Client Cancel
+- [x] Client Cancel
 
 ### Browser
 - [ ] BinaryTransport
@@ -15,3 +15,4 @@
 - [x] Use
 - [x] ptlEncoder & ptlDecoder
 - [x] BinaryTransport
+- [x] Client Cancel

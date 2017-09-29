@@ -11,6 +11,15 @@ export default async function ApiHelloWorld(req: ApiRequest<ReqHelloWorld>, res:
         throw new TsRpcError('TsRpcError', 'TsRpcError');
     }
 
+    if (req.args.name == 'Delay') {
+        setTimeout(() => {
+            res.succ({
+                reply: `Hello, Delay!`
+            })
+        }, 100);
+        return;
+    }
+
     res.succ({
         reply: `Hello, ${req.args.name || 'world'}!`
     })

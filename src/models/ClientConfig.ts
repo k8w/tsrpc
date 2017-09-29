@@ -43,6 +43,12 @@ export default interface ClientConfig {
      * Default is string `BinaryCoder.buffer2json`.
      */
     binaryDecoder: (content: Buffer) => any | Promise<any>;
+
+    /**
+     * If true, every req/res would appear in console.debug
+     * Default is true.
+     */
+    showDebugLog: boolean;
 }
 
 /**
@@ -56,5 +62,6 @@ export const DefaultClientConfig: ClientConfig = {
     ptlDecoder: JSON.parse,
     binaryTransport: false,
     binaryEncoder: BinaryTextCoder.encode,
-    binaryDecoder: BinaryTextCoder.decode
+    binaryDecoder: BinaryTextCoder.decode,
+    showDebugLog: true
 }

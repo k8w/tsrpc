@@ -80,6 +80,22 @@ describe('HelloWorld', function () {
         }
     })
 
+    it('Client Cancel', function (done) {
+        let req = client.callApi(PtlHelloWorld, { name: 'Delay' }).then(res => {
+            assert.fail('Have canceled, should not be here');
+        }).catch(e => {
+            assert.fail('Have canceled, should not be here');
+        });
+
+        setTimeout(() => {
+            req.cancel();
+        }, 80)
+
+        setTimeout(() => {
+            done();
+        }, 200)
+    })
+
     after(function () {
         server.stop()
     })
