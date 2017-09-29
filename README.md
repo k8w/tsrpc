@@ -1,7 +1,7 @@
 TSRPC
 ===
 
-Full-stack TypeScript RPC framework.
+Full-stack TypeScript RPC framework.<br/>
 If you have any question, feel free to submit a issue.
 
 ## Features
