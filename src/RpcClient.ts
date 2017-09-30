@@ -4,6 +4,7 @@ import SuperPromise from 'k8w-super-promise';
 import ClientConfig from './models/ClientConfig';
 import { DefaultClientConfig } from './models/ClientConfig';
 import { URL } from 'url';
+import 'k8w-extend-native';
 
 export default class RpcClient {
 

@@ -3,7 +3,6 @@ import ApiRequest from './models/ApiRequest';
 import ApiResponse from './models/ApiResponse';
 import ApiRequestExtend from './middlewares/ApiRequestExtend';
 import ServerConfig from './models/ServerConfig';
-import 'k8w-extend-native';
 import { DefaultServerConfig } from './models/ServerConfig';
 import ApiHandler from './models/ApiHandler';
 import ApiResponseExtend from './middlewares/ApiResponseExtend';
@@ -12,6 +11,7 @@ import { TsRpcPtl, TsRpcReq, TsRpcRes, TsRpcError } from 'tsrpc-protocol';
 import * as http from 'http';
 import AutoImplementProtocol from './models/AutoImplementProtocol';
 import EnableLog4js from './models/EnableLog4js';
+import 'k8w-extend-native';
 const bodyParser = require('body-parser');
 
 export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next: Function) => void;

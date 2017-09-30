@@ -6,6 +6,7 @@
  * @license Apache-2.0
  */
 
+import 'k8w-extend-native';
 import RpcServer from './src/RpcServer';
 import RpcClient from './src/RpcClient';
 import ApiRequest from './src/models/ApiRequest';
