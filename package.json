@@ -1,11 +1,11 @@
 {
   "name": "tsrpc",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "TypeScript full-stack RPC framework",
   "main": "index.js",
   "scripts": {
     "test": "mocha",
-    "build": "rm -rf dist && tsc -d && cp package.json LICENSE README.md dist/"
+    "build": "rm -rf dist && tsc -d && cp package.json LICENSE README.md dist/ && find src/models -name *.d.ts | xargs cp --target-directory dist/src/models/"
   },
   "repository": {
     "type": "git",
