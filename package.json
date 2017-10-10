@@ -1,6 +1,6 @@
 {
   "name": "tsrpc",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "TypeScript full-stack RPC framework",
   "main": "index.js",
   "scripts": {
@@ -19,13 +19,13 @@
   ],
   "author": "k8w",
   "license": "Apache-2.0",
-  "devDependencies": {
-    "@types/express": "^4.0.37",
-    "@types/mocha": "^2.2.41",
-    "@types/node": "^8.0.23"
+  "devDependencies": {    
+    "@types/mocha": "^2.2.41"
   },
   "typings": "index.d.ts",
   "dependencies": {
+    "@types/node": "^8.0.23",
+    "@types/express": "^4.0.37",
     "@types/uuid": "^3.4.2",
     "body-parser": "^1.17.2",
     "express": "^4.15.5",
