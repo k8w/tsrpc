@@ -15,13 +15,14 @@ describe('HelloWorld', function () {
         server = new RpcServer({
             protocolPath: path.resolve(__dirname, 'protocol'),
             logRequestDetail: true,
-            logResponseDetail: true
+            logResponseDetail: true,
+            urlRootPath: '/api/'
         });
         server.implementPtl(PtlHelloWorld, ApiHelloWorld);
         server.start();
 
         client = new RpcClient({
-            serverUrl: 'http://localhost:3000',
+            serverUrl: 'http://localhost:3000/api',
             protocolPath: path.resolve(__dirname, 'protocol')
         })
     })

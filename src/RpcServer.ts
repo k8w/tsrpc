@@ -22,6 +22,11 @@ export default class RpcServer {
     constructor(conf: Partial<ServerConfig> & { protocolPath: string }) {
         this.config = Object.merge({}, DefaultServerConfig, conf);
 
+        //urlRootPath must ends with /
+        if (!this.config.urlRootPath.endsWith('/')) {
+            this.config.urlRootPath += '/';
+        }
+
         //Enable log4js
         if (this.config.logFiles) {
             EnableLog4js(this.config.logFiles);
@@ -128,7 +133,14 @@ export default class RpcServer {
                     res.error('HideApiPath is disabled, set it to false too in your client config.', 'REQ_CANT_BE_RESOLVED')
                     return;
                 }
-                req.rpcUrl = req.path;
+
+                if (req.path.startsWith(this.config.urlRootPath)) {
+                    req.rpcUrl = '/' + req.path.substr(this.config.urlRootPath.length);
+                }
+                else {
+                    res.error('Invalid path', 'INVALID_PATH')
+                    return;
+                }
             }
 
             //Not specify rpcUrl
@@ -145,7 +157,7 @@ export default class RpcServer {
             }
 
             //OK: Protocol registered
-            req.rpcPtl = this._implementedUrl[req.path].protocol;
+            req.rpcPtl = this._implementedUrl[req.rpcUrl].protocol;
             next();
         });
 
@@ -158,7 +170,7 @@ export default class RpcServer {
             console.log('[ApiReq]', '#' + req.reqId, req.rpcUrl, this.config.logRequestDetail ? req.args : '');
 
             //validate request
-            let validateResult = this._implementedUrl[req.path].reqValidator.validate(req.args);
+            let validateResult = this._implementedUrl[req.rpcUrl].reqValidator.validate(req.args);
             if (validateResult.isError) {
                 let originalError = validateResult.originalError;
                 let reason = this.config.showParamInvalidReason ? (originalError.fieldName + ': ' + originalError.message) : 'Invalid Request Parameter';
@@ -169,7 +181,7 @@ export default class RpcServer {
 
             //do handler
             try {
-                let result = await this._implementedUrl[req.path].handler(req, res);
+                let result = await this._implementedUrl[req.rpcUrl].handler(req, res);
             }
             catch (e) {
                 //TsRpcError is return to client directly
