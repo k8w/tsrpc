@@ -256,7 +256,6 @@ export default class RpcServer {
 
     //hooks
     onPtlNotFound(req: ApiRequest<any>, res: ApiResponse<any>) {
-        res.status(404);
         res.error('404 Not Found', 'PTL_NOT_FOUND');
     };
     onUnhandledApiError(err: Error, req: ApiRequest<any>, res: ApiResponse<any>) {
