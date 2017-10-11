@@ -126,6 +126,7 @@ export default class RpcServer {
                     return;
                 }
                 req.rpcUrl = req.args.__tsrpc_url__;
+                delete req.args.__tsrpc_url__;
             }
             else {
                 //__tsrpc_url__ should not appear
