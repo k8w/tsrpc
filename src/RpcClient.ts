@@ -11,7 +11,7 @@ export default class RpcClient {
     readonly config: ClientConfig;
     private _serverUrl: URL;
 
-    private _sn = 0;
+    private static _sn = 0;
 
     /**
      * must set serverUrl and protocolPath
@@ -30,7 +30,7 @@ export default class RpcClient {
     }
 
     callApi<Req, Res>(ptl: TsRpcPtl<Req, Res>, req: Req = {} as Req, headers: object = {}): SuperPromise<Res, TsRpcError> {
-        let sn = ++this._sn;
+        let sn = ++RpcClient._sn;
         let rpcUrl = this.getPtlUrl(ptl);
 
         //debug log
