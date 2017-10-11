@@ -71,11 +71,11 @@ export default class RpcClient {
                         //log
                         this.config.showDebugLog && console.debug(result.errmsg ? '[ApiErr]' : '[ApiRes]', `#${sn}`, rpcUrl, result);
 
-                        //hook
-                        this.onResponse && this.onResponse(ptl, req, result as any);
-
                         //callback
                         result.errmsg == null ? rs(result as Res) : rj(new TsRpcError(result.errmsg, result.errinfo));
+
+                        //hook
+                        this.onResponse && this.onResponse(ptl, req, result as any);
                     }
                     catch (e) {
                         console.error('Response cannot be decoded');
