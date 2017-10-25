@@ -6,6 +6,7 @@
 - [x] Client Cancel
 - [ ] res.succ type check
 - [ ] Auto Build and pack dependency (Ptl import)
+- [ ] SuperPromise.onCancel(func)
 
 ### Browser
 - [ ] BinaryTransport
