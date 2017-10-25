@@ -4,6 +4,8 @@
 - [x] BinaryTransport
 - [x] Client Hooks
 - [x] Client Cancel
+- [ ] res.succ type check
+- [ ] Auto Build and pack dependency (Ptl import)
 
 ### Browser
 - [ ] BinaryTransport
