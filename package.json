@@ -1,6 +1,6 @@
 {
   "name": "tsrpc",
-  "version": "0.3.8",
+  "version": "0.4.0",
   "description": "TypeScript full-stack RPC framework",
   "main": "index.js",
   "scripts": {
@@ -30,7 +30,7 @@
     "body-parser": "^1.17.2",
     "express": "^4.15.5",
     "k8w-extend-native": "^0.1.0",
-    "k8w-super-promise": "^0.1.1",
+    "k8w-super-promise": "^0.2.0",
     "log4js": "1",
     "ts-interface-validator": "^0.1.5",
     "tsrpc-protocol": "^0.2.2",

@@ -95,10 +95,10 @@ export default class RpcClient {
             httpReq.write(reqBody);
             httpReq.end();
 
-            output.onCancel = () => {
+            output.onCancel(() => {
                 this.config.showDebugLog && console.debug('[ApiCancel]', '#' + sn, rpcUrl)
                 httpReq.abort();
-            }
+            })
         })
 
         return output;
