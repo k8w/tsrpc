@@ -1,4 +1,4 @@
-import { TsRpcPtl, TsRpcReq, TsRpcRes, TsRpcError } from "tsrpc-protocol";
+import { TsRpcPtl, TsRpcReq, TsRpcRes, TsRpcError, ITsRpcClient } from "tsrpc-protocol";
 import http = require('http');
 import SuperPromise from 'k8w-super-promise';
 import ClientConfig from './models/ClientConfig';
@@ -6,7 +6,7 @@ import { DefaultClientConfig } from './models/ClientConfig';
 import { URL } from 'url';
 import 'k8w-extend-native';
 
-export default class RpcClient {
+export default class RpcClient implements ITsRpcClient {
 
     readonly config: ClientConfig;
     private _serverUrl: URL;
