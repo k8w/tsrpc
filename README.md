@@ -14,7 +14,7 @@ If you have any question, feel free to submit a issue.
 
 
 ```
-npm install tsrpc tsrpc-protocol
+npm install tsrpc
 ```
 
 ### Server
