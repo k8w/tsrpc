@@ -16,7 +16,7 @@ export default interface ApiResponse<T> extends Response {
     /**
      * Send error response
      */
-    error: (errmsg?: string, errinfo?: any) => Promise<void>;
+    error: (errmsg: string, errinfo?: any) => Promise<void>;
 
     /**
      * final output body by res.succ or res.error

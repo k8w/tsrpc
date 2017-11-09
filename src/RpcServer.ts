@@ -12,9 +12,11 @@ import * as http from 'http';
 import AutoImplementProtocol from './models/AutoImplementProtocol';
 import EnableLog4js from './models/EnableLog4js';
 import 'k8w-extend-native';
-const bodyParser = require('body-parser');
+import * as bodyParser from 'body-parser';
 
-export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next: Function) => void;
+export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next: () => void) => any;
+
+export type ExpressApplication = Overwrite<Express.Application, { use: (...handlers: RouterHandler[]) => void }>;
 
 export default class RpcServer {
     readonly config: ServerConfig;
@@ -91,21 +93,21 @@ export default class RpcServer {
             .replace(/\\/g, '/').replace(/Ptl(\w+)$/, '$1'); // /a/b/PtlC -> /a/b/C
     }
 
-    private _expressApp: Express.Application;
+    private _expressApp: ExpressApplication;
     private init() {
         if (this._expressApp) {
             return;
         }
 
         //new express app
-        let expressApp: Express.Application = Express();
+        let expressApp: ExpressApplication = Express() as any;
         this._expressApp = expressApp;
 
         //the frontest init
         //optimize useless header
         expressApp.disable('x-powered-by');
         //parse body
-        expressApp.use(bodyParser[this.config.binaryTransport ? 'raw' : 'text']({ limit: Infinity, type: () => true }))
+        expressApp.use((this.config.binaryTransport ? bodyParser.raw : bodyParser.text)({ limit: Infinity, type: () => true }))
         //extend rpcServer for req and res
         expressApp.use((req: ApiRequest<any>, res: ApiResponse<any>, next) => {
             req.rpcServer = this;
