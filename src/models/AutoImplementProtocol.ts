@@ -6,6 +6,13 @@ interface PtlDef {
     name: string;
     path: string;
 }
+
+/**
+ * 遍历目录下的所有PtlXXX文件
+ * 注意：会忽略“~”开头的文件和文件夹
+ * @param protocolPath 
+ * @param output 
+ */
 function getPtlPath(protocolPath: string, output?: PtlDef[]) {
     if (!output) {
         output = [];
@@ -13,6 +20,10 @@ function getPtlPath(protocolPath: string, output?: PtlDef[]) {
 
     let list = fs.readdirSync(protocolPath);
     for (let v of list) {
+        if (v.startsWith('~')) {
+            continue;
+        }
+
         let stat = fs.statSync(path.resolve(protocolPath, v));
         if (stat.isDirectory()) {
             getPtlPath(path.resolve(protocolPath, v), output);
