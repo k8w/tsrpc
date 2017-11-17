@@ -13,6 +13,7 @@ import AutoImplementProtocol from './models/AutoImplementProtocol';
 import EnableLog4js from './models/EnableLog4js';
 import 'k8w-extend-native';
 import * as bodyParser from 'body-parser';
+import * as fs from "fs";
 
 export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next: () => void) => any;
 
@@ -23,6 +24,9 @@ export default class TsRpcServer {
 
     constructor(conf: Partial<ServerConfig> & { protocolPath: string }) {
         this.config = Object.merge({}, DefaultServerConfig, conf);
+
+        //parse symlink protocol path
+        this.config.protocolPath = fs.realpathSync(this.config.protocolPath);
 
         //urlRootPath must ends with /
         if (!this.config.urlRootPath.endsWith('/')) {
