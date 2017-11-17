@@ -1,5 +1,5 @@
 // import * as path from 'path';
-// import RpcServer from '../src/RpcServer';
+// import RpcServer from '../src/TsRpcServer';
 // import PtlHelloWorld from '../test/protocol/PtlHelloWorld';
 // import ApiHelloWorld from '../test/api/ApiHelloWorld';
 

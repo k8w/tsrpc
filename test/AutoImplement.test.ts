@@ -1,18 +1,18 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import RpcServer from '../src/RpcServer';
+import TsRpcServer from '../src/TsRpcServer';
 import PtlHelloWorld from './protocol/PtlHelloWorld';
 import ApiHelloWorld from './api/ApiHelloWorld';
-import RpcClient from '../src/RpcClient';
+import TsRpcClient from '../src/TsRpcClient';
 import PtlHelloKing from './protocol/PtlHelloKing';
 import { TsRpcError } from 'tsrpc-protocol';
 
 describe('AutoImplement', function () {
-    let server: RpcServer;
-    let client: RpcClient;
+    let server: TsRpcServer;
+    let client: TsRpcClient;
 
     before(function () {
-        server = new RpcServer({
+        server = new TsRpcServer({
             autoImplement: true,
             apiPath: path.resolve(__dirname, 'api'),
             protocolPath: path.resolve(__dirname, 'protocol'),
@@ -28,7 +28,7 @@ describe('AutoImplement', function () {
 
         server.start();
 
-        client = new RpcClient({
+        client = new TsRpcClient({
             serverUrl: 'http://localhost:3000',
             protocolPath: path.resolve(__dirname, 'protocol')
         })
@@ -72,7 +72,7 @@ describe('AutoImplement', function () {
 
     it('api not exists', function () {
         assert.throws(function(){
-            new RpcServer({
+            new TsRpcServer({
                 autoImplement: true,
                 apiPath: path.resolve(__dirname, 'api_lack'),
                 protocolPath: path.resolve(__dirname, 'protocol'),

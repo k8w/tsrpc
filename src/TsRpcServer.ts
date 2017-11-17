@@ -18,7 +18,7 @@ export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next: 
 
 export type ExpressApplication = Overwrite<Express.Application, { use: (...handlers: RouterHandler[]) => void }>;
 
-export default class RpcServer {
+export default class TsRpcServer {
     readonly config: ServerConfig;
 
     constructor(conf: Partial<ServerConfig> & { protocolPath: string }) {

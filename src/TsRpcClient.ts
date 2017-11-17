@@ -6,7 +6,7 @@ import { DefaultClientConfig } from './models/ClientConfig';
 import { URL } from 'url';
 import 'k8w-extend-native';
 
-export default class RpcClient implements ITsRpcClient {
+export default class TsRpcClient implements ITsRpcClient {
 
     readonly config: ClientConfig;
     private _serverUrl: URL;
@@ -30,7 +30,7 @@ export default class RpcClient implements ITsRpcClient {
     }
 
     callApi<Req, Res>(ptl: TsRpcPtl<Req, Res>, req: Req = {} as Req, headers: object = {}): SuperPromise<Res, TsRpcError> {
-        let sn = ++RpcClient._sn;
+        let sn = ++TsRpcClient._sn;
         let rpcUrl = this.getPtlUrl(ptl);
 
         //debug log

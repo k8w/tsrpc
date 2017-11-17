@@ -1,18 +1,18 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import RpcServer from '../src/RpcServer';
+import TsRpcServer from '../src/TsRpcServer';
 import PtlHelloWorld from './protocol/PtlHelloWorld';
 import ApiHelloWorld from './api/ApiHelloWorld';
-import RpcClient from '../src/RpcClient';
+import TsRpcClient from '../src/TsRpcClient';
 import PtlHelloKing from './protocol/PtlHelloKing';
 import { TsRpcError } from 'tsrpc-protocol';
 
 describe('UrlRootPath', function () {
     it('ends with /', async function () {
-        let server: RpcServer;
-        let client: RpcClient;
+        let server: TsRpcServer;
+        let client: TsRpcClient;
 
-        server = new RpcServer({
+        server = new TsRpcServer({
             protocolPath: path.resolve(__dirname, 'protocol'),
             logRequestDetail: true,
             logResponseDetail: true,
@@ -21,7 +21,7 @@ describe('UrlRootPath', function () {
         server.implementPtl(PtlHelloWorld, ApiHelloWorld);
         server.start();
 
-        client = new RpcClient({
+        client = new TsRpcClient({
             serverUrl: 'http://localhost:3000/api/',
             protocolPath: path.resolve(__dirname, 'protocol')
         })
@@ -39,7 +39,7 @@ describe('UrlRootPath', function () {
 
         client.onRequest = client.onResponse = undefined;
 
-        client = new RpcClient({
+        client = new TsRpcClient({
             serverUrl: 'http://localhost:3000/api',
             protocolPath: path.resolve(__dirname, 'protocol')
         })
@@ -60,10 +60,10 @@ describe('UrlRootPath', function () {
     })
 
     it('not ends with /', async function () {
-        let server: RpcServer;
-        let client: RpcClient;
+        let server: TsRpcServer;
+        let client: TsRpcClient;
 
-        server = new RpcServer({
+        server = new TsRpcServer({
             protocolPath: path.resolve(__dirname, 'protocol'),
             logRequestDetail: true,
             logResponseDetail: true,
@@ -72,7 +72,7 @@ describe('UrlRootPath', function () {
         server.implementPtl(PtlHelloWorld, ApiHelloWorld);
         server.start();
 
-        client = new RpcClient({
+        client = new TsRpcClient({
             serverUrl: 'http://localhost:3000/api',
             protocolPath: path.resolve(__dirname, 'protocol')
         })
@@ -90,7 +90,7 @@ describe('UrlRootPath', function () {
 
         client.onRequest = client.onResponse = undefined;
 
-        client = new RpcClient({
+        client = new TsRpcClient({
             serverUrl: 'http://localhost:3000/api/',
             protocolPath: path.resolve(__dirname, 'protocol')
         })
