@@ -22,6 +22,13 @@ export default interface ServerConfig {
     autoImplement: boolean,
 
     /**
+     * If true, server would scan all Ptl in protocolPath and implement them with their ApiHandler.
+     * If no matched ApiHandler, it would throw error.
+     * @default false
+     */
+    forceAutoImplementAll: boolean,
+
+    /**
      * [Optional] only need when `autoImplement` is true
      * Api implementation (ApiXXX.ts) folder path, should be absolute
      */
@@ -105,6 +112,7 @@ export const DefaultServerConfig: ServerConfig = {
     urlRootPath: '/',
     protocolPath: '',
     autoImplement: false,
+    forceAutoImplementAll: false,
     showErrorReqId: true,
     logRequestDetail: true,
     logResponseDetail: false,

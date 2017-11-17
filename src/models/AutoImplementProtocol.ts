@@ -20,10 +20,6 @@ function getPtlPath(protocolPath: string, output?: PtlDef[]) {
 
     let list = fs.readdirSync(protocolPath);
     for (let v of list) {
-        if (v.startsWith('~')) {
-            continue;
-        }
-
         let stat = fs.statSync(path.resolve(protocolPath, v));
         if (stat.isDirectory()) {
             getPtlPath(path.resolve(protocolPath, v), output);
@@ -58,22 +54,31 @@ export default function AutoImplementProtocol(server: TsRpcServer, protocolPath:
     let ptls = getPtlRelativePath(protocolPath);
     let errorMsgs: string[] = []
     for (let ptl of ptls) {
+        //get Ptl
         let protocol: any;
-        let api: any;
         try {
             protocol = require(path.resolve(protocolPath, ptl.path, 'Ptl' + ptl.name)).default;
         }
         catch (e) {
-            errorMsgs.push(path.resolve(protocolPath, ptl.path, 'Ptl' + ptl.name) +': ' +e.message)
+            errorMsgs.push(path.resolve(protocolPath, ptl.path, 'Ptl' + ptl.name) + ': ' + e.message)
             continue;
         }
 
+        //get matched Api
+        let api: any;
         try {
             api = require(path.resolve(apiPath, ptl.path, 'Api' + ptl.name)).default;
         }
         catch (e) {
-            errorMsgs.push(path.resolve(apiPath, ptl.path, 'Api' + ptl.name) + ': ' + e.message)
-            continue;
+            //未指定forceAutoImplementAll 忽略找不到API的
+            if (e.code == 'MODULE_NOT_FOUND' && !server.config.forceAutoImplementAll) {
+                console.warn('Api not found: ' + path.resolve(apiPath, ptl.path, 'Api' + ptl.name));
+                continue;
+            }
+            else {
+                errorMsgs.push(path.resolve(apiPath, ptl.path, 'Api' + ptl.name) + ': ' + e.message)
+                continue;
+            }
         }
 
         // console.debug('自动注册协议', ptl.path, ptl.name, protocol.url);

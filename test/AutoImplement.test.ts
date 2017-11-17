@@ -74,10 +74,22 @@ describe('AutoImplement', function () {
         assert.throws(function(){
             new TsRpcServer({
                 autoImplement: true,
+                forceAutoImplementAll: true,
                 apiPath: path.resolve(__dirname, 'api_lack'),
                 protocolPath: path.resolve(__dirname, 'protocol'),
                 logRequestDetail: true,
                 logResponseDetail: true                
+            });
+        })
+
+        assert.doesNotThrow(function () {
+            new TsRpcServer({
+                autoImplement: true,
+                forceAutoImplementAll: false,
+                apiPath: path.resolve(__dirname, 'api_lack'),
+                protocolPath: path.resolve(__dirname, 'protocol'),
+                logRequestDetail: true,
+                logResponseDetail: true
             });
         })
     })
