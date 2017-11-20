@@ -25,9 +25,6 @@ export default class TsRpcServer {
     constructor(conf: Partial<ServerConfig> & { protocolPath: string }) {
         this.config = Object.merge({}, DefaultServerConfig, conf);
 
-        //parse symlink protocol path
-        this.config.protocolPath = fs.realpathSync(this.config.protocolPath);
-
         //urlRootPath must ends with /
         if (!this.config.urlRootPath.endsWith('/')) {
             this.config.urlRootPath += '/';
