@@ -125,7 +125,7 @@ export default class TsRpcServer {
             if (this.config.hideApiPath) {
                 //__tsrpc_url__ should appear
                 if (req.args.__tsrpc_url__ == null) {
-                    res.error('HideApiPath is enabled, set it to true too in your client config.', 'REQ_CANT_BE_RESOLVED')
+                    (res as any).apiPreCheckError = ['HideApiPath is enabled, set it to true too in your client config.', 'REQ_CANT_BE_RESOLVED']
                     return;
                 }
                 req.rpcUrl = req.args.__tsrpc_url__;
@@ -134,7 +134,7 @@ export default class TsRpcServer {
             else {
                 //__tsrpc_url__ should not appear
                 if (req.args.__tsrpc_url__) {
-                    res.error('HideApiPath is disabled, set it to false too in your client config.', 'REQ_CANT_BE_RESOLVED')
+                    (res as any).apiPreCheckError = ['HideApiPath is disabled, set it to false too in your client config.', 'REQ_CANT_BE_RESOLVED']
                     return;
                 }
 
@@ -142,26 +142,19 @@ export default class TsRpcServer {
                     req.rpcUrl = '/' + req.path.substr(this.config.urlRootPath.length);
                 }
                 else {
-                    res.error('Invalid path', 'INVALID_PATH')
+                    (res as any).apiPreCheckError = ['Invalid path', 'INVALID_PATH']
                     return;
                 }
             }
 
             //Not specify rpcUrl
             if (!req.rpcUrl) {
-                res.error('Request cannot be resolved', 'REQ_CANT_BE_RESOLVED')
-                return;
-            }
-
-            //404
-            if (!this._implementedUrl[req.rpcUrl]) {
-                //Error404: no url or protocol not registered
-                this.onPtlNotFound(req, res);
+                (res as any).apiPreCheckError = ['Request cannot be resolved', 'REQ_CANT_BE_RESOLVED']
                 return;
             }
 
             //OK: Protocol registered
-            req.rpcPtl = this._implementedUrl[req.rpcUrl].protocol;
+            req.rpcPtl = this._implementedUrl[req.rpcUrl] ? this._implementedUrl[req.rpcUrl].protocol : null as any;
             next();
         });
 
@@ -170,6 +163,26 @@ export default class TsRpcServer {
 
         //api handler (final router)
         expressApp.use(async (req: ApiRequest<any>, res: ApiResponse<any>) => {
+            //TODO 如果ApiReq解析失败，则报错
+            if (!req.args) {
+                console.error('Invalid Request Body', req.url, req.body)
+                res.status(400).send('Invalid Request Body');
+                return;
+            }
+            
+            //apiPreCheckError
+            if ((res as any).apiPreCheckError) {
+                res.error.apply(res, (res as any).apiPreCheckError);
+                return;
+            }
+
+            //404
+            if (!req.rpcPtl) {
+                //Error404: no url or protocol not registered
+                this.onPtlNotFound(req, res);
+                return;
+            }
+
             //log request
             console.log('[ApiReq]', '#' + req.reqId, req.rpcUrl, this.config.logRequestDetail ? req.args : '');
 

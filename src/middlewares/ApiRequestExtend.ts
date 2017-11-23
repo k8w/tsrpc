@@ -17,8 +17,7 @@ async function ApiRequestExtend(req: ApiRequest<any>, res: ApiResponse<any>, nex
         }
     }
     catch (e) {
-        console.error('Invalid Request Body', req.url, req.body)
-        res.status(400).send('Invalid Request Body');
+        req.args = null;
         return;
     }
 
