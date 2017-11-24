@@ -18,7 +18,6 @@ async function ApiRequestExtend(req: ApiRequest<any>, res: ApiResponse<any>, nex
     }
     catch (e) {
         req.args = null;
-        return;
     }
 
     next();
