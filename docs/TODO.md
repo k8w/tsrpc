@@ -6,10 +6,11 @@
 - [x] Client Cancel
 - [ ] res.succ type check
 - [ ] Auto Build and pack dependency (Ptl import)
-- [ ] SuperPromise.onCancel(func)
+- [x] SuperPromise.onCancel(func)
+- [ ] 支持ArrayBuffer/Blob类型
 
 ### Browser
-- [ ] BinaryTransport
+- [x] BinaryTransport
 
 ### Test Case
 - [x] TSRPC Error 直接返回给前台 不500
