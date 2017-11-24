@@ -108,7 +108,14 @@ export default class TsRpcServer {
         //optimize useless header
         expressApp.disable('x-powered-by');
         //parse body
-        expressApp.use((this.config.binaryTransport ? bodyParser.raw : bodyParser.text)({ limit: Infinity, type: () => true }))
+        expressApp.use((this.config.binaryTransport ? bodyParser.raw : bodyParser.text)({
+            limit: Infinity,
+            type: req => {
+                let type = req.get('Content-Type');
+                //当multipart/form-data时，不解析body（上传的情况）
+                return !(type && type.startsWith('multipart/form-data'));
+            }
+        }))
         //extend rpcServer for req and res
         expressApp.use((req: ApiRequest<any>, res: ApiResponse<any>, next) => {
             req.rpcServer = this;
