@@ -1,0 +1,173 @@
+[2017-11-24 17:04:38.138] [INFO] <8514> - √ TSRPC inited succ
+[2017-11-24 17:04:38.158] [ERROR] <8514> - [object Object]
+    at Object.<anonymous> (E:\Codes\tsrpc\test\test.ts:13:9)
+    at Module._compile (module.js:569:30)
+    at Module.m._compile (C:\Users\King\AppData\Local\Yarn\config\global\node_modules\ts-node\src\index.ts:392:23)
+    at Module._extensions..js (module.js:580:10)
+    at Object.require.extensions.(anonymous function) [as .ts] (C:\Users\King\AppData\Local\Yarn\config\global\node_modules\ts-node\src\index.ts:395:12)
+    at Module.load (module.js:503:32)
+    at tryModuleLoad (module.js:466:12)
+    at Function.Module._load (module.js:458:3)
+    at Function.Module.runMain (module.js:605:10)
+    at Object.<anonymous> (C:\Users\King\AppData\Local\Yarn\config\global\node_modules\ts-node\src\_bin.ts:182:12)
+[2017-11-24 17:04:38.159] [INFO] <8514> - log
+[2017-11-24 17:04:38.160] [INFO] <8514> - info
+[2017-11-24 17:04:38.160] [WARN] <8514> - warn
+[2017-11-24 17:04:38.161] [ERROR] <8514> - error
+[2017-11-24 17:04:38.162] [INFO] <8514> - √ Server started at 9999...
+[2017-11-24 17:04:40.305] [ERROR] <8514> - TypeError: Cannot read property '__tsrpc_url__' of null
+    at expressApp.use (E:\Codes\tsrpc\src\TsRpcServer.ts:136:29)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+    at Function.process_params (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:335:12)
+    at next (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:275:10)
+    at ApiResponseExtend (E:\Codes\tsrpc\src\middlewares\ApiResponseExtend.ts:37:5)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+[2017-11-24 17:04:40.803] [ERROR] <8514> - TypeError: Cannot read property '__tsrpc_url__' of null
+    at expressApp.use (E:\Codes\tsrpc\src\TsRpcServer.ts:136:29)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+    at Function.process_params (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:335:12)
+    at next (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:275:10)
+    at ApiResponseExtend (E:\Codes\tsrpc\src\middlewares\ApiResponseExtend.ts:37:5)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+[2017-11-24 17:04:43.231] [ERROR] <8514> - TypeError: Cannot read property '__tsrpc_url__' of null
+    at expressApp.use (E:\Codes\tsrpc\src\TsRpcServer.ts:136:29)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+    at Function.process_params (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:335:12)
+    at next (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:275:10)
+    at ApiResponseExtend (E:\Codes\tsrpc\src\middlewares\ApiResponseExtend.ts:37:5)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+[2017-11-24 17:04:43.278] [ERROR] <8514> - TypeError: Cannot read property '__tsrpc_url__' of null
+    at expressApp.use (E:\Codes\tsrpc\src\TsRpcServer.ts:136:29)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+    at Function.process_params (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:335:12)
+    at next (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:275:10)
+    at ApiResponseExtend (E:\Codes\tsrpc\src\middlewares\ApiResponseExtend.ts:37:5)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+[2017-11-24 17:04:58.204] [ERROR] <8514> - TypeError: Cannot read property '__tsrpc_url__' of null
+    at expressApp.use (E:\Codes\tsrpc\src\TsRpcServer.ts:136:29)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+    at Function.process_params (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:335:12)
+    at next (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:275:10)
+    at ApiResponseExtend (E:\Codes\tsrpc\src\middlewares\ApiResponseExtend.ts:37:5)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+[2017-11-24 17:04:58.285] [ERROR] <8514> - TypeError: Cannot read property '__tsrpc_url__' of null
+    at expressApp.use (E:\Codes\tsrpc\src\TsRpcServer.ts:136:29)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+    at Function.process_params (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:335:12)
+    at next (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:275:10)
+    at ApiResponseExtend (E:\Codes\tsrpc\src\middlewares\ApiResponseExtend.ts:37:5)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+[2017-11-24 17:06:21.613] [INFO] <ad9c> - √ TSRPC inited succ
+[2017-11-24 17:06:21.633] [ERROR] <ad9c> - [object Object]
+    at Object.<anonymous> (E:\Codes\tsrpc\test\test.ts:13:9)
+    at Module._compile (module.js:569:30)
+    at Module.m._compile (C:\Users\King\AppData\Local\Yarn\config\global\node_modules\ts-node\src\index.ts:392:23)
+    at Module._extensions..js (module.js:580:10)
+    at Object.require.extensions.(anonymous function) [as .ts] (C:\Users\King\AppData\Local\Yarn\config\global\node_modules\ts-node\src\index.ts:395:12)
+    at Module.load (module.js:503:32)
+    at tryModuleLoad (module.js:466:12)
+    at Function.Module._load (module.js:458:3)
+    at Function.Module.runMain (module.js:605:10)
+    at Object.<anonymous> (C:\Users\King\AppData\Local\Yarn\config\global\node_modules\ts-node\src\_bin.ts:182:12)
+[2017-11-24 17:06:21.634] [INFO] <ad9c> - log
+[2017-11-24 17:06:21.634] [INFO] <ad9c> - info
+[2017-11-24 17:06:21.634] [WARN] <ad9c> - warn
+[2017-11-24 17:06:21.634] [ERROR] <ad9c> - error
+[2017-11-24 17:06:21.637] [INFO] <ad9c> - √ Server started at 9999...
+[2017-11-24 17:06:24.181] [ERROR] <ad9c> - TypeError: Cannot read property '__tsrpc_url__' of null
+    at expressApp.use (E:\Codes\tsrpc\src\TsRpcServer.ts:140:29)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+    at Function.process_params (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:335:12)
+    at next (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:275:10)
+    at ApiResponseExtend (E:\Codes\tsrpc\src\middlewares\ApiResponseExtend.ts:37:5)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+[2017-11-24 17:06:24.261] [ERROR] <ad9c> - TypeError: Cannot read property '__tsrpc_url__' of null
+    at expressApp.use (E:\Codes\tsrpc\src\TsRpcServer.ts:140:29)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+    at Function.process_params (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:335:12)
+    at next (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:275:10)
+    at ApiResponseExtend (E:\Codes\tsrpc\src\middlewares\ApiResponseExtend.ts:37:5)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+[2017-11-24 17:06:27.326] [ERROR] <ad9c> - TypeError: Cannot read property '__tsrpc_url__' of null
+    at expressApp.use (E:\Codes\tsrpc\src\TsRpcServer.ts:140:29)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+    at Function.process_params (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:335:12)
+    at next (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:275:10)
+    at ApiResponseExtend (E:\Codes\tsrpc\src\middlewares\ApiResponseExtend.ts:37:5)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+[2017-11-24 17:06:27.374] [ERROR] <ad9c> - TypeError: Cannot read property '__tsrpc_url__' of null
+    at expressApp.use (E:\Codes\tsrpc\src\TsRpcServer.ts:140:29)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+    at Function.process_params (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:335:12)
+    at next (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:275:10)
+    at ApiResponseExtend (E:\Codes\tsrpc\src\middlewares\ApiResponseExtend.ts:37:5)
+    at Layer.handle [as handle_request] (E:\Codes\tsrpc\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (E:\Codes\tsrpc\node_modules\express\lib\router\index.js:317:13)
+    at E:\Codes\tsrpc\node_modules\express\lib\router\index.js:284:7
+[2017-11-24 17:06:51.379] [INFO] <9108> - √ TSRPC inited succ
+[2017-11-24 17:06:51.403] [ERROR] <9108> - [object Object]
+    at Object.<anonymous> (E:\Codes\tsrpc\test\test.ts:13:9)
+    at Module._compile (module.js:569:30)
+    at Module.m._compile (C:\Users\King\AppData\Local\Yarn\config\global\node_modules\ts-node\src\index.ts:392:23)
+    at Module._extensions..js (module.js:580:10)
+    at Object.require.extensions.(anonymous function) [as .ts] (C:\Users\King\AppData\Local\Yarn\config\global\node_modules\ts-node\src\index.ts:395:12)
+    at Module.load (module.js:503:32)
+    at tryModuleLoad (module.js:466:12)
+    at Function.Module._load (module.js:458:3)
+    at Function.Module.runMain (module.js:605:10)
+    at Object.<anonymous> (C:\Users\King\AppData\Local\Yarn\config\global\node_modules\ts-node\src\_bin.ts:182:12)
+[2017-11-24 17:06:51.405] [INFO] <9108> - log
+[2017-11-24 17:06:51.405] [INFO] <9108> - info
+[2017-11-24 17:06:51.406] [WARN] <9108> - warn
+[2017-11-24 17:06:51.413] [ERROR] <9108> - error
+[2017-11-24 17:06:51.414] [INFO] <9108> - √ Server started at 9999...
+[2017-11-24 17:06:51.566] [ERROR] <9108> - Invalid Request Body /asdg {}
+[2017-11-24 17:06:51.644] [ERROR] <9108> - Invalid Request Body /favicon.ico {}
+[2017-11-24 17:06:52.497] [ERROR] <9108> - Invalid Request Body /asdg {}
+[2017-11-24 17:06:52.565] [ERROR] <9108> - Invalid Request Body /favicon.ico {}
+[2017-11-24 17:06:52.680] [ERROR] <9108> - Invalid Request Body /asdg {}
+[2017-11-24 17:06:52.719] [ERROR] <9108> - Invalid Request Body /favicon.ico {}
+[2017-11-24 17:06:52.871] [ERROR] <9108> - Invalid Request Body /asdg {}
+[2017-11-24 17:06:52.911] [ERROR] <9108> - Invalid Request Body /favicon.ico {}
+[2017-11-24 17:06:53.067] [ERROR] <9108> - Invalid Request Body /asdg {}
+[2017-11-24 17:06:53.127] [ERROR] <9108> - Invalid Request Body /favicon.ico {}
+[2017-11-24 17:06:56.062] [ERROR] <9108> - Invalid Request Body /sfjsdfjsdfj {}
+[2017-11-24 17:06:56.101] [ERROR] <9108> - Invalid Request Body /favicon.ico {}

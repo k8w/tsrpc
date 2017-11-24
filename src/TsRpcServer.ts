@@ -122,6 +122,11 @@ export default class TsRpcServer {
         expressApp.use(ApiResponseExtend);
         //Check if protocol registered
         expressApp.use((req: ApiRequest<TsRpcReq>, res: ApiResponse<TsRpcRes>, next) => {
+            if (!req.args) {
+                next();
+                return;
+            }
+
             if (this.config.hideApiPath) {
                 //__tsrpc_url__ should appear
                 if (req.args.__tsrpc_url__ == null) {
