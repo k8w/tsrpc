@@ -1,6 +1,6 @@
 {
   "name": "tsrpc",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "description": "TypeScript full-stack RPC framework",
   "main": "index.js",
   "scripts": {

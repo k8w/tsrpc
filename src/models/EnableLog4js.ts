@@ -5,7 +5,7 @@ import * as uuid from 'uuid';
 const log4js = require('log4js');
 
 export interface Log4jsConfig {
-    level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR',
+    level: string,  // 'DEBUG' | 'INFO' | 'WARN' | 'ERROR',
     filename: string,
     path: string,
     keepDays: number
