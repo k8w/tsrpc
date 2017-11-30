@@ -7,7 +7,10 @@ async function ApiRequestExtend(req: ApiRequest<any>, res: ApiResponse<any>, nex
         
     //去除IPV4 IP的前缀
     if (req.ip.startsWith('::ffff:')) {
-        req.ip = req.ip.substr(7);
+        req.realIp = req.ip.substr(7);
+    }
+    else {
+        req.realIp = req.ip;
     }
 
     //解析输入参数
