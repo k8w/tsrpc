@@ -107,6 +107,9 @@ export default class TsRpcServer {
         //the frontest init
         //optimize useless header
         expressApp.disable('x-powered-by');
+        //show real IP
+        expressApp.set('trust proxy', true);
+
         //parse body
         expressApp.use((this.config.binaryTransport ? bodyParser.raw : bodyParser.text)({
             limit: Infinity,
