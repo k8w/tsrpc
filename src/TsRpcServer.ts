@@ -199,7 +199,7 @@ export default class TsRpcServer {
             }
 
             //log request
-            console.log('[ApiReq]', '#' + req.reqId, req.rpcUrl, this.config.logRequestDetail ? req.args : '');
+            console.log('[ApiReq]', '#' + req.reqId, req.rpcUrl, req.realIp, this.config.logRequestDetail ? req.args : '');
 
             //validate request
             let validateResult = this._implementedUrl[req.rpcUrl].reqValidator.validate(req.args);
