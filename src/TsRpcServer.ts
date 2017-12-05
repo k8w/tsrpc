@@ -184,7 +184,7 @@ export default class TsRpcServer {
                 res.status(400).send('Invalid Request Body');
                 return;
             }
-            
+
             //apiPreCheckError
             if ((res as any).apiPreCheckError) {
                 res.error.apply(res, (res as any).apiPreCheckError);
