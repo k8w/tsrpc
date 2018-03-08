@@ -1,9 +1,9 @@
 import * as path from 'path';
-import RpcServer from '../src/TsrpcServer';
+import TsrpcServer from '../src/TsrpcServer';
 import PtlHelloWorld from '../test/protocol/PtlHelloWorld';
 import ApiHelloWorld from '../test/api/ApiHelloWorld';
 
-let server = new RpcServer({
+let server = new TsrpcServer({
     protocolPath: path.resolve(__dirname, 'protocol'),
     binaryTransport: true
 });

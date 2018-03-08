@@ -94,7 +94,7 @@ export default class TsrpcServer {
             .replace(/\\/g, '/').replace(/Ptl(\w+)$/, '$1'); // /a/b/PtlC -> /a/b/C
     }
 
-    private _expressApp: ExpressApplication;
+    private _expressApp!: ExpressApplication;
     private init() {
         if (this._expressApp) {
             return;
@@ -244,7 +244,7 @@ export default class TsrpcServer {
         console.log('√ TSRPC inited succ')
     }
 
-    private _server: http.Server;
+    private _server!: http.Server;
     async start(port?: number) {
         this.init();
         port = port || this.config.defaultPort;

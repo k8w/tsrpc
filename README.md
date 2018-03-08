@@ -56,12 +56,12 @@ export default async function ApiHelloWorld(req: ApiRequest<ReqHelloWorld>, res:
 
 ```typescript
 // project/index.ts
-import {RpcServer} from 'tsrpc';
+import {TsrpcServer} from 'tsrpc';
 import * as path from 'path';
 import PtlHelloWorld from './protocol/PtlHelloWorld';
 import ApiHelloWorld from './protocol/ApiHelloWorld';
 
-let server = new RpcServer({
+let server = new TsrpcServer({
     protocolPath: path.resolve(__dirname, 'protocol')
 });
 // register protocol and API
@@ -72,10 +72,10 @@ server.start();
 #### Auto register protocol and API
 
 ```typescript
-import {RpcServer} from 'tsrpc';
+import {TsrpcServer} from 'tsrpc';
 import * as path from 'path';
 
-let server = new RpcServer({
+let server = new TsrpcServer({
     autoImplement: true,
     apiPath: path.resolve(__dirname, 'api'),
     protocolPath: path.resolve(__dirname, 'protocol')        
@@ -86,10 +86,10 @@ server.start();
 ### Client
 
 ```typescript
-import {RpcClient} from 'tsrpc';
+import {TsrpcClient} from 'tsrpc';
 import PtlHelloWorld from './protocol/PtlHelloWorld';
 
-let client = new RpcClient({
+let client = new TsrpcClient({
     serverUrl: 'http://localhost:3000',
     protocolPath: path.resolve(__dirname, 'protocol')
 })
@@ -115,10 +115,10 @@ npm install tsrpc-browser
 ```
 
 ```typescript
-import {RpcClient} from 'tsrpc-browser';
+import {TsrpcClient} from 'tsrpc-browser';
 import PtlHelloWorld from './protocol/PtlHelloWorld';
 
-let client = new RpcClient({
+let client = new TsrpcClient({
     serverUrl: 'http://localhost:3000'
     // Don't need protocolPath for Browser usage
 })
