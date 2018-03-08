@@ -1,12 +1,12 @@
-import TsRpcServer from '../TsRpcServer';
-import { TsRpcPtl, TsRpcRes } from 'tsrpc-protocol';
+import TsrpcServer from '../TsrpcServer';
+import { TsrpcPtl, TsrpcRes } from 'tsrpc-protocol';
 import { Response } from 'express';
 
 export default interface ApiResponse<T> extends Response {
     /**
      * TSRPC Server instance
      */
-    rpcServer: TsRpcServer;
+    rpcServer: TsrpcServer;
 
     /**
      * Send successful response
@@ -21,5 +21,5 @@ export default interface ApiResponse<T> extends Response {
     /**
      * final output body by res.succ or res.error
      */
-    rpcOutput?: TsRpcRes;
+    rpcOutput?: TsrpcRes;
 }

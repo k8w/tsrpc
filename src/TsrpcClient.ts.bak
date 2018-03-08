@@ -1,4 +1,4 @@
-import { TsRpcPtl, TsRpcReq, TsRpcRes, TsRpcError, ITsRpcClient } from "tsrpc-protocol";
+import { TsrpcPtl, TsrpcReq, TsrpcRes, TsrpcError, ITsrpcClient } from "tsrpc-protocol";
 import http = require('http');
 import SuperPromise from 'k8w-super-promise';
 import ClientConfig from './models/ClientConfig';
@@ -6,7 +6,7 @@ import { DefaultClientConfig } from './models/ClientConfig';
 import { URL } from 'url';
 import 'k8w-extend-native';
 
-export default class TsRpcClient implements ITsRpcClient {
+export default class TsrpcClient implements ITsrpcClient {
 
     readonly config: ClientConfig;
     private _serverUrl: URL;
@@ -29,8 +29,8 @@ export default class TsRpcClient implements ITsRpcClient {
         this._serverUrl = new URL(this.config.serverUrl);
     }
 
-    callApi<Req, Res>(ptl: TsRpcPtl<Req, Res>, req: Req = {} as Req, headers: object = {}): SuperPromise<Res, TsRpcError> {
-        let sn = ++TsRpcClient._sn;
+    callApi<Req, Res>(ptl: TsrpcPtl<Req, Res>, req: Req = {} as Req, headers: object = {}): SuperPromise<Res, TsrpcError> {
+        let sn = ++TsrpcClient._sn;
         let rpcUrl = this.getPtlUrl(ptl);
 
         //debug log
@@ -50,7 +50,7 @@ export default class TsRpcClient implements ITsRpcClient {
         };
 
         let rs, rj;
-        let output = new SuperPromise<Res, TsRpcError>(async (rs, rj) => {
+        let output = new SuperPromise<Res, TsrpcError>(async (rs, rj) => {
             const httpReq = http.request(options, res => {
                 if (!this.config.binaryTransport) {
                     res.setEncoding('utf8');
@@ -72,7 +72,7 @@ export default class TsRpcClient implements ITsRpcClient {
                         this.config.showDebugLog && console.debug(result.errmsg ? '[ApiErr]' : '[ApiRes]', `#${sn}`, rpcUrl, result);
 
                         //callback
-                        result.errmsg == null ? rs(result as Res) : rj(new TsRpcError(result.errmsg, result.errinfo));
+                        result.errmsg == null ? rs(result as Res) : rj(new TsrpcError(result.errmsg, result.errinfo));
 
                         //hook
                         this.onResponse && this.onResponse(ptl, req, result as any);
@@ -110,7 +110,7 @@ export default class TsRpcClient implements ITsRpcClient {
      * @param ptl 
      * @return like `/a/b/c/DoSomeThing`
      */
-    private getPtlUrl(ptl: TsRpcPtl<any, any>): string {
+    private getPtlUrl(ptl: TsrpcPtl<any, any>): string {
         let filename = ptl.filename.replace(/\.js$/, '.ts');
         if (!filename.startsWith(this.config.protocolPath) || !filename.endsWith('.ts')) {
             throw new Error('Error protocol filename (not in the protocolPath) : ' + filename);
@@ -120,8 +120,8 @@ export default class TsRpcClient implements ITsRpcClient {
     }
 
     //hooks
-    onRequest: ((ptl: TsRpcPtl<any, any>, req: TsRpcReq) => void) | null | undefined;
-    onResponse: ((ptl: TsRpcPtl<any, any>, req: TsRpcReq, res: TsRpcRes) => void) | null | undefined;
+    onRequest: ((ptl: TsrpcPtl<any, any>, req: TsrpcReq) => void) | null | undefined;
+    onResponse: ((ptl: TsrpcPtl<any, any>, req: TsrpcReq, res: TsrpcRes) => void) | null | undefined;
 }
 
 

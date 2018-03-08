@@ -23,9 +23,9 @@ npm install tsrpc
 
 ```typescript
 // project/protocol/PtlHelloWorld.ts
-import { TsRpcPtl } from "tsrpc-protocol";
+import { TsrpcPtl } from "tsrpc-protocol";
 
-const PtlHelloWorld = new TsRpcPtl<ReqHelloWorld, ResHelloWorld>(__filename);
+const PtlHelloWorld = new TsrpcPtl<ReqHelloWorld, ResHelloWorld>(__filename);
 export default PtlHelloWorld;
 
 export interface ReqHelloWorld {
@@ -43,7 +43,7 @@ export interface ResHelloWorld {
 // project/api/ApiHelloWorld.ts
 import {ApiRequest,ApiResponse} from 'tsrpc';
 import { ReqHelloWorld, ResHelloWorld } from '../protocol/PtlHelloWorld';
-import { TsRpcError } from 'tsrpc-protocol';
+import { TsrpcError } from 'tsrpc-protocol';
 
 export default async function ApiHelloWorld(req: ApiRequest<ReqHelloWorld>, res: ApiResponse<ResHelloWorld>) {
     res.succ({

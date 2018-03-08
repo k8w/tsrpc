@@ -1,11 +1,11 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import TsRpcServer from '../src/TsRpcServer';
+import TsrpcServer from '../src/TsrpcServer';
 import PtlHelloWorld from './protocol/PtlHelloWorld';
 import ApiHelloWorld from './api/ApiHelloWorld';
-import TsRpcClient from '../src/TsRpcClient';
+import TsrpcClient from '../src/TsrpcClient';
 import PtlHelloKing from './protocol/PtlHelloKing';
-import { TsRpcError } from 'tsrpc-protocol';
+import { TsrpcError } from 'tsrpc-protocol';
 import BinaryTextCoder from '../src/models/BinaryTextCoder';
 
 function encode(content: any): Buffer {
@@ -24,11 +24,11 @@ function decode(buf: Buffer): any {
 }
 
 describe('BinaryTransport', function () {
-    let server: TsRpcServer;
-    let client: TsRpcClient;
+    let server: TsrpcServer;
+    let client: TsrpcClient;
 
     before(function () {
-        server = new TsRpcServer({
+        server = new TsrpcServer({
             protocolPath: path.resolve(__dirname, 'protocol'),
             logRequestDetail: true,
             logResponseDetail: true,
@@ -39,7 +39,7 @@ describe('BinaryTransport', function () {
         server.implementPtl(PtlHelloWorld, ApiHelloWorld);
         server.start();
 
-        client = new TsRpcClient({
+        client = new TsrpcClient({
             serverUrl: 'http://localhost:3000',
             protocolPath: path.resolve(__dirname, 'protocol'),
             binaryTransport: true,

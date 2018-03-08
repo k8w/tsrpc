@@ -7,8 +7,8 @@
  */
 
 import 'k8w-extend-native';
-import TsRpcServer from './src/TsRpcServer';
-import TsRpcClient from './src/TsRpcClient';
+import TsrpcServer from './src/TsrpcServer';
+import TsrpcClient from './src/TsrpcClient';
 import ApiRequest from './src/models/ApiRequest';
 import ApiResponse from './src/models/ApiResponse';
-export { TsRpcServer, TsRpcClient, ApiRequest, ApiResponse };
+export { TsrpcServer, TsrpcClient, ApiRequest, ApiResponse };

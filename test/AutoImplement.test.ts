@@ -1,18 +1,18 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import TsRpcServer from '../src/TsRpcServer';
+import TsrpcServer from '../src/TsrpcServer';
 import PtlHelloWorld from './protocol/PtlHelloWorld';
 import ApiHelloWorld from './api/ApiHelloWorld';
-import TsRpcClient from '../src/TsRpcClient';
+import TsrpcClient from '../src/TsrpcClient';
 import PtlHelloKing from './protocol/PtlHelloKing';
-import { TsRpcError } from 'tsrpc-protocol';
+import { TsrpcError } from 'tsrpc-protocol';
 
 describe('AutoImplement', function () {
-    let server: TsRpcServer;
-    let client: TsRpcClient;
+    let server: TsrpcServer;
+    let client: TsrpcClient;
 
     before(function () {
-        server = new TsRpcServer({
+        server = new TsrpcServer({
             autoImplement: true,
             apiPath: path.resolve(__dirname, 'api'),
             protocolPath: path.resolve(__dirname, 'protocol'),
@@ -28,7 +28,7 @@ describe('AutoImplement', function () {
 
         server.start();
 
-        client = new TsRpcClient({
+        client = new TsrpcClient({
             serverUrl: 'http://localhost:3000',
             protocolPath: path.resolve(__dirname, 'protocol')
         })
@@ -52,27 +52,27 @@ describe('AutoImplement', function () {
             assert(false, 'Should not get res')
         }
         catch (e) {
-            assert.ok(e instanceof TsRpcError);
+            assert.ok(e instanceof TsrpcError);
             assert.ok(e.message.startsWith('Internal Server Error'));
             assert.equal(e.info, 'UNHANDLED_API_ERROR');
         }
     })
 
-    it('TsRpcError', async function () {
+    it('TsrpcError', async function () {
         try {
-            await client.callApi(PtlHelloWorld, { name: 'TsRpcError' });
+            await client.callApi(PtlHelloWorld, { name: 'TsrpcError' });
             assert(false, 'Should not get res')
         }
         catch (e) {
-            assert.ok(e instanceof TsRpcError);
-            assert.ok(e.message.startsWith('TsRpcError'));
-            assert.equal(e.info, 'TsRpcError');
+            assert.ok(e instanceof TsrpcError);
+            assert.ok(e.message.startsWith('TsrpcError'));
+            assert.equal(e.info, 'TsrpcError');
         }
     })
 
     it('api not exists', function () {
         assert.throws(function(){
-            new TsRpcServer({
+            new TsrpcServer({
                 autoImplement: true,
                 forceAutoImplementAll: true,
                 apiPath: path.resolve(__dirname, 'api_lack'),
@@ -83,7 +83,7 @@ describe('AutoImplement', function () {
         })
 
         assert.doesNotThrow(function () {
-            new TsRpcServer({
+            new TsrpcServer({
                 autoImplement: true,
                 forceAutoImplementAll: false,
                 apiPath: path.resolve(__dirname, 'api_lack'),

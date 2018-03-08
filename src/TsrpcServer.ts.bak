@@ -7,7 +7,7 @@ import { DefaultServerConfig } from './models/ServerConfig';
 import ApiHandler from './models/ApiHandler';
 import ApiResponseExtend from './middlewares/ApiResponseExtend';
 import ValidatorManager, { IValidator } from 'ts-interface-validator';
-import { TsRpcPtl, TsRpcReq, TsRpcRes, TsRpcError } from 'tsrpc-protocol';
+import { TsrpcPtl, TsrpcReq, TsrpcRes, TsrpcError } from 'tsrpc-protocol';
 import * as http from 'http';
 import AutoImplementProtocol from './models/AutoImplementProtocol';
 import EnableLog4js from './models/EnableLog4js';
@@ -19,7 +19,7 @@ export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next: 
 
 export type ExpressApplication = Overwrite<Express.Application, { use: (...handlers: RouterHandler[]) => void }>;
 
-export default class TsRpcServer {
+export default class TsrpcServer {
     readonly config: ServerConfig;
 
     constructor(conf: Partial<ServerConfig> & { protocolPath: string }) {
@@ -54,7 +54,7 @@ export default class TsRpcServer {
 
     protected _implementedUrl: {
         [rpcUrl: string]: {
-            protocol: TsRpcPtl<any, any>,
+            protocol: TsrpcPtl<any, any>,
             handler: ApiHandler<any, any>,
             reqValidator: IValidator
         }
@@ -64,7 +64,7 @@ export default class TsRpcServer {
      * @param protocol PtlXXX
      * @param handler ApiXXX
      */
-    implementPtl<Req, Res>(protocol: TsRpcPtl<Req, Res>, handler: ApiHandler<Req, Res>) {
+    implementPtl<Req, Res>(protocol: TsrpcPtl<Req, Res>, handler: ApiHandler<Req, Res>) {
         let url = this.getPtlUrl(protocol);
         //duplicate warn
         if (this._implementedUrl[url]) {
@@ -85,7 +85,7 @@ export default class TsRpcServer {
      * Without `/` at the beginning and the end
      * @param ptl 
      */
-    private getPtlUrl(ptl: TsRpcPtl<any, any>): string {
+    private getPtlUrl(ptl: TsrpcPtl<any, any>): string {
         let filename = ptl.filename.replace(/\.js$/, '.ts');
         if (!filename.startsWith(this.config.protocolPath) || !filename.endsWith('.ts')) {
             throw new Error('Protocol is not in the protocolPath : ' + filename);
@@ -131,7 +131,7 @@ export default class TsRpcServer {
         //Res extend
         expressApp.use(ApiResponseExtend);
         //Check if protocol registered
-        expressApp.use((req: ApiRequest<TsRpcReq>, res: ApiResponse<TsRpcRes>, next) => {
+        expressApp.use((req: ApiRequest<TsrpcReq>, res: ApiResponse<TsrpcRes>, next) => {
             if (!req.args) {
                 next();
                 return;
@@ -216,8 +216,8 @@ export default class TsRpcServer {
                 let result = await this._implementedUrl[req.rpcUrl].handler(req, res);
             }
             catch (e) {
-                //TsRpcError is return to client directly
-                if (e instanceof TsRpcError) {
+                //TsrpcError is return to client directly
+                if (e instanceof TsrpcError) {
                     res.error(e.message, e.info);
                 }
                 else {

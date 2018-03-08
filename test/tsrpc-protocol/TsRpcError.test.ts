@@ -1,16 +1,16 @@
 import * as assert from 'assert';
-import { TsRpcError } from 'tsrpc-protocol';
+import { TsrpcError } from 'tsrpc-protocol';
 
-describe('TsRpcError', function () {
+describe('TsrpcError', function () {
     let error = new Error('test');
-    let rpcError = new TsRpcError('test', 'info');
+    let rpcError = new TsrpcError('test', 'info');
 
-    it('TsRpcError is Error', function () {        
+    it('TsrpcError is Error', function () {        
         assert(rpcError instanceof Error);
-        assert(rpcError instanceof TsRpcError);
+        assert(rpcError instanceof TsrpcError);
     })
 
-    it('Error is not TsRpcError', function () {
-        assert(!(error as any instanceof TsRpcError));
+    it('Error is not TsrpcError', function () {
+        assert(!(error as any instanceof TsrpcError));
     })
 })

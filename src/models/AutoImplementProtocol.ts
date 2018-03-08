@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import TsRpcServer from '../TsRpcServer';
+import TsrpcServer from '../TsrpcServer';
 
 interface PtlDef {
     name: string;
@@ -50,7 +50,7 @@ function getPtlRelativePath(protocolPath: string): PtlDef[] {
  * Auto implement protocols (protocolPath -> apiPath)
  * @return null represent succ, otherwise is errmsgs
  */
-export default function AutoImplementProtocol(server: TsRpcServer, protocolPath: string, apiPath: string): string[] | null {
+export default function AutoImplementProtocol(server: TsrpcServer, protocolPath: string, apiPath: string): string[] | null {
     let ptls = getPtlRelativePath(protocolPath);
     let errorMsgs: string[] = []
     for (let ptl of ptls) {

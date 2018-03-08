@@ -33,7 +33,7 @@
     "k8w-super-promise": "*",
     "log4js": "^1",
     "ts-interface-validator": "*",
-    "tsrpc-protocol": "*",
+    "tsrpc-protocol": "^1.0.1",
     "uuid": "^3.1.0"
   }
 }
