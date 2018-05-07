@@ -49,6 +49,12 @@ export default interface ClientConfig {
      * Default is true.
      */
     showDebugLog: boolean;
+
+    /**
+     * If true, every res raw data would appear in console.debug
+     * Default is false
+     */
+    showRawRecvLog: boolean;
 }
 
 /**
@@ -63,5 +69,6 @@ export const DefaultClientConfig: ClientConfig = {
     binaryTransport: false,
     binaryEncoder: BinaryTextCoder.encode,
     binaryDecoder: BinaryTextCoder.decode,
-    showDebugLog: true
+    showDebugLog: true,
+    showRawRecvLog: false
 }

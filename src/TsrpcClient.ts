@@ -58,7 +58,7 @@ export default class TsrpcClient implements ITsrpcClient {
 
                 let data: any[] = [];
                 res.on('data', (chunk: any) => {
-                    console.log('recv', chunk)
+                    this.config.showRawRecvLog && console.debug('RawRecv', chunk)
                     data.push(chunk);
                 });
                 res.on('end', async () => {
