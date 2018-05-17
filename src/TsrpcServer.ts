@@ -44,10 +44,10 @@ export default class TsrpcServer {
             console.log('Start auto implement protocol...');
             let result = AutoImplementProtocol(this, this.config.protocolPath, this.config.apiPath);
             if (result == null) {
-                console.log('√ Auto implement protocol succ')
+                console.log('Auto implement protocol succ')
             }
             else {
-                throw new Error('× Auto implement protocol failed:\n' + result.map((v, i) => `    ${i + 1}. ` + v).join('\n'))
+                throw new Error('Auto implement protocol failed:\n' + result.map((v, i) => `    ${i + 1}. ` + v).join('\n'))
             }
         }
     }
@@ -241,7 +241,7 @@ export default class TsrpcServer {
             this.onApiComplete && this.onApiComplete(req, res);
         })
 
-        console.log('√ TSRPC inited succ')
+        console.log('TSRPC inited succ')
     }
 
     private _server!: http.Server;
@@ -252,12 +252,13 @@ export default class TsrpcServer {
         return new Promise<void>((rs, rj) => {
             try {
                 this._server = this._expressApp.listen(port, () => {
-                    console.log(`√ Server started at ${port}...`)
+                    console.log(`Server started at ${port}...`)
                     rs();
                 });
             }
             catch (e) {
-                rj(`× Port ${port} is already in use.`)
+                console.error(`Port ${port} is already in use.`)
+                rj(e);
             }
 
         })
