@@ -9,6 +9,9 @@ async function ApiRequestExtend(req: ApiRequest<any>, res: ApiResponse<any>, nex
     if (req.ip.startsWith('::ffff:')) {
         req.realIp = req.ip.substr(7);
     }
+    else if (req.ip === '::1') {
+        req.realIp = '127.0.0.1';
+    }
     else {
         req.realIp = req.ip;
     }

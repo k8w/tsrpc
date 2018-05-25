@@ -13,11 +13,12 @@ async function flushOutput(res: ApiResponse<any>) {
     }
 }
 
-function ApiResponseExtend(req: ApiRequest<any>, res: ApiResponse<any>, next: any) {    
+function ApiResponseExtend(req: ApiRequest<any>, res: ApiResponse<any>, next: any) {
     //给ApiResponse扩展succ和error方法
     res.succ = async (body: any) => {
         res.rpcOutput = body;
         await flushOutput(res);
+        console.log('[ApiRes]', '#' + req.reqId, req.rpcServer.config.logResponseDetail ? res.rpcOutput : '');
     };
 
     res.error = async (errmsg: string, errinfo?: any) => {
@@ -32,6 +33,7 @@ function ApiResponseExtend(req: ApiRequest<any>, res: ApiResponse<any>, next: an
         }
 
         await flushOutput(res);
+        console.error('[ApiErr]', '#' + req.reqId, 'url=' + req.url, 'rpcUrl=' + req.rpcUrl, 'ip=' + req.realIp, 'Req=', req.args, 'Res=', res.rpcOutput);
     };
 
     next();

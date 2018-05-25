@@ -225,18 +225,6 @@ export default class TsrpcServer {
                 }
             }
 
-            //log response
-            if (res.rpcOutput) {
-                if (res.rpcOutput.errmsg == null) {
-                    //ApiRes
-                    console.log('[ApiRes]', '#' + req.reqId, this.config.logResponseDetail ? res.rpcOutput : '');
-                }
-                else {
-                    //error
-                    console.error('[ApiErr]', '#' + req.reqId, res.rpcOutput);
-                }
-            }
-
             //complete event (succ or error)
             this.onApiComplete && this.onApiComplete(req, res);
         })
