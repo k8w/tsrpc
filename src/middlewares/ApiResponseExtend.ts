@@ -33,7 +33,7 @@ function ApiResponseExtend(req: ApiRequest<any>, res: ApiResponse<any>, next: an
         }
 
         await flushOutput(res);
-        console.error('[ApiErr]', '#' + req.reqId, 'url=' + req.url, 'rpcUrl=' + req.rpcUrl, 'ip=' + req.realIp, 'Req=', req.args, 'Res=', res.rpcOutput);
+        console.error('[ApiErr]', '#' + req.reqId, req.rpcUrl, req.realIp, req.args, res.rpcOutput);
     };
 
     next();
