@@ -81,7 +81,7 @@ export default function AutoImplementProtocol(server: TsrpcServer, protocolPath:
             }
         }
 
-        console.debug('自动注册协议', ptl.path, ptl.name, protocol.url);
+        // console.debug('自动注册协议', ptl.path, ptl.name);
         server.implementPtl(protocol, api);
     }
 

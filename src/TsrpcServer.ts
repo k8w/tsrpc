@@ -65,7 +65,7 @@ export default class TsrpcServer {
      * @param handler ApiXXX
      */
     implementPtl<Req, Res>(protocol: TsrpcPtl<Req, Res>, handler: ApiHandler<Req, Res>) {
-        let url = this.getPtlUrl(protocol);
+        let url = this.getPtlUrl(protocol);        
         //duplicate warn
         if (this._implementedUrl[url]) {
             console.warn('You are implementing a duplicated protocol: ' + protocol.filename, 'url=' + url);
@@ -78,6 +78,8 @@ export default class TsrpcServer {
             handler: handler,
             reqValidator: reqValidator
         }
+
+        console.log('Protocol registered: ', protocol.name, protocol.filename);
     }
 
     /**
