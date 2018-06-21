@@ -91,6 +91,11 @@ export default class TsrpcClient implements ITsrpcClient {
                 }
             });
 
+            if (this.config.hideApiPath) {
+                req = Object.assign({
+                    __tsrpc_url__: rpcUrl
+                }, req);
+            }
             let reqBody = this.config.binaryTransport ? await this.config.binaryEncoder(req) : await this.config.ptlEncoder(req);
             httpReq.write(reqBody);
             httpReq.end();

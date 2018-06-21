@@ -18,7 +18,8 @@ describe('HelloWorld', function () {
             logRequestDetail: true,
             logResponseDetail: true,
             ptlEncoder: PickSomeFlower.makeFlower,
-            ptlDecoder: PickSomeFlower.parseFlower
+            ptlDecoder: PickSomeFlower.parseFlower,
+            hideApiPath: true
         });
         server.implementPtl(PtlHelloWorld, ApiHelloWorld);
         server.start();
@@ -27,7 +28,8 @@ describe('HelloWorld', function () {
             serverUrl: 'http://localhost:3000',
             protocolPath: path.resolve(__dirname, 'protocol'),
             ptlEncoder: PickSomeFlower.makeFlower,
-            ptlDecoder: PickSomeFlower.parseFlower
+            ptlDecoder: PickSomeFlower.parseFlower,
+            hideApiPath: true
         })
     })
 
