@@ -79,7 +79,7 @@ export default class TsrpcServer {
             reqValidator: reqValidator
         }
 
-        console.log('Protocol registered: ', protocol.name, protocol.filename);
+        console.log('Protocol registered succ: ', url, protocol.filename);
     }
 
     /**
