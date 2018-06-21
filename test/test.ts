@@ -1,7 +1,7 @@
 import * as path from 'path';
 import TsrpcServer from '../src/TsrpcServer';
-import PtlHelloWorld from '../test/protocol/PtlHelloWorld';
-import ApiHelloWorld from '../test/api/ApiHelloWorld';
+import PtlHelloWorld from './protocol/PtlHelloWorld';
+import ApiHelloWorld from './api/ApiHelloWorld';
 
 let server = new TsrpcServer({
     protocolPath: path.resolve(__dirname, 'protocol'),
