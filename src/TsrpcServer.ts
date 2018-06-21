@@ -114,7 +114,7 @@ export default class TsrpcServer {
         expressApp.use((this.config.binaryTransport ? bodyParser.raw : bodyParser.text)({
             limit: Infinity,
             type: req => {
-                let type = req.get('Content-Type');
+                let type = req.headers['content-type'];
                 //当multipart/form-data时，不解析body（上传的情况）
                 return !(type && type.startsWith('multipart/form-data'));
             }

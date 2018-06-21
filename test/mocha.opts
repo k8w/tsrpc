@@ -2,3 +2,4 @@
 --recursive
 --timeout 999999
 --colors
+--exit

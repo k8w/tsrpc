@@ -72,7 +72,7 @@ export default function AutoImplementProtocol(server: TsrpcServer, protocolPath:
         catch (e) {
             //未指定forceAutoImplementAll 忽略找不到API的
             if (e.code == 'MODULE_NOT_FOUND' && !server.config.forceAutoImplementAll) {
-                console.warn('Api not found: ' + path.resolve(apiPath, ptl.path, 'Api' + ptl.name));
+                console.warn('Api not found: ' + path.resolve(apiPath, ptl.path, 'Api' + ptl.name), e);
                 continue;
             }
             else {
@@ -81,7 +81,7 @@ export default function AutoImplementProtocol(server: TsrpcServer, protocolPath:
             }
         }
 
-        // console.debug('自动注册协议', ptl.path, ptl.name, protocol.url);
+        console.debug('自动注册协议', ptl.path, ptl.name, protocol.url);
         server.implementPtl(protocol, api);
     }
 
