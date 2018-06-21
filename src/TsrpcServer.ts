@@ -143,6 +143,7 @@ export default class TsrpcServer {
                 //__tsrpc_url__ should appear
                 if (req.args.__tsrpc_url__ == null) {
                     (res as any).apiPreCheckError = ['HideApiPath is enabled, set it to true too in your client config.', 'REQ_CANT_BE_RESOLVED']
+                    next();
                     return;
                 }
                 req.rpcUrl = req.args.__tsrpc_url__;
@@ -152,6 +153,7 @@ export default class TsrpcServer {
                 //__tsrpc_url__ should not appear
                 if (req.args.__tsrpc_url__) {
                     (res as any).apiPreCheckError = ['HideApiPath is disabled, set it to false too in your client config.', 'REQ_CANT_BE_RESOLVED']
+                    next();
                     return;
                 }
 
@@ -160,6 +162,7 @@ export default class TsrpcServer {
                 }
                 else {
                     (res as any).apiPreCheckError = ['Invalid path', 'INVALID_PATH']
+                    next();
                     return;
                 }
             }
@@ -167,6 +170,7 @@ export default class TsrpcServer {
             //Not specify rpcUrl
             if (!req.rpcUrl) {
                 (res as any).apiPreCheckError = ['Request cannot be resolved', 'REQ_CANT_BE_RESOLVED']
+                next();
                 return;
             }
 
