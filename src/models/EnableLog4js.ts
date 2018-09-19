@@ -8,7 +8,8 @@ export interface Log4jsConfig {
     level: string,  // 'DEBUG' | 'INFO' | 'WARN' | 'ERROR',
     filename: string,
     path: string,
-    keepDays: number
+    keepDays: number,
+    pattern?: string
 }
 
 /**
@@ -47,7 +48,7 @@ export default function EnableLog4js(logFiles: Log4jsConfig[]) {
                 type: 'dateFile',
                 filename: path.resolve(logFile.path, logFile.filename),
                 daysToKeep: logFile.keepDays,
-                pattern: '-yyyyMMdd',
+                pattern: logFile.pattern || '-yyyyMMdd',
                 alwaysIncludePattern: true
             },
             category: instanceId

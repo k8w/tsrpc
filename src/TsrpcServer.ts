@@ -13,7 +13,6 @@ import AutoImplementProtocol from './models/AutoImplementProtocol';
 import EnableLog4js from './models/EnableLog4js';
 import 'k8w-extend-native';
 import * as bodyParser from 'body-parser';
-import * as fs from "fs";
 
 export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next: () => void) => any;
 
