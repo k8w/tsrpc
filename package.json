@@ -1,6 +1,6 @@
 {
   "name": "tsrpc",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "TypeScript full-stack RPC framework",
   "main": "index.js",
   "scripts": {
@@ -32,7 +32,7 @@
     "k8w-extend-native": "*",
     "k8w-super-promise": "*",
     "log4js": "^1",
-    "ts-interface-validator": "^1.0.0",
+    "ts-interface-validator": "^1.1.0",
     "tsrpc-protocol": "^1.0.1",
     "uuid": "^3.1.0"
   }
