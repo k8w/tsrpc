@@ -1,6 +1,6 @@
-import { TSRPCServer } from "..";
-import { serviceProto, ServiceType } from './proto/serviceProto';
-import { TSRPCError } from '../src/models/TSRPCError';
+import { TSRPCServer } from "../..";
+import { serviceProto, ServiceType } from '../proto/serviceProto';
+import { TSRPCError } from '../../src/models/TsrpcError';
 import * as path from "path";
 
 let server = new TSRPCServer<ServiceType & { session: any }>({

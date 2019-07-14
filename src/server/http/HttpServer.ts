@@ -13,7 +13,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
     private _server?: http.Server;
 
-    constructor(options: HttpServerOptions) {
+    constructor(options?: Partial<HttpServerOptions>) {
         super(Object.assign({}, defaultHttpServerOptions, options));
     }
 
@@ -30,6 +30,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
         return new Promise(rs => {
             this._status = 'opening';
+            this.logger.log(`Starting HTTP Server ...`);
             this._server = http.createServer((req, res) => {
                 let conn: HttpConnection<ServiceType> | undefined;
 
@@ -58,6 +59,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
             this._server.listen(this._options.port, () => {
                 this._status = 'open';
+                this.logger.log(`Server started at ${this._options.port}`);
                 rs();
             })
         });
@@ -95,54 +97,30 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
         }
 
         if (parsed.type === 'api') {
-            let call: ApiCallHttp;
-            let succ: ApiCallHttp['succ'] = res => { conn.sendApiSucc(call, res) };
-            let error: ApiCallHttp['error'] = (msg, info) => { conn.sendApiError(call, msg, info) };
             let sn = this._apiReqSnCounter.getNext();
-            call = {
+            return ApiCallHttp.pool.get({
                 conn: conn,
                 sn: sn,
-                type: 'api',
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
                     prefix: `API#${sn} ${parsed.service.name}`
                 }),
                 service: parsed.service,
-                req: parsed.req,
-                res: undefined,
-
-                // Methods
-                succ: succ,
-                error: error
-            }
-            return call
+                req: parsed.req
+            })
         }
         else {
-            let call: MsgCallHttp = {
+            return MsgCallHttp.pool.get({
                 conn: conn,
-                type: 'msg',
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
                     prefix: `MSG ${parsed.service.name}`
                 }),
                 service: parsed.service,
                 msg: parsed.msg
-            }
-            return call;
+            })
         }
     }
-
-    protected _afterApi(call: ApiCallHttp) {
-        // Clean Call & Conn
-        HttpConnection.pool.put(call.conn);
-    }
-
-    protected _afterMsg(call: MsgCallHttp) {
-        // Clean Call & Conn
-        HttpConnection.pool.put(call.conn);
-    }
-
-
 }
 
 export const defaultHttpServerOptions: HttpServerOptions = {

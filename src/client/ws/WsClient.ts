@@ -1,24 +1,20 @@
 import WebSocket from 'ws';
-import { ApiError } from '../proto/TransportData';
-import { ServiceProto } from '../proto/ServiceProto';
-import { Transporter, RecvData } from '../models/Transporter';
-import { HandlerManager } from '../models/HandlerManager';
+import { ApiError } from '../../proto/TransportData';
+import { ServiceProto } from '../../proto/ServiceProto';
+import { Transporter, RecvData } from '../../models/Transporter';
+import { HandlerManager } from '../../models/HandlerManager';
+import { BaseServiceType } from '../../proto/BaseServiceType';
+import { CallApiOptions } from '../models/CallApiOptions';
 
-export interface BaseClientCustomType {
-    req: any,
-    res: any,
-    msg: any
-}
+export class WebSocketClient<ServiceType extends BaseServiceType = any> {
 
-export class WebSocketClient<ClientCustomType extends BaseClientCustomType> {
-
-    private readonly _options: ClientOptions;
+    private _options: WsClientOptions;
 
     private _transporter: Transporter;
     private _ws?: WebSocket;
     private _msgHandlers: HandlerManager = new HandlerManager();
 
-    constructor(options: Pick<ClientOptions, 'server' | 'proto'> & Partial<ClientOptions>) {
+    constructor(options: Pick<WsClientOptions, 'server' | 'proto'> & Partial<WsClientOptions>) {
         this._options = Object.assign({}, defaultClientOptions, options);
         this._transporter = Transporter.getFromPool('client', {
             proto: this._options.proto,
@@ -120,13 +116,13 @@ export class WebSocketClient<ClientCustomType extends BaseClientCustomType> {
     private _pendingApi: {
         [sn: number]: { rs: (data: any) => void, rj: (err: any) => void } | undefined;
     } = {};
-    async callApi<T extends keyof ClientCustomType['req']>(apiName: T, req: ClientCustomType['req'][T], options: CallApiOptions = {})
-        : Promise<ClientCustomType['res'][T]> {
+    async callApi<T extends keyof ServiceType['req']>(apiName: T, req: ServiceType['req'][T], options: CallApiOptions = {})
+        : Promise<ServiceType['res'][T]> {
         // Send Req
         let sn = this._transporter.sendApiReq(apiName as string, req);
 
         // Wait Res
-        let promise = new Promise<ClientCustomType['res'][T]>((rs, rj) => {
+        let promise = new Promise<ServiceType['res'][T]>((rs, rj) => {
             this._pendingApi[sn] = {
                 rs: rs,
                 rj: rj
@@ -161,13 +157,13 @@ export class WebSocketClient<ClientCustomType extends BaseClientCustomType> {
                     }
                     this._pendingApi[sn]!.rj(err);
                 }
-            }, timeout * 1000);
+            }, timeout);
         }
 
         return promise;
     }
 
-    get status(): ClientStatus {
+    get status(): WsClientStatus {
         if (!this._ws || this._ws.readyState === WebSocket.CLOSED || this._ws.readyState === WebSocket.CLOSING) {
             return 'closed';
         }
@@ -179,40 +175,34 @@ export class WebSocketClient<ClientCustomType extends BaseClientCustomType> {
         }
     }
 
-    listenMsg<T extends keyof ClientCustomType['msg']>(msgName: T, handler: ClientMsgHandler<ClientCustomType['msg'][T]>) {
+    listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: ClientMsgHandler<ServiceType['msg'][T]>) {
         this._msgHandlers.addHandler(msgName as string, handler)
     }
-    unlistenMsg<T extends keyof ClientCustomType['msg']>(msgName: T, handler?: ClientMsgHandler<ClientCustomType['msg'][T]>) {
+    unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler?: ClientMsgHandler<ServiceType['msg'][T]>) {
         this._msgHandlers.removeHandler(msgName as string, handler)
     }
 
-    sendMsg<T extends keyof ClientCustomType['msg']>(msgName: T, msg: ClientCustomType['msg'][T]) {
+    sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]) {
         return this._transporter.sendMsg(msgName as string, msg);
     }
 }
 
-const defaultClientOptions: ClientOptions = {
+const defaultClientOptions: WsClientOptions = {
     server: '',
     proto: undefined as any,
-    // 默认超时30秒
-    apiTimeout: 30
+    apiTimeout: 3000
 }
 
-export interface ClientOptions {
+export interface WsClientOptions {
     server: string;
     proto: ServiceProto;
     apiTimeout: number;
 
-    onStatusChange?: (newStatus: ClientStatus) => void;
+    onStatusChange?: (newStatus: WsClientStatus) => void;
     /** 掉线 */
     onLostConnection?: () => void;
 }
 
-export type ClientStatus = 'open' | 'connecting' | 'closed';
+export type WsClientStatus = 'open' | 'connecting' | 'closed';
 
 export type ClientMsgHandler<Msg> = (msg: Msg) => void | Promise<void>;
-
-export interface CallApiOptions {
-    /** 超时时间（单位：秒） */
-    timeout?: number;
-}

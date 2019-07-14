@@ -26,35 +26,8 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends PoolIte
         return this.options.logger;
     }
 
-    sendApiSucc(call: ApiCallHttp<any, any>, res: any) {
-        if (call.res) {
-            return;
-        }
-
-        let buf = TransportDataUtil.encodeApiSucc(this.options.server.tsbuffer, call.service, res);
-        this.options.res.end(buf);
-
-        call.res = {
-            isSucc: true,
-            data: res
-        };
-        call.logger.log('[API_SUCC]', res)
-    }
-
-    sendApiError(call: ApiCallHttp<any, any>, message: string, info?: any) {
-        if (call.res) {
-            return;
-        }
-
-        let buf = TransportDataUtil.encodeApiError(call.service, message, info);
-        this.options.res.end(buf);
-
-        call.res = {
-            isSucc: false,
-            message: message,
-            info: info
-        };
-        call.logger.warn('[API_ERR]', message, info);
+    get server(): HttpServer<ServiceType> {
+        return this.options.server;
     }
 
     clean() {
@@ -67,4 +40,11 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends PoolIte
             this.options.res.end();
         }
     }
+
+    // Put into pool
+    destroy() {
+        this.close();
+        HttpConnection.pool.put(this);
+    }
+
 }

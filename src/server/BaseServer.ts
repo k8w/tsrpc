@@ -1,16 +1,12 @@
-import { ApiCall, MsgCall, BaseCall } from './BaseCall';
+import { ApiCall, MsgCall, BaseCall, ApiCallOptions, MsgCallOptions } from './BaseCall';
 import { ServiceProto, ServiceDef, ApiServiceDef, MsgServiceDef } from '../proto/ServiceProto';
-import { Logger, PrefixLogger } from './Logger';
+import { Logger } from './Logger';
 import { HandlerManager } from '../models/HandlerManager';
 import { TsrpcError } from '../models/TsrpcError';
 import { TSBuffer } from 'tsbuffer';
 import * as path from "path";
-
-export interface BaseServiceType {
-    req: any,
-    res: any,
-    msg: any
-}
+import { BaseServiceType } from '../proto/BaseServiceType';
+import { ServiceMapUtil, ServiceMap } from '../models/ServiceMapUtil';
 
 export abstract class BaseServer<ServerOptions extends BaseServerOptions, ServiceType extends BaseServiceType = any> {
     abstract start(): Promise<void>;
@@ -31,32 +27,13 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     // 多个Handler将异步并行执行
     private _msgHandlers = new HandlerManager();
 
-    readonly logger!: Logger;
+    readonly logger: Logger;
 
     constructor(options: ServerOptions) {
         this._options = options;
         this.tsbuffer = new TSBuffer(this._options.proto.types);
-        this.serviceMap = this._getServiceMap(this._options.proto);
-    }
-
-    private _getServiceMap(proto: ServiceProto): ServiceMap {
-        let map: ServiceMap = {
-            id2Service: {},
-            apiName2Service: {},
-            msgName2Service: {}
-        }
-
-        for (let v of proto.services) {
-            map.id2Service[v.id] = v;
-            if (v.type === 'api') {
-                map.apiName2Service[v.name] = v;
-            }
-            else {
-                map.msgName2Service[v.name] = v;
-            }
-        }
-
-        return map;
+        this.serviceMap = ServiceMapUtil.getServiceMap(this._options.proto);
+        this.logger = options.logger;
     }
 
     // #region Data process flow
@@ -180,9 +157,11 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     }
 
     protected _afterApi(call: ApiCall) {
-        PrefixLogger.pool.put(call.logger);
+        call.destroy();
     }
-    protected _afterMsg(call: MsgCall): void;
+    protected _afterMsg(call: MsgCall) {
+        call.destroy();
+    };
     // #endregion    
 
     // #region Api/Msg handler register
@@ -192,11 +171,10 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             throw new Error('Already exist handler for API: ' + apiName);
         }
         this._apiHandlers[apiName as string] = handler;
+        this.logger.log('API implemented succ: ' + apiName);
     };
 
     autoImplementApi(apiPath: string, apiNamePrefix?: string): { succ: string[], fail: string[] } {
-        // this.autoImpl('api/userApi', 'user')
-
         let apiServices = Object.values(this.serviceMap.apiName2Service) as ApiServiceDef[];
         let output: { succ: string[], fail: string[] } = { succ: [], fail: [] };
 
@@ -230,21 +208,39 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             }
 
             // try import
+            let requireError: Error & { code: string } | undefined;
+            let modulePath = path.resolve(apiPath, handlerPath, 'Api' + handlerName);
             try {
-                let module = require(path.resolve(apiPath, handlerPath, 'Api' + handlerName));
+                let handlerModule = require(modulePath);
                 // ApiName同名
-                apiHandler = module['Api' + handlerName];
+                apiHandler = handlerModule['Api' + handlerName];
             }
-            catch{ }
+            catch (e) {
+                requireError = e;
+            }
 
             if (!apiHandler) {
                 output.fail.push(svc.name);
-                this.logger.warn('Auto implement api fail: ' + svc.name);
+                let errMsg = 'Auto implement api fail: ' + svc.name;
+
+                // Fail info
+                if (requireError) {
+                    if (requireError.code === 'MODULE_NOT_FOUND') {
+                        errMsg += `\n  |- Module not found: ${modulePath}`;
+                    }
+                    else {
+                        errMsg += '\n  |- ' + requireError.message;
+                    }
+                }
+                else {
+                    errMsg += `\n  |- Cannot find export { ${'Api' + handlerName} } at: ${modulePath}`;
+                }
+
+                this.logger.warn(errMsg);
                 continue;
             }
 
             this.implementApi(svc.name, apiHandler as any);
-            this.logger.log('Auto implement api succ: ' + svc.name);
             output.succ.push(svc.name);
         }
 
@@ -275,11 +271,5 @@ export interface BaseServerOptions {
     decrypter?: (cipher: Uint8Array) => Uint8Array | Promise<Uint8Array>;
 }
 
-export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res>) => void | Promise<void>;
-export type MsgHandler<Msg = any> = (msg: MsgCall<Msg>) => void | Promise<void>;
-
-export interface ServiceMap {
-    id2Service: { [serviceId: number]: ServiceDef },
-    apiName2Service: { [apiName: string]: ApiServiceDef | undefined },
-    msgName2Service: { [msgName: string]: MsgServiceDef | undefined }
-}
+export type ApiHandler<Req = any, Res = any> = (call: ApiCall<ApiCallOptions, Req, Res>) => void | Promise<void>;
+export type MsgHandler<Msg = any> = (msg: MsgCall<MsgCallOptions, Msg>) => void | Promise<void>;

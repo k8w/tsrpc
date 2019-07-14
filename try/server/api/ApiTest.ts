@@ -1,4 +1,4 @@
-import { TSRPCError } from "../../src/models/TSRPCError";
+import { TsrpcError } from "../../../src/models/TsrpcError";
 
 export async function ApiTest(call: any) {
     if (Math.random() > 0.75) {
@@ -13,6 +13,6 @@ export async function ApiTest(call: any) {
         throw new Error('这应该是InternalERROR')
     }
     else {
-        throw new TSRPCError('返回到前台的错误', 'ErrInfo');
+        throw new TsrpcError('返回到前台的错误', 'ErrInfo');
     }
 }

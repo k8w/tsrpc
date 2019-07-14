@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha",
-    "build": "rm -rf dist && tsc -d && cp package.json LICENSE README.md dist/",
-    "bp": "npm version patch && npm run build && cd dist && npm publish --tag next & cd .."
+    "build": "rm -rf dist && npx rollup -c && cp package.json LICENSE README.md dist/",
+    "bp": "npm version patch && npm run build && cd dist && npm publish & cd.."
   },
   "repository": {
     "type": "git",

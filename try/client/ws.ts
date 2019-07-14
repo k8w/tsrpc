@@ -1,5 +1,5 @@
-import { TSRPCClient } from "..";
-import { serviceProto, ServiceType } from './proto/serviceProto';
+import { TSRPCClient } from "../..";
+import { serviceProto, ServiceType } from '../proto/serviceProto';
 
 async function main() {
     let client = new TSRPCClient<ServiceType>({
