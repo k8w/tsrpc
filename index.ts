@@ -1,14 +1,11 @@
-/**
- * TSRPC
- * https://github.com/k8w/tsrpc
- * @author k8w
- * @copyright k8w
- * @license Apache-2.0
- */
-
 import 'k8w-extend-native';
-import TsrpcServer from './src/TsrpcServer';
-import TsrpcClient from './src/TsrpcClient';
-import ApiRequest from './src/models/ApiRequest';
-import ApiResponse from './src/models/ApiResponse';
-export { TsrpcServer, TsrpcClient, ApiRequest, ApiResponse };
+import { Server } from './src/server/ws/WsServer';
+import { ServiceProto } from './src/proto/ServiceProto';
+import { WebSocketClient } from './src/client/WsClient';
+import { BaseServer } from './src/server/BaseServer';
+
+export { Server as TSRPCServer };
+export { WebSocketClient as TSRPCClient };
+export { ServiceProto as TSRPCServiceProto };
+
+export { BaseServer }
