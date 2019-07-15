@@ -1,8 +1,8 @@
 import { ApiCall, MsgCall, ApiCallOptions, MsgCallOptions } from '../BaseCall';
 import { HttpConnection } from './HttpConnection';
-import { BaseServiceType } from '../BaseServer';
 import { Pool } from '../../models/Pool';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
+import { BaseServiceType } from '../../proto/BaseServiceType';
 
 // export interface ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceType = any> extends ApiCall<Req, Res> {
 //     conn: HttpConnection<ServiceType>;
@@ -37,7 +37,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
         }
 
         let buf = TransportDataUtil.encodeApiSucc(this.conn.server.tsbuffer, this.service, res);
-        this.conn.options.res.end(buf);
+        this.conn.options.res.end(Buffer.from(buf));
 
         this.res = {
             isSucc: true,
@@ -52,7 +52,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
         }
 
         let buf = TransportDataUtil.encodeApiError(this.service, message, info);
-        this.conn.options.res.end(buf);
+        this.conn.options.res.end(Buffer.from(buf));
 
         this.res = {
             isSucc: false,

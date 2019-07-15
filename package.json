@@ -26,6 +26,7 @@
   "author": "k8w",
   "license": "Apache-2.0",
   "devDependencies": {
+    "ts-node": "^8.3.0",
     "typescript": "^3.5.2"
   },
   "typings": "index.d.ts",

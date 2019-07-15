@@ -59,11 +59,11 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
         // Handle Call
         if (call.type === 'api') {
-            this._handleApi(call);
+            await this._handleApi(call);
             this._afterApi(call);
         }
         else {
-            this._handleMsg(call);
+            await this._handleMsg(call);
             this._afterMsg(call);
         }
     }

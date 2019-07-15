@@ -1,13 +1,12 @@
-import { BaseServer, BaseServiceType, BaseServerOptions, defualtBaseServerOptions } from '../BaseServer';
+import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../BaseServer';
 import * as http from "http";
 import { HttpConnection } from './HttpConnection';
 import { HttpUtil } from '../../models/HttpUtil';
 import { HttpCall, ApiCallHttp, MsgCallHttp } from './HttpCall';
 import { TransportDataUtil, ParsedServerInput } from '../../models/TransportDataUtil';
-import { parse } from 'path';
 import { Counter } from '../../models/Counter';
 import { PrefixLogger } from '../Logger';
-import { ApiCall } from '../ws/WsCall';
+import { BaseServiceType } from '../../proto/BaseServiceType';
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions, ServiceType>{
 
@@ -46,7 +45,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                             server: this,
                             logger: PrefixLogger.pool.get({
                                 logger: this.logger,
-                                prefix: ip
+                                prefix: `[${ip}]`
                             }),
                             ip: ip,
                             req: req,

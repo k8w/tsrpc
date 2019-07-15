@@ -1,9 +1,12 @@
 import { TsrpcError } from "../../../src/models/TsrpcError";
+import { ApiCallHttp } from '../../../src/server/http/HttpCall';
+import { ReqTest } from "../../proto/PtlTest";
+import { ResTest } from '../../proto/a/b/c/PtlTest';
 
-export async function ApiTest(call: any) {
+export async function ApiTest(call: ApiCallHttp<ReqTest, ResTest>) {
     if (Math.random() > 0.75) {
         call.succ({
-            reply: 'Hello, ' + call.data.name
+            reply: 'Hello, ' + call.req.name
         })
     }
     else if (Math.random() > 0.5) {

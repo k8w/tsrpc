@@ -2,9 +2,9 @@ import { PoolItem, Pool } from '../../models/Pool';
 import * as http from "http";
 import { ApiCallHttp } from './HttpCall';
 import { HttpServer } from './HttpServer';
-import { BaseServiceType } from '../BaseServer';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { Logger, PrefixLogger } from '../Logger';
+import { BaseServiceType } from '../../proto/BaseServiceType';
 
 export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
     server: HttpServer<ServiceType>;
