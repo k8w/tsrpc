@@ -1,107 +1,79 @@
 import * as http from "http";
 import * as WebSocket from "ws";
-import { Server, BaseServerCustomType } from './WsServer';
 import { ApiCall } from '../BaseCall';
-import { Logger } from '../Logger';
-import { Transporter, ServiceMap, RecvData } from '../../models/Transporter';
+import { Logger, PrefixLogger } from '../Logger';
+import { RecvData, WsTransporter } from '../../models/WsTransporter';
 import { TSBuffer } from "tsbuffer";
+import { BaseServiceType } from "../../proto/BaseServiceType";
+import { WsServer } from "./WsServer";
+import { PoolItem, Pool } from '../../models/Pool';
+import { ServiceMap } from "../../models/ServiceMapUtil";
+import { ParsedServerInput } from '../../models/TransportDataUtil';
+import { HttpUtil } from "../../models/HttpUtil";
+
+export interface WsConnectionOptions<ServiceType extends BaseServiceType, SessionType> {
+    connId: number,
+    server: WsServer<ServiceType, SessionType>,
+    ws: WebSocket,
+    httpReq: http.IncomingMessage,
+    defaultSession: SessionType,
+    tsbuffer: TSBuffer,
+    serviceMap: ServiceMap,
+    onClose: (conn: WsConnection<ServiceType, SessionType>, code: number, reason: string) => void,
+    onRecvData: (data: Buffer) => void;
+    // onInput: (conn: WsConnection<ServiceType, SessionType>, input: ParsedServerInput) => void;
+}
 
 /**
  * 当前活跃的连接
  */
-export class WebSocketConnection<ServerCustomType extends BaseServerCustomType = any> {
+export class WsConnection<ServiceType extends BaseServiceType = any, SessionType = any> extends PoolItem<WsConnectionOptions<ServiceType, SessionType>> {
 
-    get type() {
-        return 'WebSocket' as const;
+    static pool = new Pool<WsConnection>(WsConnection);
+
+    ip!: string;
+    session!: SessionType;
+    logger!: PrefixLogger;
+    transporter!: WsTransporter;
+
+    get connId() {
+        return this.options.connId;
     }
 
-    private _options!: WebSocketConnectionOptions<ServerCustomType>;
-    server!: Server<ServerCustomType>;
-    private _request!: http.IncomingMessage;
-    connId!: number;
-    ip!: string;
-    session!: ServerCustomType['session'];
-    logger!: Logger;
+    reset(options: this['options']) {
+        super.reset(options);
 
-    private _ws!: WebSocket;
-    private _transporter!: Transporter;
-
-    private constructor() { }
-
-    private static _pool: WebSocketConnection<any>[] = [];
-    static getFromPool<ServerCustomType extends BaseServerCustomType>(options: WebSocketConnectionOptions<ServerCustomType>) {
-        let item = this._pool.pop() as WebSocketConnection<ServerCustomType>;
-        if (!item) {
-            item = new WebSocketConnection<ServerCustomType>();
-        }
-
-        // RESET
-        item._options = options;
-        item.server = options.server;
-        item._ws = options.ws;
-        item._request = options.request;
-        item.ip = item._getClientIp(options.request);
-        item.connId = options.connId;
-        item.session = options.session;
-        item.logger = new Logger(() => [`Conn${item.connId}(${item.ip})`])
-        item._transporter = Transporter.getFromPool('server', {
-            ws: item._ws,
-            proto: item.server.proto,
-            onRecvData: item._onRecvData,
-            tsbuffer: options.tsbuffer,
-            serviceMap: options.serviceMap
-        })
+        this.ip = HttpUtil.getClientIp(this.options.httpReq);
+        this.session = Object.merge({}, options.defaultSession);
+        this.logger = PrefixLogger.pool.get({
+            logger: this.options.server.logger,
+            prefix: `[Conn#${options.connId}] [${options.ip}]`
+        });
+        // TODO
+        // this.transporter = WsTransporter.pool.get({})
 
         // Init WS
-        options.ws.onclose = e => { item._onClose(e.code, e.reason) };
-        options.ws.onerror = e => { item._onError(e.error) };
-
-        return item;
-    }
-    static putIntoPool(item: WebSocketConnection<any>) {
-        if (this._pool.indexOf(item) > -1) {
-            return;
-        }
-
-        // DISPOSE
-        item._options =
-            item.server =
-            item._ws =
-            item._request =
-            item.ip =
-            item.connId =
-            item.session =
-            item.logger =
-            item._transporter = undefined as any;
-
-        this._pool.push(item);
+        options.ws.onclose = e => { this._onClose(e.code, e.reason) };
+        options.ws.onerror = e => { this._onError(e.error) };
     }
 
-    private _getClientIp(req: http.IncomingMessage) {
-        var ipAddress;
-        // The request may be forwarded from local web server.
-        var forwardedIpsStr = req.headers['x-forwarded-for'] as string | undefined;
-        if (forwardedIpsStr) {
-            // 'x-forwarded-for' header may return multiple IP addresses in
-            // the format: "client IP, proxy 1 IP, proxy 2 IP" so take the
-            // the first one
-            var forwardedIps = forwardedIpsStr.split(',');
-            ipAddress = forwardedIps[0];
+    clean() {
+        if (this.options.ws && this.options.ws.readyState === WebSocket.OPEN) {
+            this.options.ws.close()
         }
-        if (!ipAddress) {
-            // If request was not forwarded
-            ipAddress = req.connection.remoteAddress;
-        }
-        // Remove prefix ::ffff:
-        return ipAddress ? ipAddress.replace(/^::ffff:/, '') : '';
-    };
 
-    // Listen Msg
-    // listenMsg() { };
-    // unlistenMsg() { };
+        super.clean();
+        this.logger.destroy();
+        this.transporter.destroy();
+        this.ip = this.session = this.logger = this.transporter = undefined as any;
+    }
+
+    destroy() {
+        WsConnection.pool.put(this);
+    }
 
     // Send Msg
-    sendMsg<T extends keyof ServerCustomType['msg']>(msgName: T, msg: ServerCustomType['msg'][T]) {
+    sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]) {
         return this._transporter.sendMsg(msgName as string, msg);
     };
 
@@ -156,16 +128,4 @@ export class WebSocketConnection<ServerCustomType extends BaseServerCustomType =
     private _onError(e: Error) {
         console.warn('[CLIENT_ERR]', e);
     }
-}
-
-export interface WebSocketConnectionOptions<ServerCustomType extends BaseServerCustomType = any> {
-    connId: number,
-    server: Server<ServerCustomType>,
-    ws: WebSocket,
-    request: http.IncomingMessage,
-    session: ServerCustomType['session'],
-    tsbuffer: TSBuffer,
-    serviceMap: ServiceMap,
-    onClose: (conn: WebSocketConnection<ServerCustomType>, code: number, reason: string) => void,
-    onRecvData: (conn: WebSocketConnection<ServerCustomType>, data: RecvData) => void;
 }

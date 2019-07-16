@@ -36,5 +36,4 @@ export class PoolItem<Options> {
     clean() {
         this.options = undefined as any;
     }
-
 }

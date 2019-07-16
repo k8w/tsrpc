@@ -7,11 +7,13 @@ import { TSBuffer } from 'tsbuffer';
 import * as path from "path";
 import { BaseServiceType } from '../proto/BaseServiceType';
 import { ServiceMapUtil, ServiceMap } from '../models/ServiceMapUtil';
+import { Pool } from '../models/Pool';
+import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';
 
 export abstract class BaseServer<ServerOptions extends BaseServerOptions, ServiceType extends BaseServiceType = any> {
     abstract start(): Promise<void>;
     abstract stop(immediately?: boolean): Promise<void>;
-    protected abstract _makeCall(conn: any, buf: Uint8Array): BaseCall;
+    abstract callPool: Pool<BaseCall>;
 
     // 配置及其衍生项
     protected _options: ServerOptions;
@@ -65,6 +67,45 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         else {
             await this._handleMsg(call);
             this._afterMsg(call);
+        }
+    }
+
+    protected _parseServerInput(buf: Uint8Array): ParsedServerInput{
+        return TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);;
+    }
+
+    protected _makeCall(conn: any, buf: Uint8Array): BaseCall {
+        let parsed: ParsedServerInput;
+        try {
+            parsed = this._parseServerInput(buf);
+        }
+        catch (e) {
+            conn.close();
+            throw new Error(`Invalid input buffer, length=${buf.length}`);
+        }
+
+        if (parsed.type === 'api') {
+            return this.callPool.get({
+                conn: conn,
+                sn: parsed.sn,
+                logger: PrefixLogger.pool.get({
+                    logger: conn.logger,
+                    prefix: `API#${sn} ${parsed.service.name}`
+                }),
+                service: parsed.service,
+                req: parsed.req
+            })
+        }
+        else {
+            return MsgCallHttp.pool.get({
+                conn: conn,
+                logger: PrefixLogger.pool.get({
+                    logger: conn.logger,
+                    prefix: `MSG ${parsed.service.name}`
+                }),
+                service: parsed.service,
+                msg: parsed.msg
+            })
         }
     }
 

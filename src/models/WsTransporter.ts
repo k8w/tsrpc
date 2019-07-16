@@ -1,114 +1,58 @@
 import WebSocket from 'ws';
-import { MsgServiceDef, ApiServiceDef, ServiceProto, ServiceDef } from '../proto/ServiceProto';
+import { MsgServiceDef, ApiServiceDef, ServiceProto } from '../proto/ServiceProto';
 import { ServerInputData, ServerOutputData, ApiError } from '../proto/TransportData';
 import { TSBuffer } from 'tsbuffer';
 import { Counter } from './Counter';
 import { TsrpcError } from './TsrpcError';
+import { ServiceMap, ServiceMapUtil } from './ServiceMapUtil';
+import { TransportDataUtil, ParsedServerInput } from './TransportDataUtil';
+import { PoolItem, Pool } from './Pool';
 
-export interface CreateTransporterOptions {
-    ws?: WebSocket,
-    proto: ServiceProto,
-    onRecvData: Transporter['onRecvData'],
-
-    // Server 传入 可以复用的
-    tsbuffer?: TSBuffer,
-    serviceMap?: ServiceMap
+export interface WsTransporterOptions {
+    type: 'client' | 'server';
+    ws: WebSocket,
+    tsbuffer: TSBuffer,
+    serviceMap: ServiceMap,
+    onRecvData: (data: RecvData) => void
 }
 
-export class Transporter {
+export class WsTransporter extends PoolItem<WsTransporterOptions> {
 
-    
+    static pool = new Pool<WsTransporter>(WsTransporter);
 
-    readonly type: 'client' | 'server';
+    private _apiReqSnCounter = new Counter();
 
-    private _ws?: WebSocket;
-    private _tsbuffer!: TSBuffer;
-    private _serviceMap!: ServiceMap;
-    onRecvData!: (data: RecvData) => void;
-
-    private _apiReqSnCounter!: Counter;
-
-
-    private constructor(type: Transporter['type'], options: CreateTransporterOptions) {
-        this.type = type;
-        if (this.type === 'client') {
-            this._apiReqSnCounter = new Counter();
-        }
+    destroy() {
+        WsTransporter.pool.put(this);
     }
 
-    private static _pool: Transporter[] = [];
-    static getFromPool(type: 'client' | 'server', options: CreateTransporterOptions): Transporter {
-        let item = this._pool.pop();
-        if (!item) {
-            item = new Transporter(type, options);
+    reset(options: WsTransporterOptions) {
+        super.reset(options);
+        if (options.type === 'client') {
+            this._apiReqSnCounter.reset();
         }
 
-        // RESET
-        item._tsbuffer = options.tsbuffer || new TSBuffer(options.proto.types);
-        item._serviceMap = options.serviceMap || Transporter.getServiceMap(options.proto);
-        item.onRecvData = options.onRecvData;
-
-        if (item.type === 'client') {
-            item._apiReqSnCounter.reset();
-        }
-
-        item.resetWs(options.ws);
-
-        return item;
-    }
-    static putIntoPool(item: Transporter) {
-        if (this._pool.indexOf(item) > -1) {
-            return;
-        }
-
-        item._tsbuffer = null as any;
-        item.onRecvData = null as any;
-        item._serviceMap = null as any;
-        item.resetWs(undefined);
-        this._pool.push(item);
+        options.ws.onmessage = e => { this._onWsMessage(e.data) };
     }
 
-    resetWs(ws: WebSocket | undefined) {
-        // 清空上一次的
-        if (this._ws) {
-            this._ws.onmessage = undefined as any;
+    clean() {
+        this.options.ws.onmessage = undefined as any;
+        if (this.options.ws.readyState !== WebSocket.CLOSED && this.options.ws.readyState !== WebSocket.CLOSED) {
+            this.options.ws.close();
         }
 
-        this._ws = ws;
-        if (this._ws) {
-            this._ws.onmessage = e => { this._onWsMessage(e.data) };
-        }
-    }
-
-    static getServiceMap(proto: ServiceProto): ServiceMap {
-        let map: ServiceMap = {
-            id2Service: {},
-            apiName2Service: {},
-            msgName2Service: {}
-        }
-
-        for (let v of proto.services) {
-            map.id2Service[v.id] = v;
-            if (v.type === 'api') {
-                map.apiName2Service[v.name] = v;
-            }
-            else {
-                map.msgName2Service[v.name] = v;
-            }
-        }
-
-        return map;
+        super.clean();
     }
 
     async sendMsg(msgName: string, msg: any) {
         // GetService
-        let service = this._serviceMap.msgName2Service[msgName];
+        let service = this.options.serviceMap.msgName2Service[msgName];
         if (!service) {
             throw new Error('Invalid msg name: ' + msgName)
         }
 
         // Encode
-        let buf = this._tsbuffer.encode(msg, service.msg);
+        let buf = this.options.tsbuffer.encode(msg, service.msg);
 
         // Send Data
         await this._sendTransportData(service.id, buf);
@@ -118,18 +62,18 @@ export class Transporter {
      * @return SN
      */
     sendApiReq(apiName: string, req: any): number {
-        if (this.type !== 'client') {
+        if (this.options.type !== 'client') {
             throw new Error('sendApiReq method is only for client use');
         }
 
         // GetService
-        let service = this._serviceMap.apiName2Service[apiName];
+        let service = this.options.serviceMap.apiName2Service[apiName];
         if (!service) {
             throw new Error('Invalid api name: ' + apiName);
         }
 
         // Encode
-        let buf = this._tsbuffer.encode(req, service.req);
+        let buf = this.options.tsbuffer.encode(req, service.req);
 
         // Transport Encode
         let sn = this._apiReqSnCounter.getNext();
@@ -141,19 +85,19 @@ export class Transporter {
     }
 
     sendApiSucc(service: ApiServiceDef, sn: number, res: any) {
-        if (this.type !== 'server') {
+        if (this.options.type !== 'server') {
             throw new Error('sendApiReq sendApiSucc is only for server use');
         }
 
         // Encode Res Body
-        let buf = this._tsbuffer.encode(res, service.res);
+        let buf = this.options.tsbuffer.encode(res, service.res);
 
         // Send
         this._sendTransportData(service.id, buf, sn, true);
     }
 
     sendApiError(service: ApiServiceDef, sn: number, message: string, info?: any): ApiError {
-        if (this.type !== 'server') {
+        if (this.options.type !== 'server') {
             throw new Error('sendApiReq sendApiSucc is only for server use');
         }
 
@@ -162,7 +106,7 @@ export class Transporter {
             message: message,
             info: info
         }
-        let buf = Transporter.transportCoder.encode(err, 'ApiError');
+        let buf = TransportDataUtil.transportCoder.encode(err, 'ApiError');
 
         // Send
         this._sendTransportData(service.id, buf, sn, false);
@@ -173,24 +117,34 @@ export class Transporter {
     private _onWsMessage = (data: WebSocket.Data) => {
         // 文字消息
         if (typeof data === 'string') {
-            this.onRecvData({ type: 'text', data: data });
+            this.options.onRecvData({ type: 'text', data: data });
         }
         // Buffer
         else if (Buffer.isBuffer(data)) {
+            let parsed: ParsedServerInput;
+            try {
+                parsed = TransportDataUtil.parseServerInput(this.options.tsbuffer, this.options.serviceMap, data)
+            }
+            catch (e) {
+                // TODO ERROR
+                console.warn('Invalid input buffer', `length=${data.length}`, e);
+                this.options.onRecvData({ type: 'buffer', data: data });
+            }
+
             // 解码TransportData
-            let decRes = Transporter._tryDecode(Transporter.transportCoder, data, 'ServerOutputData');
+            let decRes = Transporter._tryDecode(TransportDataUtil.transportCoder, data, 'ServerOutputData');
             if (!decRes.isSucc) {
                 console.debug('[INVALID_DATA]', 'Cannot decode data', `data.length=${data.length}`, decRes.error);
-                this.onRecvData({ type: 'buffer', data: data });
+                this.options.onRecvData({ type: 'buffer', data: data });
                 return;
             }
             let transportData = decRes.output as ServerInputData | ServerOutputData;
 
             // 确认是哪个Service
-            let service = this._serviceMap.id2Service[transportData[0]];
+            let service = this.options.serviceMap.id2Service[transportData[0]];
             if (!service) {
                 console.warn('[INVALID_DATA]', `Cannot find service ID: ${transportData[0]}`);
-                this.onRecvData({ type: 'buffer', data: data });
+                this.options.onRecvData({ type: 'buffer', data: data });
                 return;
             }
 
@@ -200,7 +154,7 @@ export class Transporter {
                 let isSucc = transportData[3];
 
                 // Client: ApiRes
-                if (this.type === 'client') {
+                if (this.options.type === 'client') {
                     if (sn === undefined || isSucc === undefined) {
                         console.warn('[INVALID_RES]', 'Missing SN or isSucc', `SN=${sn} isSucc=${isSucc}`);
                         return;
@@ -208,15 +162,15 @@ export class Transporter {
 
                     // Parse body
                     let decRes = isSucc ?
-                        Transporter._tryDecode(this._tsbuffer, transportData[1], service.res)
-                        : Transporter._tryDecode(Transporter.transportCoder, transportData[1], 'ApiError');
+                        Transporter._tryDecode(this.options.tsbuffer, transportData[1], service.res)
+                        : Transporter._tryDecode(TransportDataUtil.transportCoder, transportData[1], 'ApiError');
                     if (!decRes.isSucc) {
                         console.warn('[INVALID_RES]', decRes.error.message);
-                        this.onRecvData({ type: 'buffer', data: data });
+                        this.options.onRecvData({ type: 'buffer', data: data });
                         return;
                     }
 
-                    this.onRecvData({ type: 'apiRes', service: service, data: decRes.output, sn: sn, isSucc: isSucc });
+                    this.options.onRecvData({ type: 'apiRes', service: service, data: decRes.output, sn: sn, isSucc: isSucc });
                 }
                 // Server: ApiReq
                 else {
@@ -226,26 +180,26 @@ export class Transporter {
                     }
 
                     // Parse body
-                    let decRes = Transporter._tryDecode(this._tsbuffer, transportData[1], service.req);
+                    let decRes = Transporter._tryDecode(this.options.tsbuffer, transportData[1], service.req);
                     if (!decRes.isSucc) {
                         console.warn('[INVALID_REQ]', decRes.error);
-                        this.onRecvData({ type: 'buffer', data: data });
+                        this.options.onRecvData({ type: 'buffer', data: data });
                         return;
                     }
 
-                    this.onRecvData({ type: 'apiReq', service: service, data: decRes.output, sn: sn });
+                    this.options.onRecvData({ type: 'apiReq', service: service, data: decRes.output, sn: sn });
                 }
             }
             // Handle Msg
             else {
                 // Parse body
-                let decRes = Transporter._tryDecode(this._tsbuffer, transportData[1], service.msg);
+                let decRes = Transporter._tryDecode(this.options.tsbuffer, transportData[1], service.msg);
                 if (!decRes.isSucc) {
                     console.warn('[INVALID_MSG]', decRes.error);
-                    this.onRecvData({ type: 'buffer', data: data });
+                    this.options.onRecvData({ type: 'buffer', data: data });
                     return;
                 }
-                this.onRecvData({ type: 'msg', service: service, data: decRes.output })
+                this.options.onRecvData({ type: 'msg', service: service, data: decRes.output })
             }
         }
         else {
@@ -263,7 +217,7 @@ export class Transporter {
 
         // Server send ServerOutputData
         let transportData: Uint8Array;
-        if (this.type === 'server') {
+        if (this.options.type === 'server') {
             let data: ServerOutputData = sn === undefined ? [serviceId, buf] : [serviceId, buf, sn, isSucc];
             transportData = Transporter.transportCoder.encode(data, 'ServerOutputData');
         }
@@ -353,9 +307,3 @@ export type RecvMsgData = {
 }
 
 export type RecvData = RecvTextData | RecvBufferData | RecvApiReqData | RecvApiResData | RecvMsgData;
-
-export interface ServiceMap {
-    id2Service: { [serviceId: number]: ServiceDef },
-    apiName2Service: { [apiName: string]: ApiServiceDef | undefined },
-    msgName2Service: { [msgName: string]: MsgServiceDef | undefined }
-}

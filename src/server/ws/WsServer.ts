@@ -1,73 +1,105 @@
-import { ServiceProto, ApiServiceDef, MsgServiceDef } from '../proto/ServiceProto';
+import { ServiceProto, ApiServiceDef, MsgServiceDef } from '../../proto/ServiceProto';
 import * as WebSocket from 'ws';
 import { Server as WebSocketServer } from 'ws';
 import * as http from "http";
-import { ActiveConnection } from './ws/WSConnection';
+import { WsConnection } from './WSConnection';
 import { TSBuffer } from 'tsbuffer';
 import * as fs from "fs";
 import * as path from "path";
-import { ApiCall, MsgCall } from './BaseCall';
-import { Counter } from '../models/Counter';
-import { Logger } from './Logger';
-import { ServiceMap, Transporter, RecvData } from '../models/Transporter';
-import { HandlerManager } from '../models/HandlerManager';
-import { TsrpcError } from '../models/TsrpcError';
-import { ServerOutputData } from '../proto/TransportData';
+import { Counter } from '../../models/Counter';
+import { Logger } from '../Logger';
+import { BaseServiceType } from '../../proto/BaseServiceType';
+import { ServiceMap } from '../../models/ServiceMapUtil';
+import { BaseServer, BaseServerOptions } from '../BaseServer';
+import { WsCall } from './WsCall';
+import { HttpUtil } from '../../models/HttpUtil';
 
-export interface BaseServerCustomType {
-    req: any,
-    res: any,
-    msg: any,
-    session: any
-}
+export class WsServer<ServiceType extends BaseServiceType = any, SessionType = any> extends BaseServer<WsServerOptions<ServiceType, SessionType>, ServiceType> {
 
-export class Server<ServerCustomType extends BaseServerCustomType = any> {
-
-    // Flow return 代表是否继续执行后续流程
-    readonly apiFlow: ApiFlowItem[] = [];
-    readonly msgFlow: MsgFlowItem[] = [];
-
-    private readonly _conns: ActiveConnection<ServerCustomType>[] = [];
-    private readonly _id2Conn: { [connId: string]: ActiveConnection<ServerCustomType> | undefined } = {};
-
-    // 配置及其衍生项
-    private readonly _options: ServerOptions<ServerCustomType>;
-    readonly proto: ServiceProto;
-    private _tsbuffer: TSBuffer;
-    private _serviceMap: ServiceMap;
+    private readonly _conns: WsConnection<ServiceType, SessionType>[] = [];
+    private readonly _id2Conn: { [connId: string]: WsConnection<ServiceType, SessionType> | undefined } = {};
 
     private _connIdCounter = new Counter();
 
-    // Handlers
-    private _apiHandlers: { [apiName: string]: ApiHandler | undefined } = {};
-    // 多个Handler将异步并行执行
-    private _msgHandlers = new HandlerManager;
+    private _status: WsServerStatus = 'closed';
+    public get status(): WsServerStatus {
+        return this._status;
+    }
 
-    constructor(options: Pick<ServerOptions, 'proto'> & Partial<ServerOptions<ServerCustomType>>) {
-        this._options = Object.assign({}, defaultServerOptions, options);
+    private _wsServer?: WebSocketServer;
+    start(): Promise<void> {
+        if (this._wsServer) {
+            throw new Error('Server already started');
+        }
 
-        if (typeof (this._options.proto) === 'string') {
-            try {
-                this.proto = JSON.parse(fs.readFileSync(this._options.proto).toString());
+        this._status = 'opening';
+        return new Promise(rs => {
+            this.logger.log('Starting WebSocket server...');
+            this._wsServer = new WebSocketServer({
+                port: this._options.port
+            }, () => {
+                this.logger.log(`Server started at ${this._options.port}...`);
+                this._status = 'open';
+                rs();
+            });
+
+            this._wsServer.on('connection', this._onClientConnect);
+            this._wsServer.on('error', e => {
+                this.logger.error('[Server Error]', e);
+            });
+        })
+    }
+
+    private _stopping?: {
+        rs: () => void,
+        rj: (e: any) => void;
+    }
+    async stop(immediately: boolean = false): Promise<void> {
+        if (!this._wsServer || this._status === 'closed') {
+            return;
+        }
+
+        this._status = 'closing';
+        let output = new Promise<void>(async (rs, rj) => {
+            if (!this._wsServer) {
+                throw new Error('Server has not been started')
             }
-            catch (e) {
-                console.error(e);
-                throw new Error('打开Proto文件失败: ' + path.resolve(this._options.proto));
+
+            if (immediately) {
+                this._wsServer.close(() => { rs(); })
             }
-        }
-        else {
-            this.proto = this._options.proto;
-        }
+            else {
+                // 优雅地停止
+                this._stopping = {
+                    rs: rs,
+                    rj: rj
+                }
+                if (this._conns.length) {
+                    for (let conn of this._conns) {
+                        conn.close();
+                    }
+                }
+                else {
+                    this._wsServer && this._wsServer.close(e => {
+                        this._stopping = undefined;
+                        this._status = 'closed';
+                        e ? rj(e) : rs();
+                    });
+                }
+            }
+        });
 
-        this._tsbuffer = new TSBuffer(this.proto.types);
-        this._serviceMap = Transporter.getServiceMap(this.proto);
+        output.then(() => {
+            this.logger.log('[SRV_STOP] Server stopped');
+            this._status = 'closed';
+            this._wsServer = undefined;
+        })
 
-        // 自动注册API
-        if (options.apiPath) {
-            console.log('Start auto implement apis...');
-            let op = this._autoImplementApis(options.apiPath);
-            console.log(`√ Finished: ${op.succ.length} succ, ${op.fail.length} fail`)
-        }
+        return output;
+    }
+
+    protected _makeCall(conn: WsConnection<ServiceType, SessionType>, buf: Uint8Array): WsCall {
+        throw new Error('TODO')
     }
 
     // ConnID 1 ~ Number.MAX_SAFE_INTEGER
@@ -80,79 +112,13 @@ export class Server<ServerCustomType extends BaseServerCustomType = any> {
             }
         }
 
-        console.error('No available connId till ' + this._connIdCounter.last);
+        this.logger.error('No available connId till ' + this._connIdCounter.last);
         return NaN;
     }
 
-    /**
-     * 启动服务
-     * @param port 要监听的端口号，不填写则使用`ServerOptions`中的
-     * @returns 成功监听的端口号
-     */
-    async start() {
-        await Promise.all([
-            this._options.wsPort && this._startWs(),
-            this._options.httpPort && this._startHttp()
-        ])
-    }
-
-    private _wsServer?: WebSocketServer;
-    private async _startWs() {
-        if (!this._options.wsPort) {
-            console.warn('Start WS failed: wsPort is undefined');
-            return;
-        }
-
-        if (this._wsServer) {
-            console.warn('Server has been started already');
-            return;
-        }
-
-        this._status = 'opening';
-        return new Promise(rs => {
-            this._wsServer = new WebSocketServer({
-                port: this._options.wsPort
-            }, () => {
-                console.log(`[WS_START] WebSocket server started at ${this._options.wsPort}...`);
-                this._status = 'open';
-                rs(this._options.wsPort!);
-            });
-
-            this._wsServer.on('connection', this._onClientConnect);
-            this._wsServer.on('error', e => {
-                console.error('[SVR_ERR]', e);
-            });
-        })
-    }
-
-    private _httpServer?: http.Server;
-    private async _startHttp() {
-        if (!this._options.httpPort) {
-            console.warn('Start Http failed: httpPort is undefined');
-            return;
-        }
-
-        return new Promise((rs, rj) => {
-            this._httpServer = http.createServer((req, res) => {
-                // TEST
-                res.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
-
-                req.on('data', v => {
-                    console.log('onData', v);
-                    res.write('Hello, ' + v);
-                    res.end();
-                });
-            });
-            this._httpServer.listen(this._options.httpPort, () => {
-                console.log(`[Http_START] Http server started at ${this._options.httpPort}...`)
-                rs()
-            });
-        })
-    }
-
-    private _onClientConnect = (ws: WebSocket, req: http.IncomingMessage) => {
+    private _onClientConnect = (ws: WebSocket, httpReq: http.IncomingMessage) => {
         // 停止中 不再接受新的连接
-        if (this._rsStopping) {
+        if (this._stopping) {
             ws.close();
             return;
         }
@@ -164,58 +130,41 @@ export class Server<ServerCustomType extends BaseServerCustomType = any> {
         }
 
         // Create Active Connection
-        let conn = ActiveConnection.getFromPool({
+        let conn = WsConnection.pool.get({
             connId: connId,
             server: this,
             ws: ws,
-            request: req,
-            session: this._options.defaultSession,
-            tsbuffer: this._tsbuffer,
-            serviceMap: this._serviceMap,
+            httpReq: httpReq,
+            defaultSession: this._options.defaultSession,
+            tsbuffer: this.tsbuffer,
+            serviceMap: this.serviceMap,
             onClose: this._onClientClose,
-            onRecvData: this._onRecvData
+            onRecvData: v => { this.onData(conn, v) }
         });
         this._conns.push(conn);
         this._id2Conn[conn.connId] = conn;
 
-        console.log('[CLIENT_CONNECT]', `IP=${conn.ip}`, `ConnID=${conn.connId}`, `ActiveConn=${this._conns.length}`);
+        this.logger.log('[CLIENT_CONNECT]', `IP=${conn.ip}`, `ConnID=${conn.connId}`, `ActiveConn=${this._conns.length}`);
     };
 
-    private _onRecvData = (conn: ActiveConnection<ServerCustomType>, recvData: RecvData) => {
-        if (recvData.type === 'text') {
-            console.debug('[RECV_TXT]', recvData.data);
-            if (recvData.data === 'status') {
-                conn.sendRaw(`Status=${this.status}, ActiveConn=${this._conns.length}`)
-            }
-        }
-        else if (recvData.type === 'apiReq') {
-            this._handleApi(conn, recvData.service, recvData.sn, recvData.data);
-        }
-        else if (recvData.type === 'msg') {
-            this._handleMsg(conn, recvData.service, recvData.data);
-        }
-        else {
-            console.warn('[UNRESOLVED_BUFFER]', recvData.data);
-        }
-    }
+    
 
-    private _onClientClose = (conn: ActiveConnection<ServerCustomType>, code: number, reason: string) => {
+    private _onClientClose = (conn: WsConnection<ServiceType, SessionType>, code: number, reason: string) => {
         this._conns.removeOne(v => v.connId === conn.connId);
         this._id2Conn[conn.connId] = undefined;
-        ActiveConnection.putIntoPool(conn);
-        console.log('[CLIENT_CLOSE]', `IP=${conn.ip} ConnID=${conn.connId} Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this._conns.length}`);
+        this.logger.log('[CLIENT_CLOSE]', `IP=${conn.ip} ConnID=${conn.connId} Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this._conns.length}`);
 
         // 优雅地停止
-        if (this._rsStopping && this._conns.length === 0 && !this._isServerWillStopExecuting) {
+        if (this._stopping && this._conns.length === 0) {
             this._wsServer && this._wsServer.close(e => {
-                this._rsStopping = this._rjStopping = undefined;
+                this._stopping = undefined;
                 this._status = 'closed';
-                e ? this._rjStopping!(e) : this._rsStopping!();
+                e ? this._stopping!.rj(e) : this._stopping!.rs();
             });
         }
     }
 
-    private async _handleApi(conn: ActiveConnection<ServerCustomType>, service: ApiServiceDef, sn: number, reqBody: any) {
+    private async _handleApi(conn: ActiveConnection<ServiceType>, service: ApiServiceDef, sn: number, reqBody: any) {
         // Create ApiCall
         let call: ApiCall<any, any> = {
             service: service,
@@ -285,7 +234,7 @@ export class Server<ServerCustomType extends BaseServerCustomType = any> {
         }
     }
 
-    private async _handleMsg(conn: ActiveConnection<ServerCustomType>, service: MsgServiceDef, msgBody: any) {
+    private async _handleMsg(conn: ActiveConnection<ServiceType>, service: MsgServiceDef, msgBody: any) {
         // Create MsgCall
         let call: MsgCall = {
             conn: conn,
@@ -316,65 +265,12 @@ export class Server<ServerCustomType extends BaseServerCustomType = any> {
 
         // MsgHandler
         if (!this._msgHandlers.forEachHandler(service.name, call)) {
-            console.debug('[UNHANDLED_MSG]', service.name);
+            this.logger.debug('[UNHANDLED_MSG]', service.name);
         }
-    }
-
-    private _isServerWillStopExecuting?: any;
-    private _rsStopping?: () => void;
-    private _rjStopping?: (e: any) => void;
-    async stop(immediately: boolean = false): Promise<void> {
-        if (!this._wsServer || this._status === 'closed') {
-            return;
-        }
-
-        this._status = 'closing';
-        let output = new Promise<void>(async (rs, rj) => {
-            if (!this._wsServer) {
-                throw new Error('Server has not been started')
-            }
-
-            if (immediately) {
-                this._wsServer.close(() => { rs(); })
-            }
-            else {
-                // 优雅地停止
-                this._rsStopping = rs;
-                this._rjStopping = rj;
-                this._isServerWillStopExecuting = undefined;
-
-                if (this._options.onServerWillStop) {
-                    this._isServerWillStopExecuting = this._options.onServerWillStop(this._conns);
-                    await this._isServerWillStopExecuting;
-                    this._isServerWillStopExecuting = undefined;
-                }
-
-                if (this._conns.length) {
-                    for (let conn of this._conns) {
-                        conn.close();
-                    }
-                }
-                else {
-                    this._wsServer && this._wsServer.close(e => {
-                        this._rsStopping = this._rjStopping = undefined;
-                        this._status = 'closed';
-                        e ? rj(e) : rs();
-                    });
-                }
-            }
-        });
-
-        output.then(() => {
-            console.log('[SRV_STOP] Server stopped');
-            this._status = 'closed';
-            this._wsServer = undefined;
-        })
-
-        return output;
     }
 
     // API 只能实现一次
-    implementApi<T extends keyof ServerCustomType['req']>(apiName: T, handler: ApiHandler<ServerCustomType['req'][T], ServerCustomType['res'][T], ServerCustomType>) {
+    implementApi<T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandler<ServiceType['req'][T], ServiceType['res'][T], ServiceType>) {
         if (this._apiHandlers[apiName as string]) {
             throw new Error('Already exist handler for API: ' + apiName);
         }
@@ -382,18 +278,18 @@ export class Server<ServerCustomType extends BaseServerCustomType = any> {
     };
 
     // Msg 可以重复监听
-    listenMsg<T extends keyof ServerCustomType['msg']>(msgName: T, handler: MsgHandler<ServerCustomType['msg'][T], ServerCustomType>) {
+    listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<ServiceType['msg'][T], ServiceType>) {
         this._msgHandlers.addHandler(msgName as string, handler);
     };
 
-    unlistenMsg<T extends keyof ServerCustomType['msg']>(msgName: T, handler?: MsgHandler<ServerCustomType['msg'][T], ServerCustomType>) {
+    unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler?: MsgHandler<ServiceType['msg'][T], ServiceType>) {
         this._msgHandlers.removeHandler(msgName as string, handler);
     };
 
     // Send Msg
-    async sendMsg<T extends keyof ServerCustomType['msg']>(connIds: string[], msgName: T, msg: ServerCustomType['msg'][T]): Promise<void> {
+    async sendMsg<T extends keyof ServiceType['msg']>(connIds: string[], msgName: T, msg: ServiceType['msg'][T]): Promise<void> {
         if (this.status !== 'open') {
-            console.error('Server not open, sendMsg failed');
+            this.logger.error('Server not open, sendMsg failed');
             return;
         }
 
@@ -416,15 +312,10 @@ export class Server<ServerCustomType extends BaseServerCustomType = any> {
                 conn.sendRaw(transportData)
             }
             else {
-                console.error('SendMsg failed, invalid connId: ' + v)
+                this.logger.error('SendMsg failed, invalid connId: ' + v)
             }
         }))
     };
-
-    private _status: ServerStatus = 'closed';
-    public get status(): ServerStatus {
-        return this._status;
-    }
 
     private _autoImplementApis(apiPath: string): { succ: string[], fail: string[] } {
         let apiServices = Object.values(this._serviceMap.apiName2Service) as ApiServiceDef[];
@@ -437,7 +328,7 @@ export class Server<ServerCustomType extends BaseServerCustomType = any> {
             // get api last name
             let match = svc.name.match(/^(.+\/)*(.+)$/);
             if (!match) {
-                console.warn('Invalid apiName: ' + svc.name);
+                this.logger.warn('Invalid apiName: ' + svc.name);
                 output.fail.push(svc.name);
                 continue;
             }
@@ -454,12 +345,12 @@ export class Server<ServerCustomType extends BaseServerCustomType = any> {
 
             if (!apiHandler) {
                 output.fail.push(svc.name);
-                console.warn('Auto implement api fail: ' + svc.name);
+                this.logger.warn('Auto implement api fail: ' + svc.name);
                 continue;
             }
 
             this.implementApi(svc.name, apiHandler as any);
-            console.log('Auto implement api succ: ' + svc.name);
+            this.logger.log('Auto implement api succ: ' + svc.name);
             output.succ.push(svc.name);
         }
 
@@ -467,9 +358,11 @@ export class Server<ServerCustomType extends BaseServerCustomType = any> {
     }
 }
 
-export type ServerStatus = 'opening' | 'open' | 'closing' | 'closed';
+export type WsServerStatus = 'opening' | 'open' | 'closing' | 'closed';
 
-const defaultServerOptions: ServerOptions = {
+const defaultServerOptions: WsServerOptions<any, any> = {
+    port: 3000,
+    logger: console,
     proto: {
         services: [],
         types: {}
@@ -484,15 +377,9 @@ export interface ServerEventData {
     resError: any
 }
 
-export type ServerOptions<ServerCustomType extends BaseServerCustomType = any> = {
-    /** Http短连接端口 无则不监听 */
-    httpPort?: number;
-    /** WebSocket长连接端口 无则不监听 */
-    wsPort?: number;
-    proto: string | ServiceProto;
-    apiPath?: string;
-    defaultSession: ServerCustomType['session'];
-    onServerWillStop?: (conns: ActiveConnection[]) => (Promise<void> | void);
+export interface WsServerOptions<ServiceType extends BaseServiceType, SessionType> extends BaseServerOptions {
+    port: number;
+    defaultSession: SessionType;
 };
 
 
@@ -500,9 +387,9 @@ export type ServerOptions<ServerCustomType extends BaseServerCustomType = any> =
 export type ApiFlowItem<
     Req = any,
     Res = any,
-    ServerCustomType extends BaseServerCustomType = any
-    > = (call: ApiCall<Req, Res, ServerCustomType>) => boolean | Promise<boolean>;
+    ServiceType extends BaseServiceType = any
+    > = (call: ApiCall<Req, Res, ServiceType>) => boolean | Promise<boolean>;
 export type MsgFlowItem<
     Msg = any,
-    ServerCustomType extends BaseServerCustomType = any
-    > = (msg: MsgCall<Msg, ServerCustomType>) => boolean | Promise<boolean>;
+    ServiceType extends BaseServiceType = any
+    > = (msg: MsgCall<Msg, ServiceType>) => boolean | Promise<boolean>;

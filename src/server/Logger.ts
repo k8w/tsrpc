@@ -35,6 +35,10 @@ export class PrefixLogger extends PoolItem<PrefixLoggerOptions> implements Logge
         this.options.logger.error(...this.getPrefix().concat(args));
     }
 
+    destroy() {
+        PrefixLogger.pool.put(this);
+    }
+
 }
 
 export interface Logger {

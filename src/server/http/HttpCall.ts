@@ -4,31 +4,24 @@ import { Pool } from '../../models/Pool';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { BaseServiceType } from '../../proto/BaseServiceType';
 
-// export interface ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceType = any> extends ApiCall<Req, Res> {
-//     conn: HttpConnection<ServiceType>;
-//     sn: number;
-// }
 export interface ApiCallHttpOptions<ServiceType extends BaseServiceType> extends ApiCallOptions {
     conn: HttpConnection<ServiceType>;
-    sn: number;
 }
 export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceType = any> extends ApiCall<ApiCallHttpOptions<ServiceType>, Req, Res> {
 
     static pool = new Pool<ApiCallHttp>(ApiCallHttp);
 
     conn!: HttpConnection<ServiceType>;
-    sn!: number;
 
     reset(options: ApiCallHttpOptions<ServiceType>) {
         super.reset(options);
         this.conn = options.conn;
-        this.sn = options.sn;
     }
 
     clean() {
         super.clean();
         this.conn.destroy();
-        this.sn = this.conn = undefined as any;
+        this.conn = undefined as any;
     }
 
     succ(res: Res): void {

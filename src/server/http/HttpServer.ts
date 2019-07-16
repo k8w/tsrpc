@@ -29,7 +29,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
         return new Promise(rs => {
             this._status = 'opening';
-            this.logger.log(`Starting HTTP Server ...`);
+            this.logger.log(`Starting HTTP server ...`);
             this._server = http.createServer((req, res) => {
                 let conn: HttpConnection<ServiceType> | undefined;
 

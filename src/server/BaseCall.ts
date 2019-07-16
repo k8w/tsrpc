@@ -1,11 +1,14 @@
 import { ApiServiceDef, MsgServiceDef } from '../proto/ServiceProto';
-import { Logger, PrefixLogger } from './Logger';
+import { PrefixLogger } from './Logger';
 import { ApiError } from '../proto/TransportData';
-import { PoolItem, Pool } from '../models/Pool';
+import { PoolItem } from '../models/Pool';
+import { BaseConnection } from './BaseConnection';
 
 export interface ApiCallOptions {
+    conn: BaseConnection<ServiceType>,
     logger: PrefixLogger;
     service: ApiServiceDef,
+    sn: number,
     req: any
 }
 export abstract class ApiCall<CallOptions extends ApiCallOptions = ApiCallOptions, Req = any, Res = any> extends PoolItem<CallOptions> {
@@ -13,6 +16,7 @@ export abstract class ApiCall<CallOptions extends ApiCallOptions = ApiCallOption
 
     logger!: PrefixLogger;
     service!: ApiServiceDef;
+    sn!: number;
     req!: Req;
     // 已发送的响应
     res?: { isSucc: true, data: Res } | ({ isSucc: false } & ApiError);
@@ -20,13 +24,14 @@ export abstract class ApiCall<CallOptions extends ApiCallOptions = ApiCallOption
     reset(options: ApiCallOptions) {
         this.logger = options.logger;
         this.service = options.service;
+        this.sn = options.sn;
         this.req = options.req;
         this.res = undefined;
     }
 
     clean() {
         PrefixLogger.pool.put(this.logger);
-        this.logger = this.service = this.req = this.res = undefined as any;
+        this.logger = this.service = this.sn = this.req = this.res = undefined as any;
     }
 
     abstract succ(data: Res): void;

@@ -1,7 +1,7 @@
 import WebSocket from 'ws';
 import { ApiError } from '../../proto/TransportData';
 import { ServiceProto } from '../../proto/ServiceProto';
-import { Transporter, RecvData } from '../../models/Transporter';
+import { Transporter, RecvData } from '../../models/WsTransporter';
 import { HandlerManager } from '../../models/HandlerManager';
 import { BaseServiceType } from '../../proto/BaseServiceType';
 import { CallApiOptions } from '../models/CallApiOptions';
