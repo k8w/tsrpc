@@ -1,6 +1,3 @@
-import { ApiServiceDef, MsgServiceDef } from '../../proto/ServiceProto';
-import { Logger } from '../Logger';
-import { ApiError } from '../../proto/TransportData';
 import { BaseServiceType } from '../../proto/BaseServiceType';
 import { WsConnection } from './WsConnection';
 import { ApiCall, ApiCallOptions, MsgCall, MsgCallOptions } from '../BaseCall';

@@ -5,15 +5,15 @@ import { HttpServer } from './HttpServer';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { Logger, PrefixLogger } from '../Logger';
 import { BaseServiceType } from '../../proto/BaseServiceType';
-import { BaseConnection, BaseConnectionOptions } from '../BaseConnection';
 
-export interface HttpConnectionOptions<ServiceType extends BaseServiceType> extends BaseConnectionOptions<ServiceType> {
+export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
+    server: HttpServer<ServiceType>,
     ip: string;
     req: http.IncomingMessage,
     res: http.ServerResponse
 }
 
-export class HttpConnection<ServiceType extends BaseServiceType> extends BaseConnection<ServiceType, HttpConnection<ServiceType>> {
+export class HttpConnection<ServiceType extends BaseServiceType> extends PoolItem<HttpConnectionOptions<ServiceType>> {
 
     static pool = new Pool<HttpConnection<any>>(HttpConnection);
 
@@ -25,6 +25,14 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
 
     get server(): HttpServer<ServiceType> {
         return this.options.server;
+    }
+
+    reset(options: this['options']) {
+        super.reset(options);
+        this.logger = PrefixLogger.pool.get({
+            logger: options.server.logger,
+            prefix: `[${options.ip}]`
+        });
     }
 
     clean() {

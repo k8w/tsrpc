@@ -2,11 +2,10 @@ import { ApiServiceDef, MsgServiceDef } from '../proto/ServiceProto';
 import { PrefixLogger } from './Logger';
 import { ApiError } from '../proto/TransportData';
 import { PoolItem } from '../models/Pool';
-import { BaseConnection } from './BaseConnection';
 
 export interface ApiCallOptions {
-    conn: BaseConnection<ServiceType>,
-    logger: PrefixLogger;
+    conn: any,
+    logger: PrefixLogger,
     service: ApiServiceDef,
     sn: number,
     req: any
@@ -42,6 +41,7 @@ export abstract class ApiCall<CallOptions extends ApiCallOptions = ApiCallOption
 }
 
 export interface MsgCallOptions {
+    conn: any,
     logger: PrefixLogger;
     service: MsgServiceDef,
     msg: any

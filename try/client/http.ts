@@ -6,7 +6,7 @@ let client = new HttpClient<ServiceType>({
 });
 
 async function main() {
-    const P = 200, N = 2000;
+    const P = 50, N = 1000;
     let max = 0;
     console.time(`test ${P}/${N}`);
     for (let i = 0, len = N / P; i < len; ++i) {
@@ -19,5 +19,4 @@ async function main() {
     console.timeEnd(`test ${P}/${N}`);
     console.log('max', max)
 }
-
 main();

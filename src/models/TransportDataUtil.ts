@@ -3,7 +3,7 @@ import { ApiServiceDef, MsgServiceDef } from '../proto/ServiceProto';
 import { ServerInputData, ServerOutputData, ApiError } from '../proto/TransportData';
 import { ServiceMap } from "./ServiceMapUtil";
 
-export type ParsedServerInput = { type: 'api', service: ApiServiceDef, req: any, sn?: number } | { type: 'msg', service: MsgServiceDef, msg: any };
+export type ParsedServerInput = { type: 'api', service: ApiServiceDef, req: any, sn: number } | { type: 'msg', service: MsgServiceDef, msg: any };
 export type ParsedServerOutput = { type: 'api', service: ApiServiceDef } & ({ isSucc: true, res: any } | { isSucc: false, error: ApiError }) | { type: 'msg', service: MsgServiceDef, msg: any };
 
 export class TransportDataUtil {
@@ -113,7 +113,7 @@ export class TransportDataUtil {
                 type: 'api',
                 service: service,
                 req: req,
-                sn: serverInputData[2]
+                sn: serverInputData[2] || -1
             }
         }
         else {

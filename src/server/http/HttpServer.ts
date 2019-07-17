@@ -7,10 +7,12 @@ import { TransportDataUtil, ParsedServerInput } from '../../models/TransportData
 import { Counter } from '../../models/Counter';
 import { PrefixLogger } from '../Logger';
 import { BaseServiceType } from '../../proto/BaseServiceType';
+import { Pool } from '../../models/Pool';
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions, ServiceType>{
 
-    private _server?: http.Server;
+    protected _poolApiCall: Pool<ApiCallHttp> = new Pool<ApiCallHttp>(ApiCallHttp);
+    protected _poolMsgCall: Pool<MsgCallHttp> = new Pool<MsgCallHttp>(MsgCallHttp);
 
     constructor(options?: Partial<HttpServerOptions>) {
         super(Object.assign({}, defaultHttpServerOptions, options));
@@ -21,6 +23,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
         return this._status;
     }
 
+    private _server?: http.Server;
     private _apiReqSnCounter = new Counter;
     start(): Promise<void> {
         if (this._server) {
@@ -43,10 +46,6 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                         let ip = HttpUtil.getClientIp(req);
                         conn = HttpConnection.pool.get({
                             server: this,
-                            logger: PrefixLogger.pool.get({
-                                logger: this.logger,
-                                prefix: `[${ip}]`
-                            }),
                             ip: ip,
                             req: req,
                             res: res
@@ -85,27 +84,25 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
         })
     }
 
-    protected _makeCall(conn: HttpConnection<ServiceType>, buf: Uint8Array): HttpCall {
-        let parsed: ParsedServerInput;
-        try {
-            parsed = TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
-        }
-        catch (e) {
-            conn.close();
-            throw new Error(`Invalid input buffer, length=${buf.length}`);
-        }
-
+    protected _parseBuffer(conn: any, buf: Uint8Array): ParsedServerInput {
+        let parsed = super._parseBuffer(conn, buf);
         if (parsed.type === 'api') {
-            let sn = this._apiReqSnCounter.getNext();
+            parsed.sn = this._apiReqSnCounter.getNext();
+        }        
+        return parsed;
+    }
+    protected _makeCall(conn: any, input: ParsedServerInput): HttpCall {
+        if (input.type === 'api') {
+            input.sn = this._apiReqSnCounter.getNext();
             return ApiCallHttp.pool.get({
                 conn: conn,
-                sn: sn,
+                sn: input.sn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefix: `API#${sn} ${parsed.service.name}`
+                    prefix: `API#${input.sn} ${input.service.name}`
                 }),
-                service: parsed.service,
-                req: parsed.req
+                service: input.service,
+                req: input.req
             })
         }
         else {
@@ -113,10 +110,10 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 conn: conn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefix: `MSG ${parsed.service.name}`
+                    prefix: `MSG ${input.service.name}`
                 }),
-                service: parsed.service,
-                msg: parsed.msg
+                service: input.service,
+                msg: input.msg
             })
         }
     }

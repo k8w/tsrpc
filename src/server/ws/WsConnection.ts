@@ -1,14 +1,13 @@
 import * as http from "http";
 import * as WebSocket from "ws";
 import { ApiCall } from '../BaseCall';
-import { Logger, PrefixLogger } from '../Logger';
+import { PrefixLogger } from '../Logger';
 import { RecvData, WsTransporter } from '../../models/WsTransporter';
 import { TSBuffer } from "tsbuffer";
 import { BaseServiceType } from "../../proto/BaseServiceType";
 import { WsServer } from "./WsServer";
 import { PoolItem, Pool } from '../../models/Pool';
 import { ServiceMap } from "../../models/ServiceMapUtil";
-import { ParsedServerInput } from '../../models/TransportDataUtil';
 import { HttpUtil } from "../../models/HttpUtil";
 
 export interface WsConnectionOptions<ServiceType extends BaseServiceType, SessionType> {

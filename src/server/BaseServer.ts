@@ -1,6 +1,6 @@
 import { ApiCall, MsgCall, BaseCall, ApiCallOptions, MsgCallOptions } from './BaseCall';
 import { ServiceProto, ServiceDef, ApiServiceDef, MsgServiceDef } from '../proto/ServiceProto';
-import { Logger } from './Logger';
+import { Logger, PrefixLogger } from './Logger';
 import { HandlerManager } from '../models/HandlerManager';
 import { TsrpcError } from '../models/TsrpcError';
 import { TSBuffer } from 'tsbuffer';
@@ -13,7 +13,9 @@ import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUti
 export abstract class BaseServer<ServerOptions extends BaseServerOptions, ServiceType extends BaseServiceType = any> {
     abstract start(): Promise<void>;
     abstract stop(immediately?: boolean): Promise<void>;
-    abstract callPool: Pool<BaseCall>;
+    // protected abstract _makeCall(conn: any, input: ParsedServerInput): BaseCall;
+    protected abstract _poolApiCall: Pool<ApiCall>;
+    protected abstract _poolMsgCall: Pool<MsgCall>;
 
     // 配置及其衍生项
     protected _options: ServerOptions;
@@ -48,11 +50,12 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         else {
             buf = data;
         }
+        let input = this._parseBuffer(conn, buf);
 
         // Parse RPC Call
         let call: BaseCall;
         try {
-            call = this._makeCall(conn, buf);
+            call = this._makeCall(conn, input);
         }
         catch (e) {
             this.logger.error('Buffer cannot be resolved.', e);
@@ -70,41 +73,38 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         }
     }
 
-    protected _parseServerInput(buf: Uint8Array): ParsedServerInput{
-        return TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);;
-    }
-
-    protected _makeCall(conn: any, buf: Uint8Array): BaseCall {
-        let parsed: ParsedServerInput;
+    protected _parseBuffer(conn: any, buf: Uint8Array): ParsedServerInput {
         try {
-            parsed = this._parseServerInput(buf);
+            return TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
         }
         catch (e) {
             conn.close();
             throw new Error(`Invalid input buffer, length=${buf.length}`);
         }
+    }
 
-        if (parsed.type === 'api') {
-            return this.callPool.get({
+    protected _makeCall(conn: any, input: ParsedServerInput): BaseCall {
+        if (input.type === 'api') {
+            return this._poolApiCall.get({
                 conn: conn,
-                sn: parsed.sn,
+                sn: input.sn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefix: `API#${sn} ${parsed.service.name}`
+                    prefix: `API#${input.sn} ${input.service.name}`
                 }),
-                service: parsed.service,
-                req: parsed.req
+                service: input.service,
+                req: input.req
             })
         }
         else {
-            return MsgCallHttp.pool.get({
+            return this._poolMsgCall.get({
                 conn: conn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefix: `MSG ${parsed.service.name}`
+                    prefix: `MSG ${input.service.name}`
                 }),
-                service: parsed.service,
-                msg: parsed.msg
+                service: input.service,
+                msg: input.msg
             })
         }
     }
