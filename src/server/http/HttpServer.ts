@@ -24,7 +24,6 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     }
 
     private _server?: http.Server;
-    private _apiReqSnCounter = new Counter;
     start(): Promise<void> {
         if (this._server) {
             throw new Error('Server already started');
@@ -87,19 +86,18 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     protected _parseBuffer(conn: any, buf: Uint8Array): ParsedServerInput {
         let parsed = super._parseBuffer(conn, buf);
         if (parsed.type === 'api') {
-            parsed.sn = this._apiReqSnCounter.getNext();
-        }        
+            parsed.sn = -1;
+        }
         return parsed;
     }
-    protected _makeCall(conn: any, input: ParsedServerInput): HttpCall {
+    protected _makeCall(conn: HttpConnection<ServiceType>, input: ParsedServerInput): HttpCall {
         if (input.type === 'api') {
-            input.sn = this._apiReqSnCounter.getNext();
             return ApiCallHttp.pool.get({
                 conn: conn,
                 sn: input.sn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefix: `API#${input.sn} ${input.service.name}`
+                    prefix: `API#${conn.sn} ${input.service.name}`
                 }),
                 service: input.service,
                 req: input.req
@@ -110,7 +108,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 conn: conn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefix: `MSG ${input.service.name}`
+                    prefix: `MSG#${conn.sn} ${input.service.name}`
                 }),
                 service: input.service,
                 msg: input.msg

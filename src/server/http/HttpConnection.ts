@@ -5,6 +5,7 @@ import { HttpServer } from './HttpServer';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { Logger, PrefixLogger } from '../Logger';
 import { BaseServiceType } from '../../proto/BaseServiceType';
+import { Counter } from '../../models/Counter';
 
 export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
     server: HttpServer<ServiceType>,
@@ -16,8 +17,10 @@ export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
 export class HttpConnection<ServiceType extends BaseServiceType> extends PoolItem<HttpConnectionOptions<ServiceType>> {
 
     static pool = new Pool<HttpConnection<any>>(HttpConnection);
+    static connCounter = new Counter();
 
     logger!: PrefixLogger;
+    sn: number;
 
     get ip(): string {
         return this.options.ip;
@@ -29,6 +32,7 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends PoolIte
 
     reset(options: this['options']) {
         super.reset(options);
+        this.sn = HttpConnection.connCounter.getNext();
         this.logger = PrefixLogger.pool.get({
             logger: options.server.logger,
             prefix: `[${options.ip}]`

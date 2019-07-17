@@ -9,6 +9,7 @@ import { WsServer } from "./WsServer";
 import { PoolItem, Pool } from '../../models/Pool';
 import { ServiceMap } from "../../models/ServiceMapUtil";
 import { HttpUtil } from "../../models/HttpUtil";
+import { TransportDataUtil } from '../../models/TransportDataUtil';
 
 export interface WsConnectionOptions<ServiceType extends BaseServiceType, SessionType> {
     connId: number,
@@ -16,11 +17,8 @@ export interface WsConnectionOptions<ServiceType extends BaseServiceType, Sessio
     ws: WebSocket,
     httpReq: http.IncomingMessage,
     defaultSession: SessionType,
-    tsbuffer: TSBuffer,
-    serviceMap: ServiceMap,
     onClose: (conn: WsConnection<ServiceType, SessionType>, code: number, reason: string) => void,
     onRecvData: (data: Buffer) => void;
-    // onInput: (conn: WsConnection<ServiceType, SessionType>, input: ParsedServerInput) => void;
 }
 
 /**
@@ -46,20 +44,21 @@ export class WsConnection<ServiceType extends BaseServiceType = any, SessionType
         this.session = Object.merge({}, options.defaultSession);
         this.logger = PrefixLogger.pool.get({
             logger: this.options.server.logger,
-            prefix: `[Conn#${options.connId}] [${options.ip}]`
+            prefix: `[Conn#${options.connId}] [${this.ip}]`
         });
         // TODO
         // this.transporter = WsTransporter.pool.get({})
 
         // Init WS
-        options.ws.onclose = e => { this._onClose(e.code, e.reason) };
-        options.ws.onerror = e => { this._onError(e.error) };
+        options.ws.onclose = e => { this.options.onClose(this, e.code, e.reason); };
+        options.ws.onerror = e => { this.logger.warn('[CLIENT_ERR]', e.error); };
     }
 
     clean() {
         if (this.options.ws && this.options.ws.readyState === WebSocket.OPEN) {
             this.options.ws.close()
         }
+        this.options.ws.onopen = this.options.ws.onclose = this.options.ws.onmessage = this.options.ws.onerror = undefined as any;
 
         super.clean();
         this.logger.destroy();
@@ -73,7 +72,17 @@ export class WsConnection<ServiceType extends BaseServiceType = any, SessionType
 
     // Send Msg
     sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]) {
-        return this._transporter.sendMsg(msgName as string, msg);
+        let service = this.options.server.serviceMap.msgName2Service[msgName as string];
+        if (!service) {
+            throw new Error('Invalid msg name: ' + msgName);
+        }
+
+        let buf = TransportDataUtil.encodeMsg(this.options.server.tsbuffer, service, msg);
+        return new Promise((rs, rj) => {
+            this.options.ws.send(buf, e => {
+                e ? rj(e) : rs();
+            })
+        })
     };
 
     sendApiSucc(call: ApiCall<any, any>, res: any) {
@@ -81,10 +90,15 @@ export class WsConnection<ServiceType extends BaseServiceType = any, SessionType
             return;
         }
 
-        this._transporter.sendApiSucc(call.service, call.sn, res)
-
         call.res = res;
         call.logger.log('Succ', res)
+
+        let buf = TransportDataUtil.encodeApiSucc(this.options.server.tsbuffer, call.service, res, call.sn);
+        return new Promise((rs, rj) => {
+            this.options.ws.send(buf, e => {
+                e ? rj(e) : rs();
+            })
+        });
     }
 
     sendApiError(call: ApiCall<any, any>, message: string, info?: any) {
@@ -92,39 +106,24 @@ export class WsConnection<ServiceType extends BaseServiceType = any, SessionType
             return;
         }
 
-        let err = this._transporter.sendApiError(call.service, call.sn, message, info);
+        let buf = TransportDataUtil.encodeApiError(call.service, message, info, call.sn)
 
-        call.res = err;
+        call.res = {
+            isSucc: false,
+            message: message,
+            info: info
+        };
         call.logger.log('Error', message, info);
-    }
 
-    sendRaw(data: WebSocket.Data) {
         return new Promise((rs, rj) => {
-            this._ws!.send(data, err => {
-                err ? rj(err) : rs();
-            });
-        })
-    }
-
-    private _onRecvData = (data: RecvData) => {
-        this._options.onRecvData(this, data);
+            this.options.ws.send(buf, e => {
+                e ? rj(e) : rs();
+            })
+        });
     }
 
     close() {
-        if (!this._ws) {
-            return;
-        }
-
         // 已连接 Close之
-        this._ws.close(1000, 'Server closed');
-    }
-
-    private _onClose(code: number, reason: string) {
-        this._ws.onopen = this._ws.onclose = this._ws.onmessage = this._ws.onerror = undefined as any;
-        this._options.onClose && this._options.onClose(this, code, reason);
-    }
-
-    private _onError(e: Error) {
-        console.warn('[CLIENT_ERR]', e);
+        this.options.ws.close(1000, 'Server closed');
     }
 }

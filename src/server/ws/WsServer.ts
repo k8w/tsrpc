@@ -134,8 +134,6 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = a
             ws: ws,
             httpReq: httpReq,
             defaultSession: this._options.defaultSession,
-            tsbuffer: this.tsbuffer,
-            serviceMap: this.serviceMap,
             onClose: this._onClientClose,
             onRecvData: v => { this.onData(conn, v) }
         });
