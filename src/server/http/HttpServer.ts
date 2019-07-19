@@ -2,7 +2,7 @@ import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../Base
 import * as http from "http";
 import { HttpConnection } from './HttpConnection';
 import { HttpUtil } from '../../models/HttpUtil';
-import { HttpCall, ApiCallHttp, MsgCallHttp } from './HttpCall';
+import { HttpCall, ApiCallHttp, MsgCallHttp, ApiCallHttpOptions, MsgCallHttpOptions } from './HttpCall';
 import { TransportDataUtil, ParsedServerInput } from '../../models/TransportDataUtil';
 import { Counter } from '../../models/Counter';
 import { PrefixLogger } from '../Logger';
@@ -115,6 +115,10 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
             })
         }
     }
+
+    // Override function type
+    implementApi!: <T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandlerHttp<ServiceType,ServiceType['req'][T], ServiceType['res'][T]>) => void;
+    listenMsg!: <T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandlerHttp<ServiceType,ServiceType['msg'][T]>) => void;
 }
 
 export const defaultHttpServerOptions: HttpServerOptions = {
@@ -128,3 +132,6 @@ export interface HttpServerOptions extends BaseServerOptions {
 }
 
 type HttpServerStatus = 'opening' | 'open' | 'closing' | 'closed';
+
+export type ApiHandlerHttp<ServiceType extends BaseServiceType = BaseServiceType, Req = any, Res = any> = (call: ApiCallHttp<Req, Res, ServiceType>) => void | Promise<void>;
+export type MsgHandlerHttp<ServiceType extends BaseServiceType = BaseServiceType, Msg = any> = (msg: MsgCallHttp<Msg, ServiceType>) => void | Promise<void>;

@@ -83,7 +83,7 @@ export class TransportDataUtil {
         return this.transportCoder.encode([service.id, resBuf, undefined, sn], 'ServerOutputData');
     }
 
-    static encodeApiError(service: ApiServiceDef, message: string, info?: any, sn: number) {
+    static encodeApiError(service: ApiServiceDef, message: string, info: any | undefined, sn: number) {
         return this.transportCoder.encode([service.id, undefined, { message: message, info: info }, sn >= 0 ? sn : undefined], 'ServerOutputData');
     }
 

@@ -207,12 +207,12 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
     // #region Api/Msg handler register
     // API 只能实现一次
-    implementApi<T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandler<ServiceType['req'][T], ServiceType['res'][T]>) {
+    implementApi<T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandler<ServiceType['req'][T], ServiceType['res'][T]>): void {
         if (this._apiHandlers[apiName as string]) {
             throw new Error('Already exist handler for API: ' + apiName);
         }
         this._apiHandlers[apiName as string] = handler;
-        this.logger.log('API implemented succ: ' + apiName);
+        this.logger.log(`API implemented succ: [${apiName}]`);
     };
 
     autoImplementApi(apiPath: string, apiNamePrefix?: string): { succ: string[], fail: string[] } {
@@ -262,7 +262,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
             if (!apiHandler) {
                 output.fail.push(svc.name);
-                let errMsg = 'Auto implement api fail: ' + svc.name;
+                let errMsg = `Auto implement api fail: [${svc.name}]`;
 
                 // Fail info
                 if (requireError) {
@@ -289,12 +289,14 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     }
 
     // Msg 可以重复监听
-    listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<ServiceType['msg'][T]>) {
+    listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<ServiceType['msg'][T]>): void {
         this._msgHandlers.addHandler(msgName as string, handler);
+        console.log(`Msg listened succ [${msgName}]`);
     };
 
-    unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler?: MsgHandler<ServiceType['msg'][T]>) {
+    unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler?: Function): void {
         this._msgHandlers.removeHandler(msgName as string, handler);
+        console.log(`Msg unlistened succ [${msgName}]`);
     };
     // #endregion   
 
@@ -311,6 +313,7 @@ export interface BaseServerOptions {
     encrypter?: (src: Uint8Array) => Uint8Array | Promise<Uint8Array>;
     decrypter?: (cipher: Uint8Array) => Uint8Array | Promise<Uint8Array>;
 }
+
 
 export type ApiHandler<Req = any, Res = any> = (call: ApiCall<ApiCallOptions, Req, Res>) => void | Promise<void>;
 export type MsgHandler<Msg = any> = (msg: MsgCall<MsgCallOptions, Msg>) => void | Promise<void>;

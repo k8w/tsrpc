@@ -20,7 +20,7 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends PoolIte
     static connCounter = new Counter();
 
     logger!: PrefixLogger;
-    sn: number;
+    sn!: number;
 
     get ip(): string {
         return this.options.ip;

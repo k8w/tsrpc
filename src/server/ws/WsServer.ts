@@ -180,13 +180,18 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = a
         await Promise.all(connIds.map(v => {
             let conn = this._id2Conn[v];
             if (conn) {
-                conn.sendRaw(transportData)
+                conn.options.ws.send(transportData)
             }
             else {
                 this.logger.error('SendMsg failed, invalid connId: ' + v)
             }
         }))
     };
+
+    // Override function type
+    implementApi!: <T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandlerWs<ServiceType, ServiceType['req'][T], ServiceType['res'][T]>) => void;
+    listenMsg!: <T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandlerWs<ServiceType, ServiceType['msg'][T]>) => void;
+
 }
 
 export type WsServerStatus = 'opening' | 'open' | 'closing' | 'closed';
@@ -212,3 +217,6 @@ export interface WsServerOptions<SessionType> extends BaseServerOptions {
     port: number;
     defaultSession: SessionType;
 };
+
+export type ApiHandlerWs<ServiceType extends BaseServiceType = BaseServiceType, Req = any, Res = any> = (call: ApiCallWs<Req, Res, ServiceType>) => void | Promise<void>;
+export type MsgHandlerWs<ServiceType extends BaseServiceType = BaseServiceType, Msg = any> = (msg: MsgCallWs<Msg, ServiceType>) => void | Promise<void>;
