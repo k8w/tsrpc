@@ -2,12 +2,9 @@ import * as http from "http";
 import * as WebSocket from "ws";
 import { ApiCall } from '../BaseCall';
 import { PrefixLogger } from '../Logger';
-import { RecvData, WsTransporter } from '../../models/WsTransporter';
-import { TSBuffer } from "tsbuffer";
 import { BaseServiceType } from "../../proto/BaseServiceType";
 import { WsServer } from "./WsServer";
 import { PoolItem, Pool } from '../../models/Pool';
-import { ServiceMap } from "../../models/ServiceMapUtil";
 import { HttpUtil } from "../../models/HttpUtil";
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 
@@ -31,7 +28,6 @@ export class WsConnection<ServiceType extends BaseServiceType = any, SessionType
     ip!: string;
     session!: SessionType;
     logger!: PrefixLogger;
-    transporter!: WsTransporter;
 
     get connId() {
         return this.options.connId;
@@ -46,8 +42,6 @@ export class WsConnection<ServiceType extends BaseServiceType = any, SessionType
             logger: this.options.server.logger,
             prefix: `[Conn#${options.connId}] [${this.ip}]`
         });
-        // TODO
-        // this.transporter = WsTransporter.pool.get({})
 
         // Init WS
         options.ws.onclose = e => { this.options.onClose(this, e.code, e.reason); };
@@ -62,8 +56,7 @@ export class WsConnection<ServiceType extends BaseServiceType = any, SessionType
 
         super.clean();
         this.logger.destroy();
-        this.transporter.destroy();
-        this.ip = this.session = this.logger = this.transporter = undefined as any;
+        this.ip = this.session = this.logger = undefined as any;
     }
 
     destroy() {
