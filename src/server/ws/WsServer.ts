@@ -9,7 +9,7 @@ import { ApiCallWs, MsgCallWs } from './WsCall';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { Pool } from '../../models/Pool';
 
-export class WsServer<ServiceType extends BaseServiceType = any, SessionType = any> extends BaseServer<WsServerOptions<SessionType>, ServiceType> {
+export class WsServer<ServiceType extends BaseServiceType = any, SessionType = any> extends BaseServer<WsServerOptions<ServiceType, SessionType>, ServiceType> {
 
     protected _poolApiCall: Pool<ApiCallWs> = new Pool<ApiCallWs>(ApiCallWs);
     protected _poolMsgCall: Pool<MsgCallWs> = new Pool<MsgCallWs>(MsgCallWs);
@@ -19,7 +19,7 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = a
 
     private _connIdCounter = new Counter();
 
-    constructor(options?: Partial<WsServerOptions<SessionType>>) {
+    constructor(options?: Partial<WsServerOptions<ServiceType, SessionType>>) {
         super(Object.assign({}, defaultWsServerOptions, options));
     }
 
@@ -189,14 +189,14 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = a
     };
 
     // Override function type
-    implementApi!: <T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandlerWs<ServiceType, ServiceType['req'][T], ServiceType['res'][T]>) => void;
-    listenMsg!: <T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandlerWs<ServiceType, ServiceType['msg'][T]>) => void;
+    implementApi!: <T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandlerWs<ServiceType['req'][T], ServiceType['res'][T], ServiceType, SessionType>) => void;
+    listenMsg!: <T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandlerWs<ServiceType['msg'][T], ServiceType, SessionType>) => void;
 
 }
 
 export type WsServerStatus = 'opening' | 'open' | 'closing' | 'closed';
 
-const defaultWsServerOptions: WsServerOptions<any> = {
+const defaultWsServerOptions: WsServerOptions<any, any> = {
     port: 3000,
     logger: console,
     proto: {
@@ -213,10 +213,10 @@ export interface ServerEventData {
     resError: any
 }
 
-export interface WsServerOptions<SessionType> extends BaseServerOptions {
+export interface WsServerOptions<ServiceType extends BaseServiceType, SessionType> extends BaseServerOptions<ServiceType> {
     port: number;
     defaultSession: SessionType;
 };
 
-export type ApiHandlerWs<ServiceType extends BaseServiceType = BaseServiceType, Req = any, Res = any> = (call: ApiCallWs<Req, Res, ServiceType>) => void | Promise<void>;
-export type MsgHandlerWs<ServiceType extends BaseServiceType = BaseServiceType, Msg = any> = (msg: MsgCallWs<Msg, ServiceType>) => void | Promise<void>;
+export type ApiHandlerWs<Req, Res, ServiceType extends BaseServiceType = any, SessionType = any> = (call: ApiCallWs<Req, Res, ServiceType, SessionType>) => void | Promise<void>;
+export type MsgHandlerWs<Msg, ServiceType extends BaseServiceType = any, SessionType = any> = (msg: MsgCallWs<Msg, ServiceType, SessionType>) => void | Promise<void>;

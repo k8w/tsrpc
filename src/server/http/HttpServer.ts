@@ -8,12 +8,12 @@ import { PrefixLogger } from '../Logger';
 import { BaseServiceType } from '../../proto/BaseServiceType';
 import { Pool } from '../../models/Pool';
 
-export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions, ServiceType>{
+export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions<ServiceType>, ServiceType>{
 
     protected _poolApiCall: Pool<ApiCallHttp> = new Pool<ApiCallHttp>(ApiCallHttp);
     protected _poolMsgCall: Pool<MsgCallHttp> = new Pool<MsgCallHttp>(MsgCallHttp);
 
-    constructor(options?: Partial<HttpServerOptions>) {
+    constructor(options?: Partial<HttpServerOptions<ServiceType>>) {
         super(Object.assign({}, defaultHttpServerOptions, options));
     }
 
@@ -116,16 +116,16 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     }
 
     // Override function type
-    implementApi!: <T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandlerHttp<ServiceType,ServiceType['req'][T], ServiceType['res'][T]>) => void;
-    listenMsg!: <T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandlerHttp<ServiceType,ServiceType['msg'][T]>) => void;
+    implementApi!: <T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandlerHttp<ServiceType, ServiceType['req'][T], ServiceType['res'][T]>) => void;
+    listenMsg!: <T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandlerHttp<ServiceType, ServiceType['msg'][T]>) => void;
 }
 
-export const defaultHttpServerOptions: HttpServerOptions = {
+export const defaultHttpServerOptions: HttpServerOptions<any> = {
     ...defualtBaseServerOptions,
     port: 3000
 }
 
-export interface HttpServerOptions extends BaseServerOptions {
+export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
     port: number,
     cors?: string
 }

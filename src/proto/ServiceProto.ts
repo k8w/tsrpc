@@ -21,7 +21,10 @@ export interface MsgServiceDef extends BaseServiceDef {
 
 export type ServiceDef = ApiServiceDef | MsgServiceDef;
 
-export interface ServiceProto {
+export interface ServiceProto<ServiceType extends BaseServiceType = any> {
     services: ServiceDef[],
-    types: TSBufferProto
+    types: TSBufferProto,
+
+    // 无值 仅用于类型检测
+    __SERVICE_TYPE__?: ServiceType;
 }

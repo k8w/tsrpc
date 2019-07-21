@@ -3,17 +3,17 @@ import { WsConnection } from './WsConnection';
 import { ApiCall, ApiCallOptions, MsgCall, MsgCallOptions } from '../BaseCall';
 import { Pool } from '../../models/Pool';
 
-export interface ApiCallWsOptions<ServiceType extends BaseServiceType> extends ApiCallOptions {
-    conn: WsConnection<ServiceType>
+export interface ApiCallWsOptions<ServiceType extends BaseServiceType, SessionType> extends ApiCallOptions {
+    conn: WsConnection<ServiceType, SessionType>
 }
 
-export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType = any> extends ApiCall<ApiCallWsOptions<ServiceType>, Req, Res> {
+export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType = any, SessionType = any> extends ApiCall<ApiCallWsOptions<ServiceType, SessionType>, Req, Res> {
 
     static pool = new Pool<ApiCallWs>(ApiCallWs);
 
-    conn!: WsConnection<ServiceType>;
+    conn!: WsConnection<ServiceType, SessionType>;
 
-    reset(options: ApiCallWsOptions<ServiceType>) {
+    reset(options: ApiCallWsOptions<ServiceType, SessionType>) {
         super.reset(options);
         this.conn = options.conn;
     }
@@ -38,16 +38,16 @@ export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType
 
 }
 
-export interface MsgCallWsOptions<ServiceType extends BaseServiceType> extends MsgCallOptions {
-    conn: WsConnection<ServiceType>;
+export interface MsgCallWsOptions<ServiceType extends BaseServiceType, SessionType> extends MsgCallOptions {
+    conn: WsConnection<ServiceType, SessionType>;
 }
-export class MsgCallWs<Msg = any, ServiceType extends BaseServiceType = any> extends MsgCall<MsgCallWsOptions<ServiceType>, Msg> {
+export class MsgCallWs<Msg = any, ServiceType extends BaseServiceType = any, SessionType = any> extends MsgCall<MsgCallWsOptions<ServiceType, SessionType>, Msg> {
 
     static pool = new Pool<MsgCallWs>(MsgCallWs);
 
-    conn!: WsConnection<ServiceType>;
+    conn!: WsConnection<ServiceType, SessionType>;
 
-    reset(options: MsgCallWsOptions<ServiceType>) {
+    reset(options: MsgCallWsOptions<ServiceType, SessionType>) {
         super.reset(options);
         this.conn = options.conn;
     }

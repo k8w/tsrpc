@@ -307,8 +307,8 @@ export const defualtBaseServerOptions: BaseServerOptions = {
     logger: console
 }
 
-export interface BaseServerOptions {
-    proto: ServiceProto;
+export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
+    proto: ServiceProto<ServiceType>;
     logger: Logger;
     encrypter?: (src: Uint8Array) => Uint8Array | Promise<Uint8Array>;
     decrypter?: (cipher: Uint8Array) => Uint8Array | Promise<Uint8Array>;

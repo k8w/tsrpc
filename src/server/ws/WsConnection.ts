@@ -21,9 +21,9 @@ export interface WsConnectionOptions<ServiceType extends BaseServiceType, Sessio
 /**
  * 当前活跃的连接
  */
-export class WsConnection<ServiceType extends BaseServiceType = any, SessionType = any> extends PoolItem<WsConnectionOptions<ServiceType, SessionType>> {
+export class WsConnection<ServiceType extends BaseServiceType, SessionType> extends PoolItem<WsConnectionOptions<ServiceType, SessionType>> {
 
-    static pool = new Pool<WsConnection>(WsConnection);
+    static pool = new Pool<WsConnection<any, any>>(WsConnection);
 
     ip!: string;
     session!: SessionType;

@@ -13,11 +13,11 @@ export interface ServiceType {
         "Test": ResTest_1
     },
     msg: {
-        "Chat": MsgChat        
+        "Chat": MsgChat
     }
 }
 
-export const serviceProto: TsrpcServiceProto = {
+export const serviceProto: TsrpcServiceProto<ServiceType> = {
     "services": [
         {
             "id": 0,
