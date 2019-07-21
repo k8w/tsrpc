@@ -21,8 +21,7 @@ export interface MsgServiceDef extends BaseServiceDef {
 
 export type ServiceDef = ApiServiceDef | MsgServiceDef;
 
-export interface ServiceProto<ServiceType extends BaseServiceType = any> {
-    // __SERVICE_TYPE__?: ServiceType;
+export interface ServiceProto {
     services: ServiceDef[],
     types: TSBufferProto
 }
