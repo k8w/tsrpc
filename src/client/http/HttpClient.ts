@@ -76,18 +76,24 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
             httpReq = http.request(this._options.server, {
                 method: 'POST',
                 timeout: options.timeout || this._options.timeout
-            }, res => {
-                res.on('data', (v: Buffer) => {
+            }, httpRes => {
+                httpRes.on('data', (v: Buffer) => {
                     rs(v);
                 });
-                res.on('end', () => {
+                httpRes.on('end', () => {
                     rs();
                 })
             });
+
+            httpReq.on('abort', () => {
+                if (!promise.isDone) {
+                    apiSn && this.logger.log(`[ApiCancel] #${apiSn}`)
+                }
+            });
+
             httpReq.on('error', e => {
                 // abort 不算错误
-                if ((e as any).code === 'ECONNRESET') {
-                    apiSn && this.logger.log(`[ApiCancel] #${apiSn}`)
+                if (promise.isCanceled) {
                     return;
                 }
 
