@@ -84,9 +84,6 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
     protected _parseBuffer(conn: any, buf: Uint8Array): ParsedServerInput {
         let parsed = super._parseBuffer(conn, buf);
-        if (parsed.type === 'api') {
-            parsed.sn = -1;
-        }
         return parsed;
     }
     protected _makeCall(conn: HttpConnection<ServiceType>, input: ParsedServerInput): HttpCall {

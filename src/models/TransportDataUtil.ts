@@ -4,7 +4,7 @@ import { ServerInputData, ServerOutputData, ApiError } from '../proto/TransportD
 import { ServiceMap } from "./ServiceMapUtil";
 
 export type ParsedServerInput = { type: 'api', service: ApiServiceDef, req: any, sn: number } | { type: 'msg', service: MsgServiceDef, msg: any };
-export type ParsedServerOutput = { type: 'api', service: ApiServiceDef } & ({ isSucc: true, res: any } | { isSucc: false, error: ApiError }) | { type: 'msg', service: MsgServiceDef, msg: any };
+export type ParsedServerOutput = { type: 'api', service: ApiServiceDef, sn: number } & ({ isSucc: true, res: any } | { isSucc: false, error: ApiError }) | { type: 'msg', service: MsgServiceDef, msg: any };
 
 export class TransportDataUtil {
 
@@ -92,9 +92,9 @@ export class TransportDataUtil {
         return this.transportCoder.encode([service.id, msgBuf], 'ServerOutputData');
     }
 
-    static encodeApiReq(tsbuffer: TSBuffer, service: ApiServiceDef, req: any) {
+    static encodeApiReq(tsbuffer: TSBuffer, service: ApiServiceDef, req: any, sn?: number) {
         let reqBuf = tsbuffer.encode(req, service.req);
-        return this.transportCoder.encode([service.id, reqBuf], 'ServerInputData');
+        return this.transportCoder.encode([service.id, reqBuf, sn ? sn : undefined], 'ServerInputData');
     }
 
     static parseServerInput(tsbuffer: TSBuffer, serviceMap: ServiceMap, buf: Uint8Array): ParsedServerInput {
@@ -113,7 +113,7 @@ export class TransportDataUtil {
                 type: 'api',
                 service: service,
                 req: req,
-                sn: serverInputData[2] || -1
+                sn: serverInputData[2] || 0
             }
         }
         else {
@@ -131,7 +131,7 @@ export class TransportDataUtil {
         let serviceId = serverOutputData[0];
         let buffer = serverOutputData[1];
         let apiError = serverOutputData[2];
-        let sn = serverOutputData[3];
+        let sn = serverOutputData[3] || 0;
 
         let service = serviceMap.id2Service[serviceId];
         if (!service) {
@@ -155,7 +155,8 @@ export class TransportDataUtil {
                     type: 'api',
                     service: service,
                     isSucc: false,
-                    error: apiError
+                    error: apiError,
+                    sn: sn
                 }
             }
             else {
@@ -167,7 +168,8 @@ export class TransportDataUtil {
                     type: 'api',
                     service: service,
                     isSucc: true,
-                    res: res
+                    res: res,
+                    sn: sn
                 }
             }
         }

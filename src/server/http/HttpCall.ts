@@ -44,7 +44,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
             return;
         }
 
-        let buf = TransportDataUtil.encodeApiError(this.service, message, info, -1);
+        let buf = TransportDataUtil.encodeApiError(this.service, message, info, 0);
         this.conn.options.res.end(Buffer.from(buf));
 
         this.res = {

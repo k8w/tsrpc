@@ -15,7 +15,7 @@ export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
 export class HttpConnection<ServiceType extends BaseServiceType> extends PoolItem<HttpConnectionOptions<ServiceType>> {
 
     static pool = new Pool<HttpConnection<any>>(HttpConnection);
-    static connCounter = new Counter();
+    static connCounter = new Counter(1);
 
     logger!: PrefixLogger;
     sn!: number;

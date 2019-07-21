@@ -4,6 +4,10 @@ import { ServiceProto } from '../../proto/ServiceProto';
 import { HandlerManager } from '../../models/HandlerManager';
 import { BaseServiceType } from '../../proto/BaseServiceType';
 import { CallApiOptions } from '../models/CallApiOptions';
+import { Counter } from '../../models/Counter';
+import { TransportDataUtil, ParsedServerOutput } from '../../models/TransportDataUtil';
+import { TSBuffer } from 'tsbuffer';
+import { ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
 
 export class WebSocketClient<ServiceType extends BaseServiceType = any> {
 
@@ -11,13 +15,15 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
 
     private _ws?: WebSocket;
     private _msgHandlers: HandlerManager = new HandlerManager();
+    private _apiReqSnCounter = new Counter(1);
+
+    private _tsbuffer: TSBuffer;
+    private _serviceMap: ServiceMap;
 
     constructor(options: Pick<WsClientOptions, 'server' | 'proto'> & Partial<WsClientOptions>) {
         this._options = Object.assign({}, defaultClientOptions, options);
-        this._transporter = Transporter.getFromPool('client', {
-            proto: this._options.proto,
-            onRecvData: this._onRecvData
-        });
+        this._tsbuffer = new TSBuffer(this._options.proto.types);
+        this._serviceMap = ServiceMapUtil.getServiceMap(this._options.proto);
     }
 
     private _connecting?: Promise<void>;
@@ -34,18 +40,18 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
 
         this._options.onStatusChange && this._options.onStatusChange('connecting');
 
-        this._ws = new (WebSocket as any)(this._options.server) as WebSocket;
+        let ws = new (WebSocket as any)(this._options.server) as WebSocket;
         this._connecting = new Promise((rs: Function, rj?: Function) => {
-            this._ws!.onopen = () => {
+            ws.onopen = () => {
                 this._connecting = undefined;
                 rs();
                 this._options.onStatusChange && this._options.onStatusChange('open');
                 rj = undefined;
-                this._ws!.onopen = undefined as any;
-                this._transporter.resetWs(this._ws!);
+                ws.onopen = undefined as any;
+                this._ws = ws;
             };
 
-            this._ws!.onclose = e => {
+            ws.onclose = e => {
                 // 还在连接中，则连接失败
                 if (rj) {
                     this._connecting = undefined;
@@ -53,11 +59,8 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
                 }
 
                 // 清空WebSocket Listener
-                this._ws!.onopen = this._ws!.onclose = this._ws!.onmessage = this._ws!.onerror = undefined as any;
+                ws.onopen = ws.onclose = ws.onmessage = ws.onerror = undefined as any;
                 this._ws = undefined;
-
-                // 重设Transporter
-                this._transporter.resetWs(undefined);
 
                 this._options.onStatusChange && this._options.onStatusChange('closed');
 
@@ -68,8 +71,20 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
             };
         })
 
-        this._ws.onerror = e => {
+        ws.onerror = e => {
             console.error('[WebSocket ERROR]', e.message);
+        }
+
+        ws.onmessage = e => {
+            if (e.data instanceof Buffer) {
+                this._onBuffer(e.data)
+            }
+            else if (e.data instanceof ArrayBuffer) {
+                this._onBuffer(new Uint8Array(e.data));
+            }
+            else {
+                console.log('[UNRESOLVED_DATA]', e.data)
+            }
         }
 
         return this._connecting;
@@ -86,28 +101,35 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
         this._ws.close();
     }
 
-    private _onRecvData = (recvData: RecvData) => {
-        // 文字消息，通常用于调试，直接打印
-        if (recvData.type === 'text') {
-            console.debug('Received Text:', recvData.data);
+    private _onBuffer(buf: Uint8Array) {
+        let parsed: ParsedServerOutput;
+        try {
+            parsed = TransportDataUtil.parseServerOutout(this._tsbuffer, this._serviceMap, buf);
         }
-        else if (recvData.type === 'apiRes') {
-            let pending = this._pendingApi[recvData.sn];
+        catch (e) {
+            console.error('Cannot resolve buffer:', buf);
+            return;
+        }
+
+        if (parsed.type === 'api') {
+            let pending = this._pendingApi[parsed.sn];
             if (pending) {
-                delete this._pendingApi[recvData.sn];
-                (recvData.isSucc ? pending.rs : pending.rj)(recvData.data);
+                delete this._pendingApi[parsed.sn];
+                if (parsed.isSucc) {
+                    pending.rs(parsed.res);
+                }
+                else {
+                    pending.rj(parsed.error);
+                }
             }
             else {
-                console.warn(`Invalid SN:`, `Invalid SN: ${recvData.sn}`);
+                console.warn(`Invalid SN:`, `Invalid SN: ${parsed.sn}`);
             }
         }
-        else if (recvData.type === 'msg') {
-            if (!this._msgHandlers.forEachHandler(recvData.service.name, recvData.data)) {
-                console.debug('Unhandled msg:', recvData.data)
+        else if (parsed.type === 'msg') {
+            if (!this._msgHandlers.forEachHandler(parsed.service.name, parsed.msg)) {
+                console.debug('Unhandled msg:', parsed.msg)
             }
-        }
-        else {
-            console.warn('Unresolved buffer:', recvData.data)
         }
     }
 
@@ -116,8 +138,20 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
     } = {};
     async callApi<T extends keyof ServiceType['req']>(apiName: T, req: ServiceType['req'][T], options: CallApiOptions = {})
         : Promise<ServiceType['res'][T]> {
+        if (!this._ws) {
+            throw new Error('Not connected')
+        }
+
+        // GetService
+        let service = this._serviceMap.apiName2Service[apiName as string];
+        if (!service) {
+            throw new Error('Invalid api name: ' + apiName);
+        }
+
         // Send Req
-        let sn = this._transporter.sendApiReq(apiName as string, req);
+        let sn = this._apiReqSnCounter.getNext();
+        let buf = TransportDataUtil.encodeApiReq(this._tsbuffer, service, req, sn);
+        this._ws.send(buf);
 
         // Wait Res
         let promise = new Promise<ServiceType['res'][T]>((rs, rj) => {
@@ -181,7 +215,25 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
     }
 
     sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]) {
-        return this._transporter.sendMsg(msgName as string, msg);
+        if (!this._ws) {
+            throw new Error('Not connected')
+        }
+
+        // GetService
+        let service = this._serviceMap.msgName2Service[msgName as string];
+        if (!service) {
+            throw new Error('Invalid msg name: ' + msgName)
+        }
+
+        // Encode
+        let buf = TransportDataUtil.encodeMsg(this._tsbuffer, service, msg);
+
+        // Send Data
+        return new Promise((rs, rj) => {
+            this._ws!.send(buf, e => {
+                e ? rj(e) : rs();
+            })
+        })
     }
 }
 

@@ -9,7 +9,7 @@ import { ApiCallWs, MsgCallWs } from './WsCall';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { Pool } from '../../models/Pool';
 
-export class WsServer<ServiceType extends BaseServiceType = any, SessionType = any> extends BaseServer<WsServerOptions<ServiceType, SessionType>, ServiceType> {
+export class WsServer<ServiceType extends BaseServiceType = any, SessionType = { [key: string]: any | undefined }> extends BaseServer<WsServerOptions<ServiceType, SessionType>, ServiceType> {
 
     protected _poolApiCall: Pool<ApiCallWs> = new Pool<ApiCallWs>(ApiCallWs);
     protected _poolMsgCall: Pool<MsgCallWs> = new Pool<MsgCallWs>(MsgCallWs);
@@ -17,7 +17,7 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = a
     private readonly _conns: WsConnection<ServiceType, SessionType>[] = [];
     private readonly _id2Conn: { [connId: string]: WsConnection<ServiceType, SessionType> | undefined } = {};
 
-    private _connIdCounter = new Counter();
+    private _connIdCounter = new Counter(1);
 
     constructor(options?: Partial<WsServerOptions<ServiceType, SessionType>>) {
         super(Object.assign({}, defaultWsServerOptions, options));
