@@ -4,7 +4,7 @@
   "description": "TSRPC 2.x (both support HTTP and WebSocket)",
   "main": "index.js",
   "scripts": {
-    "test": "mocha",
+    "test": "mocha test\\**\\*.test.ts",
     "build": "rm -rf dist && npx rollup -c && cp package.json LICENSE README.md dist/",
     "bp": "npm version patch && npm run build && cd dist && npm publish & cd.."
   },
@@ -26,6 +26,10 @@
   "author": "k8w",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.7",
+    "chai": "^4.2.0",
+    "mocha": "^6.2.0",
     "ts-node": "^8.3.0",
     "typescript": "^3.5.3"
   },
@@ -33,6 +37,7 @@
   "dependencies": {
     "@types/uuid": "^3.4.4",
     "@types/ws": "^6.0.1",
+    "k8w-super-promise": "^0.2.4",
     "tsbuffer": "^1.1.0",
     "tslib": "^1.10.0",
     "uuid": "^3.3.2",

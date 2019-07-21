@@ -1,24 +1,34 @@
 import { ServiceProto } from "../../proto/ServiceProto";
 import { BaseServiceType } from "../../proto/BaseServiceType";
-import { CallApiOptions } from "../models/CallApiOptions";
 import { ServiceMapUtil, ServiceMap } from '../../models/ServiceMapUtil';
 import { TSBuffer } from "tsbuffer";
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import * as http from "http";
+import { Counter } from '../../models/Counter';
+import { Logger } from '../../server/Logger';
+import { TransportOptions } from "../models/TransportOptions";
+import SuperPromise from 'k8w-super-promise';
+import { TsrpcError } from '../../models/TsrpcError';
 
 export class HttpClient<ServiceType extends BaseServiceType = any> {
 
-    private _options: HttpClientOptions;
+    private _options: HttpClientOptions<ServiceType>;
     serviceMap: ServiceMap;
     tsbuffer: TSBuffer;
+    logger: Logger;
 
-    constructor(options?: Partial<HttpClientOptions>) {
+    private _apiSnCounter = new Counter(1);
+
+    constructor(options?: Partial<HttpClientOptions<ServiceType>>) {
         this._options = Object.assign({}, defaultHttpClientOptions, options);
         this.serviceMap = ServiceMapUtil.getServiceMap(this._options.proto);
         this.tsbuffer = new TSBuffer(this._options.proto.types);
+        this.logger = this._options.logger;
+
+        this.logger.log('TSRPC HTTP client :', this._options.server);
     }
 
-    async callApi<T extends keyof ServiceType['req']>(apiName: T, req: ServiceType['req'][T], options: CallApiOptions = {}): Promise<ServiceType['res'][T]> {
+    callApi<T extends keyof ServiceType['req']>(apiName: T, req: ServiceType['req'][T], options: TransportOptions = {}): SuperPromise<ServiceType['res'][T], TsrpcError> {
         // GetService
         let service = this.serviceMap.apiName2Service[apiName as string];
         if (!service) {
@@ -27,42 +37,89 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
 
         // Encode
         let buf = TransportDataUtil.encodeApiReq(this.tsbuffer, service, req);
+        let sn = this._apiSnCounter.getNext();
+        this.logger.log(`[ApiReq] #${sn}`, apiName, req);
 
-        return new Promise<ServiceType['res'][T]>((rs, rj) => {
-            let req = http.request(this._options.server, {
+        // Send
+        return this._sendBuf(buf, options, sn).then(resBuf => {
+            // Parsed res
+            let parsed = TransportDataUtil.parseServerOutout(this.tsbuffer, this.serviceMap, resBuf);
+            if (parsed.type !== 'api') {
+                throw new TsrpcError('Invalid response', 'INTERNAL_ERR');
+            }
+            if (parsed.isSucc) {
+                this.logger.log(`[ApiRes] #${sn}`, parsed.res)
+                return parsed.res;
+            }
+            else {
+                this.logger.log(`[ApiErr] #${sn}`, parsed.error)
+                throw parsed.error;
+            }
+        })
+    }
+
+    sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options: TransportOptions = {}): SuperPromise<void, TsrpcError> {
+        // GetService
+        let service = this.serviceMap.msgName2Service[msgName as string];
+        if (!service) {
+            throw new Error('Invalid msg name: ' + msgName);
+        }
+
+        let buf = TransportDataUtil.encodeMsg(this.tsbuffer, service, msg);
+        return this._sendBuf(buf, options).then(() => { })
+    }
+
+    protected _sendBuf(buf: Uint8Array, options: TransportOptions = {}, apiSn?: number): SuperPromise<Buffer, TsrpcError> {
+        let httpReq: http.ClientRequest;
+
+        let promise = new SuperPromise<Buffer>((rs, rj) => {
+            httpReq = http.request(this._options.server, {
                 method: 'POST',
-                timeout: options && options.timeout || this._options.apiTimeout
+                timeout: options.timeout || this._options.timeout
             }, res => {
-                res.on('data', v => {
-                    let parsed = TransportDataUtil.parseServerOutout(this.tsbuffer, this.serviceMap, v);
-                    if (parsed.type !== 'api') {
-                        rj(new Error('Invalid response'))
-                        return;
-                    }
-                    parsed.isSucc ? rs(parsed.res) : rj(parsed.error);
+                res.on('data', (v: Buffer) => {
+                    rs(v);
+                });
+                res.on('end', () => {
+                    rs();
                 })
             });
-            req.write(Buffer.from(buf));
-            req.end();
+            httpReq.on('error', e => {
+                // abort 不算错误
+                if ((e as any).code === 'ECONNRESET') {
+                    apiSn && this.logger.log(`[ApiCancel] #${apiSn}`)
+                    return;
+                }
+
+                rj(new TsrpcError(e.message, { isNetworkError: true, code: (e as any).code }));
+            })
+
+            httpReq.write(Buffer.from(buf));
+            httpReq.end();
         });
-    }
 
-    async sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]): Promise<void> {
-        throw new Error('TODO')
+        promise.onCancel(() => {
+            console.log('onCancel')
+            httpReq.abort();
+        });
+
+        return promise;
     }
 
 }
 
-const defaultHttpClientOptions: HttpClientOptions = {
-    server: '',
+const defaultHttpClientOptions: HttpClientOptions<any> = {
+    server: 'http://localhost:3000',
     proto: { services: [], types: {} },
-    apiTimeout: 3000
+    logger: console,
+    timeout: 30000
 }
 
-export interface HttpClientOptions {
+export interface HttpClientOptions<ServiceType extends BaseServiceType> {
     server: string;
-    proto: ServiceProto;
+    proto: ServiceProto<ServiceType>;
+    logger: Logger;
     /** API超时时间（毫秒） */
-    apiTimeout: number;
+    timeout: number;
 }
 

@@ -8,8 +8,8 @@ import { Counter } from '../../models/Counter';
 export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
     server: HttpServer<ServiceType>,
     ip: string;
-    req: http.IncomingMessage,
-    res: http.ServerResponse
+    httpReq: http.IncomingMessage,
+    httpRes: http.ServerResponse
 }
 
 export class HttpConnection<ServiceType extends BaseServiceType> extends PoolItem<HttpConnectionOptions<ServiceType>> {
@@ -44,8 +44,8 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends PoolIte
     }
 
     close() {
-        if (!this.options.res.finished) {
-            this.options.res.end();
+        if (!this.options.httpRes.finished) {
+            this.options.httpRes.end();
         }
     }
 

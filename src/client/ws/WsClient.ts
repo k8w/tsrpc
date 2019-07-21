@@ -3,27 +3,29 @@ import { ApiError } from '../../proto/TransportData';
 import { ServiceProto } from '../../proto/ServiceProto';
 import { HandlerManager } from '../../models/HandlerManager';
 import { BaseServiceType } from '../../proto/BaseServiceType';
-import { CallApiOptions } from '../models/CallApiOptions';
+import { CallApiOptions } from '../models/TransportOptions';
 import { Counter } from '../../models/Counter';
 import { TransportDataUtil, ParsedServerOutput } from '../../models/TransportDataUtil';
 import { TSBuffer } from 'tsbuffer';
 import { ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
+import { Logger } from '../../server/Logger';
 
 export class WebSocketClient<ServiceType extends BaseServiceType = any> {
 
     private _options: WsClientOptions;
+    private _tsbuffer: TSBuffer;
+    private _serviceMap: ServiceMap;
+    logger: Logger;
 
     private _ws?: WebSocket;
     private _msgHandlers: HandlerManager = new HandlerManager();
     private _apiReqSnCounter = new Counter(1);
 
-    private _tsbuffer: TSBuffer;
-    private _serviceMap: ServiceMap;
-
     constructor(options: Pick<WsClientOptions, 'server' | 'proto'> & Partial<WsClientOptions>) {
         this._options = Object.assign({}, defaultClientOptions, options);
         this._tsbuffer = new TSBuffer(this._options.proto.types);
         this._serviceMap = ServiceMapUtil.getServiceMap(this._options.proto);
+        this.logger = this._options.logger;
     }
 
     private _connecting?: Promise<void>;
@@ -76,7 +78,7 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
         })
 
         ws.onerror = e => {
-            console.error('[WebSocket ERROR]', e.message);
+            this.logger.error('[WebSocket ERROR]', e.message);
         }
 
         ws.onmessage = e => {
@@ -87,7 +89,7 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
                 this._onBuffer(new Uint8Array(e.data));
             }
             else {
-                console.log('[UNRESOLVED_DATA]', e.data)
+                this.logger.log('[UNRESOLVED_DATA]', e.data)
             }
         }
 
@@ -113,7 +115,7 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
             parsed = TransportDataUtil.parseServerOutout(this._tsbuffer, this._serviceMap, buf);
         }
         catch (e) {
-            console.error('Cannot resolve buffer:', buf);
+            this.logger.error('Cannot resolve buffer:', buf);
             return;
         }
 
@@ -129,12 +131,12 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
                 }
             }
             else {
-                console.warn(`Invalid SN:`, `Invalid SN: ${parsed.sn}`);
+                this.logger.warn(`Invalid SN:`, `Invalid SN: ${parsed.sn}`);
             }
         }
         else if (parsed.type === 'msg') {
             if (!this._msgHandlers.forEachHandler(parsed.service.name, parsed.msg)) {
-                console.debug('Unhandled msg:', parsed.msg)
+                this.logger.debug('Unhandled msg:', parsed.msg)
             }
         }
     }
@@ -183,7 +185,7 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
         });
 
         // Timeout
-        let timeout = options.timeout !== undefined ? options.timeout : this._options.apiTimeout;
+        let timeout = options.timeout !== undefined ? options.timeout : this._options.timeout;
         let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
         if (timeout > 0) {
             timeoutTimer = setTimeout(() => {
@@ -244,15 +246,17 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
 }
 
 const defaultClientOptions: WsClientOptions = {
-    server: '',
-    proto: undefined as any,
-    apiTimeout: 3000
+    server: 'Server URL not set',
+    proto: { services: [], types: {} },
+    logger: console,
+    timeout: 3000
 }
 
 export interface WsClientOptions {
     server: string;
     proto: ServiceProto;
-    apiTimeout: number;
+    logger: Logger;
+    timeout: number;
 
     onStatusChange?: (newStatus: WsClientStatus) => void;
     /** 掉线 */

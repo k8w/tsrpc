@@ -64,10 +64,13 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
         // Handle Call
         if (call.type === 'api') {
+            call.logger.log('Req=', call.req);
             await this._handleApi(call);
+            call.logger.log('Res=', call.res);
             this._afterApi(call);
         }
         else {
+            call.logger.log('Msg=', call.msg);
             await this._handleMsg(call);
             this._afterMsg(call);
         }
@@ -90,7 +93,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 sn: input.sn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefix: `API#${input.sn} ${input.service.name}`
+                    prefix: `API#${input.sn} [${input.service.name}]`
                 }),
                 service: input.service,
                 req: input.req

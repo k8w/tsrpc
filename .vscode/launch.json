@@ -8,14 +8,12 @@
             "type": "node",
             "request": "launch",
             "name": "mocha current file",
-            "program": "${workspaceFolder}/test/node_modules/mocha/bin/_mocha",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "args": [
-                "--opts",
-                "mocha.opts",
                 "${file}"
             ],
             "internalConsoleOptions": "openOnSessionStart",
-            "cwd": "${workspaceFolder}/test/"
+            "cwd": "${workspaceFolder}"
         },
         {
             "type": "node",

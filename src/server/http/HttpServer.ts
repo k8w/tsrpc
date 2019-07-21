@@ -31,27 +31,31 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
         return new Promise(rs => {
             this._status = 'opening';
             this.logger.log(`Starting HTTP server ...`);
-            this._server = http.createServer((req, res) => {
+            this._server = http.createServer((httpReq, httpRes) => {
                 let conn: HttpConnection<ServiceType> | undefined;
 
-                res.statusCode = 200;
+                httpRes.statusCode = 200;
                 if (this._options.cors) {
-                    res.setHeader('Access-Control-Allow-Origin', this._options.cors)
+                    httpRes.setHeader('Access-Control-Allow-Origin', this._options.cors)
                 };
 
-                req.on('data', data => {
+                httpReq.on('data', data => {
                     if (!conn) {
-                        let ip = HttpUtil.getClientIp(req);
+                        let ip = HttpUtil.getClientIp(httpReq);
                         conn = HttpConnection.pool.get({
                             server: this,
                             ip: ip,
-                            req: req,
-                            res: res
+                            httpReq: httpReq,
+                            httpRes: httpRes
                         });
                     }
                     this.onData(conn, data);
                 })
             });
+
+            if (this._options.timeout !== undefined) {
+                this._server.setTimeout(this._options.timeout);
+            }
 
             this._server.listen(this._options.port, () => {
                 this._status = 'open';
@@ -61,7 +65,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
         });
     }
 
-    stop(immediately?: boolean): Promise<void> {
+    stop(): Promise<void> {
         return new Promise(rs => {
             if (!this._server) {
                 rs();
@@ -69,52 +73,31 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
             }
             this._status = 'closing';
 
-            if (immediately) {
-                this._server.close(() => {
-                    rs();
-                })
-            }
-            else {
-                // TODO 等所有请求都结束再关闭
-            }
+            // 立即close，不再接受新请求
+            // 等所有连接都断开后rs
+            this._server.close(() => {
+                this.logger.log('Server stopped');
+                rs();
+            });
 
             this._server = undefined;
         })
     }
 
-    protected _parseBuffer(conn: any, buf: Uint8Array): ParsedServerInput {
+    protected _parseBuffer(conn: HttpConnection<ServiceType>, buf: Uint8Array): ParsedServerInput {
         let parsed = super._parseBuffer(conn, buf);
+        if (parsed.type === 'api') {
+            parsed.sn = conn.sn;
+        }
+        else if (parsed.type === 'msg') {
+            conn.options.httpRes.end();
+        }
         return parsed;
-    }
-    protected _makeCall(conn: HttpConnection<ServiceType>, input: ParsedServerInput): HttpCall {
-        if (input.type === 'api') {
-            return ApiCallHttp.pool.get({
-                conn: conn,
-                sn: input.sn,
-                logger: PrefixLogger.pool.get({
-                    logger: conn.logger,
-                    prefix: `API#${conn.sn} ${input.service.name}`
-                }),
-                service: input.service,
-                req: input.req
-            })
-        }
-        else {
-            return MsgCallHttp.pool.get({
-                conn: conn,
-                logger: PrefixLogger.pool.get({
-                    logger: conn.logger,
-                    prefix: `MSG#${conn.sn} ${input.service.name}`
-                }),
-                service: input.service,
-                msg: input.msg
-            })
-        }
     }
 
     // Override function type
-    implementApi!: <T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandlerHttp<ServiceType, ServiceType['req'][T], ServiceType['res'][T]>) => void;
-    listenMsg!: <T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandlerHttp<ServiceType, ServiceType['msg'][T]>) => void;
+    implementApi!: <T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandlerHttp<ServiceType['req'][T], ServiceType['res'][T], ServiceType>) => void;
+    listenMsg!: <T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandlerHttp<ServiceType['msg'][T], ServiceType>) => void;
 }
 
 export const defaultHttpServerOptions: HttpServerOptions<any> = {
@@ -124,10 +107,12 @@ export const defaultHttpServerOptions: HttpServerOptions<any> = {
 
 export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
     port: number,
+    // Socket Timeout
+    timeout?: number,
     cors?: string
 }
 
 type HttpServerStatus = 'opening' | 'open' | 'closing' | 'closed';
 
-export type ApiHandlerHttp<ServiceType extends BaseServiceType = BaseServiceType, Req = any, Res = any> = (call: ApiCallHttp<Req, Res, ServiceType>) => void | Promise<void>;
-export type MsgHandlerHttp<ServiceType extends BaseServiceType = BaseServiceType, Msg = any> = (msg: MsgCallHttp<Msg, ServiceType>) => void | Promise<void>;
+export type ApiHandlerHttp<Req, Res, ServiceType extends BaseServiceType = any> = (call: ApiCallHttp<Req, Res, ServiceType>) => void | Promise<void>;
+export type MsgHandlerHttp<Msg, ServiceType extends BaseServiceType = any> = (msg: MsgCallHttp<Msg, ServiceType>) => void | Promise<void>;
