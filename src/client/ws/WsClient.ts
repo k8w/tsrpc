@@ -64,10 +64,14 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
 
                 this._options.onStatusChange && this._options.onStatusChange('closed');
 
-                if (!this._disconnecting) {
+                if (this._rsDisconnecting) {
+                    this._rsDisconnecting();
+                    this._rsDisconnecting = undefined;
+                }
+                // 非主动关闭 触发掉线
+                else {
                     this._options.onLostConnection && this._options.onLostConnection();
                 }
-                this._disconnecting = false;
             };
         })
 
@@ -90,15 +94,17 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
         return this._connecting;
     }
 
-    private _disconnecting = false;
-    disconnect() {
+    private _rsDisconnecting?: () => void;
+    async disconnect() {
         // 连接不存在
         if (!this._ws) {
             return;
         }
 
-        this._disconnecting = true;
-        this._ws.close();
+        return new Promise(rs => {
+            this._rsDisconnecting = rs;
+            this._ws!.close();
+        })
     }
 
     private _onBuffer(buf: Uint8Array) {
