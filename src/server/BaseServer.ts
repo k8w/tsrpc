@@ -1,5 +1,5 @@
 import { ApiCall, MsgCall, BaseCall, ApiCallOptions, MsgCallOptions } from './BaseCall';
-import { ServiceProto, ServiceDef, ApiServiceDef, MsgServiceDef } from '../proto/ServiceProto';
+import { ServiceProto, ApiServiceDef } from '../proto/ServiceProto';
 import { Logger, PrefixLogger } from './Logger';
 import { HandlerManager } from '../models/HandlerManager';
 import { TsrpcError } from '../models/TsrpcError';

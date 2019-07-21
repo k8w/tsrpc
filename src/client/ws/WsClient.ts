@@ -1,7 +1,6 @@
 import WebSocket from 'ws';
 import { ApiError } from '../../proto/TransportData';
 import { ServiceProto } from '../../proto/ServiceProto';
-import { Transporter, RecvData } from '../../models/WsTransporter';
 import { HandlerManager } from '../../models/HandlerManager';
 import { BaseServiceType } from '../../proto/BaseServiceType';
 import { CallApiOptions } from '../models/CallApiOptions';
@@ -10,7 +9,6 @@ export class WebSocketClient<ServiceType extends BaseServiceType = any> {
 
     private _options: WsClientOptions;
 
-    private _transporter: Transporter;
     private _ws?: WebSocket;
     private _msgHandlers: HandlerManager = new HandlerManager();
 

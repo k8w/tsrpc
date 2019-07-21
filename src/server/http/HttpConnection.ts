@@ -1,9 +1,7 @@
 import { PoolItem, Pool } from '../../models/Pool';
 import * as http from "http";
-import { ApiCallHttp } from './HttpCall';
 import { HttpServer } from './HttpServer';
-import { TransportDataUtil } from '../../models/TransportDataUtil';
-import { Logger, PrefixLogger } from '../Logger';
+import { PrefixLogger } from '../Logger';
 import { BaseServiceType } from '../../proto/BaseServiceType';
 import { Counter } from '../../models/Counter';
 

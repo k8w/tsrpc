@@ -1,4 +1,5 @@
 import { TSBufferProto } from 'tsbuffer-schema';
+import { BaseServiceType } from './BaseServiceType';
 
 export interface BaseServiceDef {
     id: number,
@@ -20,7 +21,8 @@ export interface MsgServiceDef extends BaseServiceDef {
 
 export type ServiceDef = ApiServiceDef | MsgServiceDef;
 
-export interface ServiceProto {
+export interface ServiceProto<ServiceType extends BaseServiceType = any> {
+    // __SERVICE_TYPE__?: ServiceType;
     services: ServiceDef[],
     types: TSBufferProto
 }
