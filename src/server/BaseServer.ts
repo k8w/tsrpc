@@ -8,6 +8,14 @@ import { ServiceMapUtil, ServiceMap } from '../models/ServiceMapUtil';
 import { Pool } from '../models/Pool';
 import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';
 
+export type ConnectionCloseReason = 'Invalid Buffer';
+
+type Connection = {
+    close: (reason?: ConnectionCloseReason) => void,
+    ip: string,
+    logger: Logger
+}
+
 export abstract class BaseServer<ServerOptions extends BaseServerOptions, ServiceType extends BaseServiceType = any> {
     abstract start(): Promise<void>;
     abstract stop(immediately?: boolean): Promise<void>;
@@ -39,7 +47,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     }
 
     // #region Data process flow
-    async onData(conn: any, data: Buffer) {
+    async onData(conn: Connection, data: Buffer) {
         // Decrypt
         let buf: Uint8Array;
         if (this.options.decrypter) {
@@ -48,7 +56,15 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         else {
             buf = data;
         }
-        let input = this._parseBuffer(conn, buf);
+        let input: ParsedServerInput;
+        try {
+            input = this._parseBuffer(conn, buf);
+        }
+        catch (e) {
+            this.logger.error(`[${conn.ip}] [Invalid Buffer] length=${buf.length}`, buf.subarray(0, 16))
+            conn.close('Invalid Buffer');
+            return;
+        }
 
         // Parse RPC Call
         let call: BaseCall;
@@ -74,17 +90,11 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         }
     }
 
-    protected _parseBuffer(conn: any, buf: Uint8Array): ParsedServerInput {
-        try {
-            return TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
-        }
-        catch (e) {
-            conn.close();
-            throw new Error(`Invalid input buffer, length=${buf.length}`);
-        }
+    protected _parseBuffer(conn: Connection, buf: Uint8Array): ParsedServerInput {
+        return TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
     }
 
-    protected _makeCall(conn: any, input: ParsedServerInput): BaseCall {
+    protected _makeCall(conn: Connection, input: ParsedServerInput): BaseCall {
         if (input.type === 'api') {
             return this._poolApiCall.get({
                 conn: conn,
@@ -102,7 +112,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 conn: conn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefix: `MSG#${conn.sn} [${input.service.name}]`
+                    prefix: `MSG [${input.service.name}]`
                 }),
                 service: input.service,
                 msg: input.msg

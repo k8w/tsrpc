@@ -1,4 +1,4 @@
-import { TsrpcError } from "../../../src/models/TsrpcError";
+import { TsrpcError } from "tsrpc-proto";
 import { ApiCallHttp } from '../../../src/server/http/HttpCall';
 import { ReqTest } from "../../proto/PtlTest";
 import { ResTest } from '../../proto/a/b/c/PtlTest';

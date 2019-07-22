@@ -45,7 +45,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
 
         // Error SN
         if (this.conn.server.options.showErrorSn) {
-            message += ` [#${this.conn.sn.toString(36)}]`;
+            message += ` [#${this.sn.toString(36)}]`;
         }
 
         let buf = TransportDataUtil.encodeApiError(this.service, message, info, 0);

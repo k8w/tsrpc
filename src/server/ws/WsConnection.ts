@@ -7,6 +7,7 @@ import { WsServer } from "./WsServer";
 import { PoolItem, Pool } from '../../models/Pool';
 import { HttpUtil } from "../../models/HttpUtil";
 import { TransportDataUtil } from '../../models/TransportDataUtil';
+import { ConnectionCloseReason } from '../BaseServer';
 
 export interface WsConnectionOptions<ServiceType extends BaseServiceType, SessionType> {
     connId: number,
@@ -115,8 +116,8 @@ export class WsConnection<ServiceType extends BaseServiceType, SessionType> exte
         });
     }
 
-    close() {
+    close(reason?: ConnectionCloseReason) {
         // 已连接 Close之
-        this.options.ws.close(1000, 'Server closed');
+        this.options.ws.close(1000, reason || 'Server Closed');
     }
 }

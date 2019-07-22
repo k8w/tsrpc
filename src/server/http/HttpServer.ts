@@ -6,11 +6,14 @@ import { ApiCallHttp, MsgCallHttp } from './HttpCall';
 import { ParsedServerInput } from '../../models/TransportDataUtil';
 import { BaseServiceType } from 'tsrpc-proto';
 import { Pool } from '../../models/Pool';
+import { Counter } from '../../models/Counter';
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions<ServiceType>, ServiceType>{
 
     protected _poolApiCall: Pool<ApiCallHttp> = new Pool<ApiCallHttp>(ApiCallHttp);
     protected _poolMsgCall: Pool<MsgCallHttp> = new Pool<MsgCallHttp>(MsgCallHttp);
+
+    private _apiSnCounter = new Counter(1);
 
     constructor(options?: Partial<HttpServerOptions<ServiceType>>) {
         super(Object.assign({}, defaultHttpServerOptions, options));
@@ -49,7 +52,15 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                         });
                     }
                     this.onData(conn, data);
-                })
+                });
+
+                httpReq.on('end', () => {
+                    if (!conn) {
+                        httpRes.statusCode = 400;
+                        httpRes.end();
+                        this.logger.log(`[${HttpUtil.getClientIp(httpReq)}] [Bad Request] ${httpReq.method} ${httpReq.url}`)
+                    }
+                });
             });
 
             if (this.options.timeout !== undefined) {
@@ -84,9 +95,10 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     }
 
     protected _parseBuffer(conn: HttpConnection<ServiceType>, buf: Uint8Array): ParsedServerInput {
-        let parsed = super._parseBuffer(conn, buf);
+        let parsed: ParsedServerInput = super._parseBuffer(conn, buf);
+
         if (parsed.type === 'api') {
-            parsed.sn = conn.sn;
+            parsed.sn = this._apiSnCounter.getNext();
         }
         else if (parsed.type === 'msg') {
             conn.options.httpRes.end();
