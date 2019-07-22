@@ -2,10 +2,9 @@ import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../Base
 import * as http from "http";
 import { HttpConnection } from './HttpConnection';
 import { HttpUtil } from '../../models/HttpUtil';
-import { HttpCall, ApiCallHttp, MsgCallHttp, ApiCallHttpOptions, MsgCallHttpOptions } from './HttpCall';
+import { ApiCallHttp, MsgCallHttp } from './HttpCall';
 import { ParsedServerInput } from '../../models/TransportDataUtil';
-import { PrefixLogger } from '../Logger';
-import { BaseServiceType } from '../../proto/BaseServiceType';
+import { BaseServiceType } from 'tsrpc-proto';
 import { Pool } from '../../models/Pool';
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions<ServiceType>, ServiceType>{

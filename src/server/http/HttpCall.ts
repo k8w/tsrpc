@@ -2,7 +2,7 @@ import { ApiCall, MsgCall, ApiCallOptions, MsgCallOptions } from '../BaseCall';
 import { HttpConnection } from './HttpConnection';
 import { Pool } from '../../models/Pool';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
-import { BaseServiceType } from '../../proto/BaseServiceType';
+import { BaseServiceType } from 'tsrpc-proto';
 
 export interface ApiCallHttpOptions<ServiceType extends BaseServiceType> extends ApiCallOptions {
     conn: HttpConnection<ServiceType>;

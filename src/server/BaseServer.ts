@@ -1,11 +1,10 @@
 import { ApiCall, MsgCall, BaseCall, ApiCallOptions, MsgCallOptions } from './BaseCall';
-import { ServiceProto, ApiServiceDef } from '../proto/ServiceProto';
 import { Logger, PrefixLogger } from './Logger';
 import { HandlerManager } from '../models/HandlerManager';
 import { TsrpcError } from '../models/TsrpcError';
 import { TSBuffer } from 'tsbuffer';
 import * as path from "path";
-import { BaseServiceType } from '../proto/BaseServiceType';
+import { BaseServiceType, ServiceProto, ApiServiceDef } from 'tsrpc-proto';
 import { ServiceMapUtil, ServiceMap } from '../models/ServiceMapUtil';
 import { Pool } from '../models/Pool';
 import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';

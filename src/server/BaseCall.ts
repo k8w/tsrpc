@@ -1,6 +1,5 @@
-import { ApiServiceDef, MsgServiceDef } from '../proto/ServiceProto';
 import { PrefixLogger } from './Logger';
-import { ApiError } from '../proto/TransportData';
+import { ApiError, ApiServiceDef, MsgServiceDef } from 'tsrpc-proto';
 import { PoolItem } from '../models/Pool';
 
 export interface ApiCallOptions {

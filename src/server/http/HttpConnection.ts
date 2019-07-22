@@ -2,7 +2,7 @@ import { PoolItem, Pool } from '../../models/Pool';
 import * as http from "http";
 import { HttpServer } from './HttpServer';
 import { PrefixLogger } from '../Logger';
-import { BaseServiceType } from '../../proto/BaseServiceType';
+import { BaseServiceType } from 'tsrpc-proto';
 import { Counter } from '../../models/Counter';
 
 export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {

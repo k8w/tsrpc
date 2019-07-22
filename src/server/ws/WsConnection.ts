@@ -2,7 +2,7 @@ import * as http from "http";
 import * as WebSocket from "ws";
 import { ApiCall } from '../BaseCall';
 import { PrefixLogger } from '../Logger';
-import { BaseServiceType } from "../../proto/BaseServiceType";
+import { BaseServiceType } from "tsrpc-proto";
 import { WsServer } from "./WsServer";
 import { PoolItem, Pool } from '../../models/Pool';
 import { HttpUtil } from "../../models/HttpUtil";

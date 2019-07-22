@@ -37,9 +37,10 @@
   "dependencies": {
     "@types/uuid": "^3.4.4",
     "@types/ws": "^6.0.1",
-    "k8w-super-promise": "^0.2.4",
-    "tsbuffer": "^1.1.0",
-    "tslib": "^1.10.0",
+    "k8w-super-promise": "*",
+    "tsbuffer": "*",
+    "tslib": "*",
+    "tsrpc-proto": "*",
     "uuid": "^3.3.2",
     "ws": "^7.0.1"
   }

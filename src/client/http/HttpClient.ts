@@ -1,5 +1,4 @@
-import { ServiceProto } from "../../proto/ServiceProto";
-import { BaseServiceType } from "../../proto/BaseServiceType";
+import { BaseServiceType, ServiceProto } from "tsrpc-proto";
 import { ServiceMapUtil, ServiceMap } from '../../models/ServiceMapUtil';
 import { TSBuffer } from "tsbuffer";
 import { TransportDataUtil } from '../../models/TransportDataUtil';

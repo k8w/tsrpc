@@ -1,7 +1,7 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiServiceDef, MsgServiceDef } from '../proto/ServiceProto';
-import { ServerInputData, ServerOutputData, ApiError } from '../proto/TransportData';
+import { ApiServiceDef, MsgServiceDef, ServerInputData, ServerOutputData, ApiError } from 'tsrpc-proto';
 import { ServiceMap } from "./ServiceMapUtil";
+import { TransportDataProto } from "tsrpc-proto";
 
 export type ParsedServerInput = { type: 'api', service: ApiServiceDef, req: any, sn: number } | { type: 'msg', service: MsgServiceDef, msg: any };
 export type ParsedServerOutput = { type: 'api', service: ApiServiceDef, sn: number } & ({ isSucc: true, res: any } | { isSucc: false, error: ApiError }) | { type: 'msg', service: MsgServiceDef, msg: any };
@@ -11,68 +11,7 @@ export class TransportDataUtil {
     private static _transportCoder?: TSBuffer;
     static get transportCoder(): TSBuffer {
         if (!this._transportCoder) {
-            this._transportCoder = new TSBuffer({
-                "ServerInputData": {
-                    "type": "Tuple",
-                    "elementTypes": [
-                        {
-                            "type": "Number",
-                            "scalarType": "uint"
-                        },
-                        {
-                            "type": "Buffer",
-                            "arrayType": "Uint8Array"
-                        },
-                        {
-                            "type": "Number",
-                            "scalarType": "uint"
-                        }
-                    ],
-                    "optionalStartIndex": 2
-                },
-                "ServerOutputData": {
-                    "type": "Tuple",
-                    "elementTypes": [
-                        {
-                            "type": "Number",
-                            "scalarType": "uint"
-                        },
-                        {
-                            "type": "Buffer",
-                            "arrayType": "Uint8Array"
-                        },
-                        {
-                            "type": "Reference",
-                            "target": "ApiError"
-                        },
-                        {
-                            "type": "Number",
-                            "scalarType": "uint"
-                        }
-                    ],
-                    "optionalStartIndex": 1
-                },
-                "ApiError": {
-                    "type": "Interface",
-                    "properties": [
-                        {
-                            "id": 0,
-                            "name": "message",
-                            "type": {
-                                "type": "String"
-                            }
-                        },
-                        {
-                            "id": 1,
-                            "name": "info",
-                            "type": {
-                                "type": "Any"
-                            },
-                            "optional": true
-                        }
-                    ]
-                }
-            })
+            this._transportCoder = new TSBuffer(TransportDataProto)
         }
 
         return this._transportCoder;

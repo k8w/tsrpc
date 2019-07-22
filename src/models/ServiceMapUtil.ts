@@ -1,4 +1,4 @@
-import { ServiceProto, ServiceDef, ApiServiceDef, MsgServiceDef } from "../proto/ServiceProto";
+import { ServiceProto, ServiceDef, ApiServiceDef, MsgServiceDef } from "tsrpc-proto";
 
 export class ServiceMapUtil {
     static getServiceMap(proto: ServiceProto): ServiceMap {

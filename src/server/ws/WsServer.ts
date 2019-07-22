@@ -3,11 +3,11 @@ import { Server as WebSocketServer } from 'ws';
 import * as http from "http";
 import { WsConnection } from './WSConnection';
 import { Counter } from '../../models/Counter';
-import { BaseServiceType } from '../../proto/BaseServiceType';
 import { BaseServer, BaseServerOptions } from '../BaseServer';
 import { ApiCallWs, MsgCallWs } from './WsCall';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { Pool } from '../../models/Pool';
+import { BaseServiceType } from 'tsrpc-proto';
 
 export class WsServer<ServiceType extends BaseServiceType = any, SessionType = { [key: string]: any | undefined }> extends BaseServer<WsServerOptions<ServiceType, SessionType>, ServiceType> {
 

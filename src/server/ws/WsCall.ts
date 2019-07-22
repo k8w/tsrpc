@@ -1,4 +1,4 @@
-import { BaseServiceType } from '../../proto/BaseServiceType';
+import { BaseServiceType } from 'tsrpc-proto';
 import { WsConnection } from './WsConnection';
 import { ApiCall, ApiCallOptions, MsgCall, MsgCallOptions } from '../BaseCall';
 import { Pool } from '../../models/Pool';
