@@ -1,4 +1,4 @@
-import { BaseServiceType, ServiceProto } from "tsrpc-proto";
+import { BaseServiceType, ServiceProto, TsrpcError } from "tsrpc-proto";
 import { ServiceMapUtil, ServiceMap } from '../../models/ServiceMapUtil';
 import { TSBuffer } from "tsbuffer";
 import { TransportDataUtil } from '../../models/TransportDataUtil';
@@ -7,7 +7,6 @@ import { Counter } from '../../models/Counter';
 import { Logger } from '../../server/Logger';
 import { TransportOptions } from "../models/TransportOptions";
 import SuperPromise from 'k8w-super-promise';
-import { TsrpcError } from '../../models/TsrpcError';
 
 export class HttpClient<ServiceType extends BaseServiceType = any> {
 
@@ -24,7 +23,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         this.tsbuffer = new TSBuffer(this._options.proto.types);
         this.logger = this._options.logger;
 
-        this.logger.log('TSRPC HTTP client :', this._options.server);
+        this.logger.log('TSRPC HTTP Client :', this._options.server);
     }
 
     callApi<T extends keyof ServiceType['req']>(apiName: T, req: ServiceType['req'][T], options: TransportOptions = {}): SuperPromise<ServiceType['res'][T], TsrpcError> {
