@@ -1,7 +1,7 @@
 import * as WebSocket from 'ws';
 import { Server as WebSocketServer } from 'ws';
 import * as http from "http";
-import { WsConnection } from './WSConnection';
+import { WsConnection } from './WsConnection';
 import { Counter } from '../../models/Counter';
 import { BaseServer, BaseServerOptions } from '../BaseServer';
 import { ApiCallWs, MsgCallWs } from './WsCall';
