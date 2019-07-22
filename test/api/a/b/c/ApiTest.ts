@@ -1,4 +1,4 @@
-import { TsrpcError } from "../../../../../src/models/TsrpcError";
+import { TsrpcError } from "tsrpc-proto";
 
 export async function ApiTest(call: any) {
     if (call.req.name === 'InnerError') {

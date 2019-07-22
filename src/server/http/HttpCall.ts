@@ -43,15 +43,19 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
             return;
         }
 
+        // Error SN
+        if (this.conn.server.options.showErrorSn) {
+            message += ` [#${this.conn.sn.toString(36)}]`;
+        }
+
         let buf = TransportDataUtil.encodeApiError(this.service, message, info, 0);
         this.conn.options.httpRes.end(Buffer.from(buf));
 
         this.res = {
             isSucc: false,
-            message: message + `[#${this.conn.sn.toString(36)}]`,
+            message: message,
             info: info
         };
-        this.logger.warn('[API_ERR]', message, info);
     }
 
     destroy(): void {

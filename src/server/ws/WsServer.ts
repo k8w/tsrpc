@@ -38,9 +38,9 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
         return new Promise(rs => {
             this.logger.log('Starting WebSocket server...');
             this._wsServer = new WebSocketServer({
-                port: this._options.port
+                port: this.options.port
             }, () => {
-                this.logger.log(`Server started at ${this._options.port}...`);
+                this.logger.log(`Server started at ${this.options.port}...`);
                 this._status = 'open';
                 rs();
             });
@@ -133,7 +133,7 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
             server: this,
             ws: ws,
             httpReq: httpReq,
-            defaultSession: this._options.defaultSession,
+            defaultSession: this.options.defaultSession,
             onClose: this._onClientClose,
             onRecvData: v => { this.onData(conn, v) }
         });

@@ -7,8 +7,7 @@ import { ApiTest as ApiAbcTest } from './api/a/b/c/ApiTest';
 import { PrefixLogger } from '../src/server/Logger';
 import * as path from "path";
 import { MsgChat } from './proto/MsgChat';
-import SuperPromise from 'k8w-super-promise';
-import { TsrpcError } from '../src/models/TsrpcError';
+import { TsrpcError } from 'tsrpc-proto';
 
 const serverLogger = PrefixLogger.pool.get({
     prefix: '[Server Log]',

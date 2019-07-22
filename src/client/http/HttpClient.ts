@@ -103,7 +103,6 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         });
 
         promise.onCancel(() => {
-            console.log('onCancel')
             httpReq.abort();
         });
 

@@ -34,8 +34,8 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 let conn: HttpConnection<ServiceType> | undefined;
 
                 httpRes.statusCode = 200;
-                if (this._options.cors) {
-                    httpRes.setHeader('Access-Control-Allow-Origin', this._options.cors)
+                if (this.options.cors) {
+                    httpRes.setHeader('Access-Control-Allow-Origin', this.options.cors)
                 };
 
                 httpReq.on('data', data => {
@@ -52,13 +52,13 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 })
             });
 
-            if (this._options.timeout !== undefined) {
-                this._server.setTimeout(this._options.timeout);
+            if (this.options.timeout !== undefined) {
+                this._server.setTimeout(this.options.timeout);
             }
 
-            this._server.listen(this._options.port, () => {
+            this._server.listen(this.options.port, () => {
                 this._status = 'open';
-                this.logger.log(`Server started at ${this._options.port}`);
+                this.logger.log(`Server started at ${this.options.port}`);
                 rs();
             })
         });
@@ -108,7 +108,9 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
     port: number,
     // Socket Timeout
     timeout?: number,
-    cors?: string
+    cors?: string,
+    // 是否在message后加入ErrorSN
+    showErrorSn?: boolean
 }
 
 type HttpServerStatus = 'opening' | 'open' | 'closing' | 'closed';

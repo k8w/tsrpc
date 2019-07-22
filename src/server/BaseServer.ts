@@ -16,7 +16,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     protected abstract _poolMsgCall: Pool<MsgCall>;
 
     // 配置及其衍生项
-    protected _options: ServerOptions;
+    readonly options: ServerOptions;
     readonly tsbuffer: TSBuffer;
     readonly serviceMap: ServiceMap;
 
@@ -32,9 +32,9 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     readonly logger: Logger;
 
     constructor(options: ServerOptions) {
-        this._options = options;
-        this.tsbuffer = new TSBuffer(this._options.proto.types);
-        this.serviceMap = ServiceMapUtil.getServiceMap(this._options.proto);
+        this.options = options;
+        this.tsbuffer = new TSBuffer(this.options.proto.types);
+        this.serviceMap = ServiceMapUtil.getServiceMap(this.options.proto);
         this.logger = options.logger;
     }
 
@@ -42,8 +42,8 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     async onData(conn: any, data: Buffer) {
         // Decrypt
         let buf: Uint8Array;
-        if (this._options.decrypter) {
-            buf = await this._options.decrypter(data);
+        if (this.options.decrypter) {
+            buf = await this.options.decrypter(data);
         }
         else {
             buf = data;
@@ -102,7 +102,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 conn: conn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefix: `MSG ${input.service.name}`
+                    prefix: `MSG#${conn.sn} [${input.service.name}]`
                 }),
                 service: input.service,
                 msg: input.msg

@@ -1,6 +1,6 @@
 {
   "name": "tsrpc",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "TSRPC 2.x (both support HTTP and WebSocket)",
   "main": "index.js",
   "scripts": {
@@ -41,9 +41,9 @@
     "@types/uuid": "^3.4.4",
     "@types/ws": "^6.0.1",
     "k8w-super-promise": "*",
-    "tsbuffer": "*",
+    "tsbuffer": "^1.1.2",
     "tslib": "*",
-    "tsrpc-proto": "^1.1.0",
+    "tsrpc-proto": "^1.1.1",
     "uuid": "^3.3.2",
     "ws": "^7.0.1"
   }
