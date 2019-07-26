@@ -4,9 +4,22 @@ export class HandlerManager {
     /**
      * @return handlers count
      */
-    forEachHandler(key: string, ...args: any[]) {
+    forEachHandler(key: string, ...args: any[]): (any | Promise<any>)[] {
         let handlers = this._handlers[key];
-        return handlers ? handlers.map(v => v(...args)) : [];
+        if (!handlers) {
+            return [];
+        }
+
+        let output: (any | Promise<any>)[] = [];
+        for (let handler of handlers) {
+            try {
+                output.push(handler(...args));
+            }
+            catch (e) {
+                console.error('MsgHandlerError', e);
+            }
+        }
+        return output;
     }
 
     addHandler(key: string, handler: Function) {

@@ -140,22 +140,24 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
         this._conns.push(conn);
         this._id2Conn[conn.connId] = conn;
 
-        this.logger.log('[CLIENT_CONNECT]', `IP=${conn.ip}`, `ConnID=${conn.connId}`, `ActiveConn=${this._conns.length}`);
+        conn.logger.log('[Connected]', `ActiveConn=${this._conns.length}`)
     };
 
 
 
     private _onClientClose = (conn: WsConnection<ServiceType, SessionType>, code: number, reason: string) => {
+        conn.logger.log('[Disconnected]', `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this._conns.length}`)
         this._conns.removeOne(v => v.connId === conn.connId);
         this._id2Conn[conn.connId] = undefined;
-        this.logger.log('[CLIENT_CLOSE]', `IP=${conn.ip} ConnID=${conn.connId} Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this._conns.length}`);
 
         // 优雅地停止
         if (this._stopping && this._conns.length === 0) {
             this._wsServer && this._wsServer.close(e => {
-                this._stopping = undefined;
                 this._status = 'closed';
-                e ? this._stopping!.rj(e) : this._stopping!.rs();
+                if (this._stopping) {
+                    e ? this._stopping.rj(e) : this._stopping!.rs();
+                    this._stopping = undefined;
+                }                
             });
         }
     }

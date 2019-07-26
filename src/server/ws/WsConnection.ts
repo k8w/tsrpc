@@ -34,6 +34,14 @@ export class WsConnection<ServiceType extends BaseServiceType, SessionType> exte
         return this.options.connId;
     }
 
+    get server() {
+        return this.options.server;
+    }
+
+    get ws() {
+        return this.options.ws;
+    }
+
     reset(options: this['options']) {
         super.reset(options);
 
@@ -47,6 +55,14 @@ export class WsConnection<ServiceType extends BaseServiceType, SessionType> exte
         // Init WS
         options.ws.onclose = e => { this.options.onClose(this, e.code, e.reason); };
         options.ws.onerror = e => { this.logger.warn('[CLIENT_ERR]', e.error); };
+        options.ws.onmessage = e => {
+            if (Buffer.isBuffer(e.data)) {
+                this.options.onRecvData(e.data)
+            }
+            else {
+                this.logger.log('[RECV]', e.data)
+            }
+        };
     }
 
     clean() {
@@ -78,43 +94,6 @@ export class WsConnection<ServiceType extends BaseServiceType, SessionType> exte
             })
         })
     };
-
-    sendApiSucc(call: ApiCall<any, any>, res: any) {
-        if (call.res) {
-            return;
-        }
-
-        call.res = res;
-        call.logger.log('Succ', res)
-
-        let buf = TransportDataUtil.encodeApiSucc(this.options.server.tsbuffer, call.service, res, call.sn);
-        return new Promise((rs, rj) => {
-            this.options.ws.send(buf, e => {
-                e ? rj(e) : rs();
-            })
-        });
-    }
-
-    sendApiError(call: ApiCall<any, any>, message: string, info?: any) {
-        if (call.res) {
-            return;
-        }
-
-        let buf = TransportDataUtil.encodeApiError(call.service, message, info, call.sn)
-
-        call.res = {
-            isSucc: false,
-            message: message,
-            info: info
-        };
-        call.logger.log('Error', message, info);
-
-        return new Promise((rs, rj) => {
-            this.options.ws.send(buf, e => {
-                e ? rj(e) : rs();
-            })
-        });
-    }
 
     close(reason?: ConnectionCloseReason) {
         // 已连接 Close之

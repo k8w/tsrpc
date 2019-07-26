@@ -1,29 +1,33 @@
-import { TSRPCClient } from "../..";
 import { serviceProto, ServiceType } from '../proto/serviceProto';
+import { WsClient } from '../../src/client/ws/WsClient';
+import SuperPromise from 'k8w-super-promise';
+import { Func } from 'mocha';
 
 async function main() {
-    let client = new TSRPCClient<ServiceType>({
+    let client = new WsClient({
         server: 'ws://127.0.0.1:3000',
         proto: serviceProto,
         onStatusChange: v => {
             console.log('StatusChange', v);
         },
-        onLostConnection: () => {
-            console.log('连接断开，2秒后重连');
-            setTimeout(() => {
-                client.connect().catch(() => { });
-            }, 2000)
-        }
+        // onLostConnection: () => {
+        //     console.log('连接断开，2秒后重连');
+        //     setTimeout(() => {
+        //         client.connect().catch(() => { });
+        //     }, 2000)
+        // }
     });
 
-    await client.connect().catch(() => { });
+    await client.connect();
+
+    let cancel = client.callApi('Test', { name: 'XXXXXXXXXXXXX' }).catch(e => e);
+    cancel.cancel();
 
     let res = await client.callApi('Test', { name: '小明同学' }).catch(e => e);
     console.log('Test Res', res);
 
-    res = await client.callApi('a/b/c/Test1', { name: '小明同学' });
+    res = await client.callApi('a/b/c/Test', { name: '小明同学' }).catch(e => e);
     console.log('Test1 Res', res);
-
 
     // setInterval(async () => {
     //     try {

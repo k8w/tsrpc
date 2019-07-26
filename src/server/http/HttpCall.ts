@@ -7,7 +7,7 @@ import { BaseServiceType } from 'tsrpc-proto';
 export interface ApiCallHttpOptions<ServiceType extends BaseServiceType> extends ApiCallOptions {
     conn: HttpConnection<ServiceType>;
 }
-export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceType = any> extends ApiCall<ApiCallHttpOptions<ServiceType>, Req, Res> {
+export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceType = any> extends ApiCall<Req, Res, ApiCallHttpOptions<ServiceType>> {
 
     static pool = new Pool<ApiCallHttp>(ApiCallHttp);
 
@@ -53,8 +53,10 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
 
         this.res = {
             isSucc: false,
-            message: message,
-            info: info
+            error: {
+                message: message,
+                info: info
+            }
         };
     }
 
@@ -66,7 +68,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
 export interface MsgCallHttpOptions<ServiceType extends BaseServiceType> extends MsgCallOptions {
     conn: HttpConnection<ServiceType>;
 }
-export class MsgCallHttp<Msg = any, ServiceType extends BaseServiceType = any> extends MsgCall<MsgCallHttpOptions<ServiceType>, Msg> {
+export class MsgCallHttp<Msg = any, ServiceType extends BaseServiceType = any> extends MsgCall<Msg, MsgCallHttpOptions<ServiceType>> {
 
     static pool = new Pool<MsgCallHttp>(MsgCallHttp);
 

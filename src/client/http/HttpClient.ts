@@ -27,6 +27,9 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
     }
 
     callApi<T extends keyof ServiceType['req']>(apiName: T, req: ServiceType['req'][T], options: TransportOptions = {}): SuperPromise<ServiceType['res'][T], TsrpcError> {
+        let sn = this._apiSnCounter.getNext();
+        this.logger.log(`[ApiReq] #${sn}`, apiName, req);
+
         // GetService
         let service = this.serviceMap.apiName2Service[apiName as string];
         if (!service) {
@@ -35,8 +38,6 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
 
         // Encode
         let buf = TransportDataUtil.encodeApiReq(this.tsbuffer, service, req);
-        let sn = this._apiSnCounter.getNext();
-        this.logger.log(`[ApiReq] #${sn}`, apiName, req);
 
         // Send
         return this._sendBuf(buf, options, sn).then(resBuf => {
@@ -57,6 +58,8 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
     }
 
     sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options: TransportOptions = {}): SuperPromise<void, TsrpcError> {
+        this.logger.log('[SendMsg]', msgName, msg);
+
         // GetService
         let service = this.serviceMap.msgName2Service[msgName as string];
         if (!service) {

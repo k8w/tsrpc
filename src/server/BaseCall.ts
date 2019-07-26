@@ -9,7 +9,7 @@ export interface ApiCallOptions {
     sn: number,
     req: any
 }
-export abstract class ApiCall<CallOptions extends ApiCallOptions = ApiCallOptions, Req = any, Res = any> extends PoolItem<CallOptions> {
+export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallOptions = ApiCallOptions> extends PoolItem<CallOptions> {
     readonly type = 'api' as const;
 
     logger!: PrefixLogger;
@@ -17,7 +17,7 @@ export abstract class ApiCall<CallOptions extends ApiCallOptions = ApiCallOption
     sn!: number;
     req!: Req;
     // 已发送的响应
-    res?: { isSucc: true, data: Res } | ({ isSucc: false } & ApiError);
+    res?: { isSucc: true, data: Res } | ({ isSucc: false, error: ApiError});
 
     reset(options: ApiCallOptions) {
         this.logger = options.logger;
@@ -45,7 +45,7 @@ export interface MsgCallOptions {
     service: MsgServiceDef,
     msg: any
 }
-export abstract class MsgCall<CallOptions extends MsgCallOptions = MsgCallOptions, Msg = any> extends PoolItem<CallOptions> {
+export abstract class MsgCall<Msg = any, CallOptions extends MsgCallOptions = MsgCallOptions> extends PoolItem<CallOptions> {
     readonly type = 'msg' as const;
 
     logger!: PrefixLogger;
@@ -67,4 +67,4 @@ export abstract class MsgCall<CallOptions extends MsgCallOptions = MsgCallOption
     abstract destroy(): void;
 }
 
-export type BaseCall = ApiCall<ApiCallOptions> | MsgCall<MsgCallOptions>;
+export type BaseCall = ApiCall | MsgCall;

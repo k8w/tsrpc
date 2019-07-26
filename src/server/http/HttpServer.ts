@@ -120,9 +120,7 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
     port: number,
     // Socket Timeout
     timeout?: number,
-    cors?: string,
-    // 是否在message后加入ErrorSN
-    showErrorSn?: boolean
+    cors?: string
 }
 
 type HttpServerStatus = 'opening' | 'open' | 'closing' | 'closed';

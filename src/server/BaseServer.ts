@@ -78,9 +78,19 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
         // Handle Call
         if (call.type === 'api') {
-            call.logger.log('Req=', call.req);
+            call.logger.log('[Req]', call.req);
             await this._handleApi(call);
-            call.logger.log('Res=', call.res);
+            if (call.res) {
+                if (call.res.isSucc) {
+                    call.logger.log('[Res]', call.res.data);
+                }
+                else {
+                    call.logger.log('[ResError]', call.res.error);
+                }
+            }
+            else {
+                call.logger.log('[No Res]');
+            }
             this._afterApi(call);
         }
         else {
@@ -174,7 +184,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 }
             }
             catch (e) {
-                call.logger.error('[API_ERR]', e);
+                call.logger.error(e);
                 if (e instanceof TsrpcError) {
                     call.error(e.message, e.info);
                 }
@@ -323,8 +333,11 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
     logger: Logger;
     encrypter?: (src: Uint8Array) => Uint8Array | Promise<Uint8Array>;
     decrypter?: (cipher: Uint8Array) => Uint8Array | Promise<Uint8Array>;
+
+    // 是否在message后加入ErrorSN
+    showErrorSn?: boolean
 }
 
 
-export type ApiHandler<Req = any, Res = any> = (call: ApiCall<ApiCallOptions, Req, Res>) => void | Promise<void>;
-export type MsgHandler<Msg = any> = (msg: MsgCall<MsgCallOptions, Msg>) => void | Promise<void>;
+export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res, ApiCallOptions>) => void | Promise<void>;
+export type MsgHandler<Msg = any> = (msg: MsgCall<Msg, MsgCallOptions>) => void | Promise<void>;
