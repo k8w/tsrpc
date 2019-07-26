@@ -17,7 +17,7 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
     logger: Logger;
 
     private _ws?: WebSocket;
-    private _msgHandlers: HandlerManager = new HandlerManager();
+    private _msgHandlers: HandlerManager;
     private _apiReqSnCounter = new Counter(1);
 
     constructor(options: Partial<WsClientOptions<ServiceType>>) {
@@ -25,6 +25,7 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
         this.tsbuffer = new TSBuffer(this.options.proto.types);
         this.serviceMap = ServiceMapUtil.getServiceMap(this.options.proto);
         this.logger = this.options.logger;
+        this._msgHandlers = new HandlerManager(this.logger);
     }
 
     private _connecting?: Promise<void>;

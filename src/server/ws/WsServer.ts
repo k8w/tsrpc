@@ -3,7 +3,7 @@ import { Server as WebSocketServer } from 'ws';
 import * as http from "http";
 import { WsConnection } from './WsConnection';
 import { Counter } from '../../models/Counter';
-import { BaseServer, BaseServerOptions } from '../BaseServer';
+import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../BaseServer';
 import { ApiCallWs, MsgCallWs } from './WsCall';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { Pool } from '../../models/Pool';
@@ -157,7 +157,7 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
                 if (this._stopping) {
                     e ? this._stopping.rj(e) : this._stopping!.rs();
                     this._stopping = undefined;
-                }                
+                }
             });
         }
     }
@@ -199,12 +199,8 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
 export type WsServerStatus = 'opening' | 'open' | 'closing' | 'closed';
 
 const defaultWsServerOptions: WsServerOptions<any, any> = {
+    ...defualtBaseServerOptions,
     port: 3000,
-    logger: console,
-    proto: {
-        services: [],
-        types: {}
-    },
     defaultSession: {}
 }
 

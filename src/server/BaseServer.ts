@@ -7,6 +7,7 @@ import { BaseServiceType, ServiceProto, ApiServiceDef, TsrpcError } from 'tsrpc-
 import { ServiceMapUtil, ServiceMap } from '../models/ServiceMapUtil';
 import { Pool } from '../models/Pool';
 import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';
+import 'colors';
 
 export type ConnectionCloseReason = 'Invalid Buffer';
 
@@ -35,7 +36,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     // Handlers
     private _apiHandlers: { [apiName: string]: ((call: ApiCall) => any) | undefined } = {};
     // 多个Handler将异步并行执行
-    private _msgHandlers = new HandlerManager();
+    private _msgHandlers: HandlerManager;
 
     readonly logger: Logger;
 
@@ -44,6 +45,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         this.tsbuffer = new TSBuffer(this.options.proto.types);
         this.serviceMap = ServiceMapUtil.getServiceMap(this.options.proto);
         this.logger = options.logger;
+        this._msgHandlers = new HandlerManager(this.logger);
     }
 
     // #region Data process flow
@@ -312,20 +314,39 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     // Msg 可以重复监听
     listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<ServiceType['msg'][T]>): void {
         this._msgHandlers.addHandler(msgName as string, handler);
-        console.log(`Msg listened succ [${msgName}]`);
+        this.logger.log(`Msg listened succ [${msgName}]`);
     };
 
     unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler?: Function): void {
         this._msgHandlers.removeHandler(msgName as string, handler);
-        console.log(`Msg unlistened succ [${msgName}]`);
+        this.logger.log(`Msg unlistened succ [${msgName}]`);
     };
     // #endregion   
 
 }
 
+export const defaultLogger: Logger = {
+    debug(...args: any[]) {
+        console.debug.call(console, '[DEBUG]'.cyan, ...args);
+    },
+    log(...args: any[]) {
+        console.log.call(console, '[INFO]'.green, ...args);
+    },
+    warn(...args: any[]) {
+        console.warn.call(console, '[WARN]'.yellow, ...args);
+    },
+    error(...args: any[]) {
+        console.error.call(console, '[ERROR]'.red, ...args);
+    },
+}
+// defaultLogger.debug('Test Debug');
+// defaultLogger.log('Test Log');
+// defaultLogger.warn('Test Warn');
+// defaultLogger.error('Test Error');
+
 export const defualtBaseServerOptions: BaseServerOptions = {
     proto: { services: [], types: {} },
-    logger: console
+    logger: defaultLogger
 }
 
 export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {

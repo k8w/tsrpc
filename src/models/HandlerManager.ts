@@ -1,5 +1,12 @@
+import { Logger } from '../server/Logger';
 export class HandlerManager {
     private _handlers: { [key: string]: Function[] | undefined } = {}
+
+    logger: Logger;
+
+    constructor(logger: Logger) {
+        this.logger = logger;
+    }
 
     /**
      * @return handlers count
@@ -16,7 +23,7 @@ export class HandlerManager {
                 output.push(handler(...args));
             }
             catch (e) {
-                console.error('MsgHandlerError', e);
+                this.logger.error('MsgHandlerError', e);
             }
         }
         return output;
