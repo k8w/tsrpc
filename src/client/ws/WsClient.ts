@@ -65,7 +65,7 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
             ws.onclose = e => {
                 if (rj) {
                     this._connecting = undefined;
-                    rj(new TsrpcError('Network Error', e.code));
+                    rj(new TsrpcError('Network Error', e.reason));
                 }
 
                 // 清空WebSocket Listener
@@ -79,8 +79,8 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
                     this._rsDisconnecting = undefined;
                     this.logger.log('Disconnected succ', `code=${e.code} reason=${e.reason}`);
                 }
-                // 非主动关闭 触发掉线
-                else {
+                // 已连接上 非主动关闭 触发掉线
+                else if (rj) {
                     this.logger.log(`Lost connection to ${this.options.server}`, `code=${e.code} reason=${e.reason}`);
                     this.options.onLostConnection && this.options.onLostConnection();
                 }
@@ -142,7 +142,7 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
                 }
             }
             else {
-                this.logger.warn(`Invalid SN:`, `Invalid SN: ${parsed.sn}`);
+                this.logger.debug(`Invalid SN: ${parsed.sn}`);
             }
         }
         else if (parsed.type === 'msg') {
@@ -279,7 +279,7 @@ const defaultClientOptions: WsClientOptions<any> = {
     server: 'http://localhost:3000',
     proto: { services: [], types: {} },
     logger: console,
-    timeout: 3000
+    timeout: 30000
 }
 
 export interface WsClientOptions<ServiceType extends BaseServiceType> {
