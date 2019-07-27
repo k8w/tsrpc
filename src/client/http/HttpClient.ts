@@ -15,7 +15,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
     tsbuffer: TSBuffer;
     logger: Logger;
 
-    private _apiSnCounter = new Counter(1);
+    private _snCounter = new Counter(1);
 
     constructor(options?: Partial<HttpClientOptions<ServiceType>>) {
         this._options = Object.assign({}, defaultHttpClientOptions, options);
@@ -27,7 +27,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
     }
 
     callApi<T extends keyof ServiceType['req']>(apiName: T, req: ServiceType['req'][T], options: TransportOptions = {}): SuperPromise<ServiceType['res'][T], TsrpcError> {
-        let sn = this._apiSnCounter.getNext();
+        let sn = this._snCounter.getNext();
         this.logger.log(`[ApiReq] #${sn}`, apiName, req);
 
         // GetService
@@ -41,6 +41,10 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
 
         // Send
         return this._sendBuf(buf, options, sn).then(resBuf => {
+            if (!resBuf) {
+                throw new TsrpcError('Unknown Error', 'NO_RES')
+            }
+
             // Parsed res
             let parsed = TransportDataUtil.parseServerOutout(this.tsbuffer, this.serviceMap, resBuf);
             if (parsed.type !== 'api') {
@@ -58,7 +62,8 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
     }
 
     sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options: TransportOptions = {}): SuperPromise<void, TsrpcError> {
-        this.logger.log('[SendMsg]', msgName, msg);
+        let sn = this._snCounter.getNext();
+        this.logger.log(`[SendMsg] #${sn}`, msgName, msg);
 
         // GetService
         let service = this.serviceMap.msgName2Service[msgName as string];
@@ -67,16 +72,17 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         }
 
         let buf = TransportDataUtil.encodeMsg(this.tsbuffer, service, msg);
-        return this._sendBuf(buf, options).then(() => { })
+        return this._sendBuf(buf, options, sn).then(() => { })
     }
 
-    protected _sendBuf(buf: Uint8Array, options: TransportOptions = {}, apiSn?: number): SuperPromise<Buffer, TsrpcError> {
+    protected _sendBuf(buf: Uint8Array, options: TransportOptions = {}, sn: number): SuperPromise<Buffer | undefined, TsrpcError> {
         let httpReq: http.ClientRequest;
 
+        let promiseRj: Function;
         let promise = new SuperPromise<Buffer>((rs, rj) => {
+            promiseRj = rj;
             httpReq = http.request(this._options.server, {
-                method: 'POST',
-                timeout: options.timeout || this._options.timeout
+                method: 'POST'
             }, httpRes => {
                 httpRes.on('data', (v: Buffer) => {
                     rs(v);
@@ -88,7 +94,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
 
             httpReq.on('abort', () => {
                 if (!promise.isDone) {
-                    apiSn && this.logger.log(`[ApiCancel] #${apiSn}`)
+                    this.logger.log(`[Cancel] #${sn}`)
                 }
             });
 
@@ -98,7 +104,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
                     return;
                 }
 
-                rj(new TsrpcError(e.message, { isNetworkError: true, code: (e as any).code }));
+                rj(new TsrpcError(e.message, (e as any).code));
             })
 
             httpReq.write(Buffer.from(buf));
@@ -108,6 +114,34 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         promise.onCancel(() => {
             httpReq.abort();
         });
+
+        let timer: NodeJS.Timeout | undefined;
+        let timeout = options.timeout || this._options.timeout;
+        if (timeout) {
+            timer = setTimeout(() => {
+                if (!promise.isCanceled && !promise.isDone) {
+                    this.logger.log(`[Timeout] #${sn}`);
+                    promiseRj(new TsrpcError('Request Timeout', 'TIMEOUT'));
+                    httpReq.abort();
+                }
+            }, timeout);
+        }
+
+        promise.then(v => {
+            if (timer) {
+                clearTimeout(timer);
+                timer = undefined;
+            }
+            return v;
+        });
+
+        promise.catch(e => {
+            if (timer) {
+                clearTimeout(timer);
+                timer = undefined;
+            }
+            throw e;
+        })
 
         return promise;
     }

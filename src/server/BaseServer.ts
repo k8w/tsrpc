@@ -81,7 +81,24 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         // Handle Call
         if (call.type === 'api') {
             call.logger.log('[Req]', call.req);
-            await this._handleApi(call);
+            let sn = call.sn;
+
+            await new Promise(rs => {
+                // Timeout
+                if (this.options.timeout) {
+                    setTimeout(() => {
+                        if (call.type === 'api' && call.sn === sn && !call.res) {
+                            call.error('Server Timeout', 'TIMEOUT');
+                        }
+                        rs();
+                    }, this.options.timeout);
+                }
+                // Handle API
+                this._handleApi(call as ApiCall).then(() => {
+                    rs();
+                });
+            })
+
             if (call.res) {
                 if (call.res.isSucc) {
                     call.logger.log('[Res]', call.res.data);
@@ -91,13 +108,26 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 }
             }
             else {
-                call.logger.log('[No Res]');
+                call.logger.log('[NoRes]');
             }
             this._afterApi(call);
         }
         else {
             call.logger.log('Msg=', call.msg);
-            await this._handleMsg(call);
+
+            await new Promise(rs => {
+                // Timeout
+                if (this.options.timeout) {
+                    setTimeout(() => {
+                        rs();
+                    }, this.options.timeout);
+                }
+                // Handle API
+                this._handleMsg(call as MsgCall).then(() => {
+                    rs();
+                });
+            })
+
             this._afterMsg(call);
         }
     }
@@ -325,7 +355,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
 }
 
-export const defaultLogger: Logger = {
+export const consoleColorLogger: Logger = {
     debug(...args: any[]) {
         console.debug.call(console, '[DEBUG]'.cyan, ...args);
     },
@@ -346,7 +376,7 @@ export const defaultLogger: Logger = {
 
 export const defualtBaseServerOptions: BaseServerOptions = {
     proto: { services: [], types: {} },
-    logger: defaultLogger
+    logger: consoleColorLogger
 }
 
 export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
@@ -355,10 +385,20 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
     encrypter?: (src: Uint8Array) => Uint8Array | Promise<Uint8Array>;
     decrypter?: (cipher: Uint8Array) => Uint8Array | Promise<Uint8Array>;
 
+    /** 处理API和MSG的最大执行时间，超过此时间call将被释放 */
+    timeout?: number;
+
     // 是否在message后加入ErrorSN
     showErrorSn?: boolean
 }
 
-
 export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res, ApiCallOptions>) => void | Promise<void>;
 export type MsgHandler<Msg = any> = (msg: MsgCall<Msg, MsgCallOptions>) => void | Promise<void>;
+
+process.on('uncaughtException', e => {
+    console.error(e);
+});
+
+process.on('unhandledRejection', e => {
+    console.error(e);
+});

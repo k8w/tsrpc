@@ -63,8 +63,8 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 });
             });
 
-            if (this.options.timeout !== undefined) {
-                this._server.setTimeout(this.options.timeout);
+            if (this.options.socketTimeout) {
+                this._server.timeout = this.options.socketTimeout;
             }
 
             this._server.listen(this.options.port, () => {
@@ -101,7 +101,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
             parsed.sn = this._apiSnCounter.getNext();
         }
         else if (parsed.type === 'msg') {
-            conn.options.httpRes.end();
+            conn.close();
         }
         return parsed;
     }
@@ -118,8 +118,7 @@ export const defaultHttpServerOptions: HttpServerOptions<any> = {
 
 export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
     port: number,
-    // Socket Timeout
-    timeout?: number,
+    socketTimeout?: number,
     cors?: string
 }
 

@@ -62,7 +62,7 @@ async function testApi(server: HttpServer<ServiceType>, client: HttpClient<Servi
     }
 }
 
-describe('HTTP', function () {
+describe('HttpClient', function () {
     it('implement API manually', async function () {
         let server = new HttpServer({
             proto: serviceProto,
@@ -184,8 +184,65 @@ describe('HTTP', function () {
         await client1.callApi('Test', { name: 'xx' }).catch(e => {
             err1 = e
         })
-        assert.deepStrictEqual(err1!.info, { isNetworkError: true, code: 'ECONNREFUSED' });
+        assert.deepStrictEqual(err1!.info, 'ECONNREFUSED');
 
         await server.stop();
     })
+
+    it('server timeout', async function () {
+        let server = new HttpServer({
+            proto: serviceProto,
+            logger: serverLogger,
+            timeout: 100
+        });
+        server.implementApi('Test', call => {
+            return new Promise(rs => {
+                setTimeout(() => {
+                    call.req && call.succ({
+                        reply: 'Hi, ' + call.req.name
+                    });
+                    rs();
+                }, 200)
+            })
+        })
+        await server.start();
+
+        let client = new HttpClient({
+            proto: serviceProto,
+            logger: clientLogger
+        });
+        let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
+        assert.deepStrictEqual(result, { message: 'Server Timeout', info: 'TIMEOUT' });
+
+        await server.stop();
+    });
+
+    it('client timeout', async function () {
+        let server = new HttpServer({
+            proto: serviceProto,
+            logger: serverLogger
+        });
+        server.implementApi('Test', call => {
+            return new Promise(rs => {
+                setTimeout(() => {
+                    call.succ({
+                        reply: 'Hi, ' + call.req.name
+                    });
+                    rs();
+                }, 2000)
+            })
+        })
+        await server.start();
+
+        let client = new HttpClient({
+            timeout: 100,
+            proto: serviceProto,
+            logger: clientLogger
+        });
+        let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
+        assert.strictEqual(result.message, 'Request Timeout');
+        assert.strictEqual(result.info, 'TIMEOUT');
+
+        await server.stop();
+    });
 })
