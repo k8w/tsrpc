@@ -40,7 +40,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         let buf = TransportDataUtil.encodeApiReq(this.tsbuffer, service, req);
 
         // Send
-        return this._sendBuf(buf, options, sn).then(resBuf => {
+        return this._sendBuf(buf, options, 'api', sn).then(resBuf => {
             if (!resBuf) {
                 throw new TsrpcError('Unknown Error', 'NO_RES')
             }
@@ -72,10 +72,10 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         }
 
         let buf = TransportDataUtil.encodeMsg(this.tsbuffer, service, msg);
-        return this._sendBuf(buf, options, sn).then(() => { })
+        return this._sendBuf(buf, options, 'msg', sn).then(() => { })
     }
 
-    protected _sendBuf(buf: Uint8Array, options: TransportOptions = {}, sn: number): SuperPromise<Buffer | undefined, TsrpcError> {
+    protected _sendBuf(buf: Uint8Array, options: TransportOptions = {}, type: 'api' | 'msg', sn: number): SuperPromise<Buffer | undefined, TsrpcError> {
         let httpReq: http.ClientRequest;
 
         let promiseRj: Function;
@@ -94,7 +94,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
 
             httpReq.on('abort', () => {
                 if (!promise.isDone) {
-                    this.logger.log(`[Cancel] #${sn}`)
+                    this.logger.log(`[${type === 'api' ? 'ApiCancel' : 'MsgCancel'}] #${sn}`)
                 }
             });
 
@@ -120,7 +120,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         if (timeout) {
             timer = setTimeout(() => {
                 if (!promise.isCanceled && !promise.isDone) {
-                    this.logger.log(`[Timeout] #${sn}`);
+                    this.logger.log(`[${type === 'api' ? 'ApiTimeout' : 'MsgTimeout'}] #${sn}`);
                     promiseRj(new TsrpcError('Request Timeout', 'TIMEOUT'));
                     httpReq.abort();
                 }

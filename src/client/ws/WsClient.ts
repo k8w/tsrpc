@@ -188,6 +188,11 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
             }
         });
 
+        // onCancel
+        promise.onCancel(() => {
+            this.logger.log(`[ApiCancel] #${sn}`);
+        })
+
         // Timeout
         let timeout = options.timeout !== undefined ? options.timeout : this.options.timeout;
         let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
@@ -203,6 +208,7 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
         if (timeout > 0) {
             timeoutTimer = setTimeout(() => {
                 if (this._pendingApi[sn]) {
+                    this.logger.log(`[ApiTimeout] #${sn}`);
                     let err: ApiError = {
                         message: 'Request Timeout',
                         info: 'TIMEOUT'
