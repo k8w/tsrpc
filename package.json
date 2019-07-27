@@ -1,6 +1,6 @@
 {
   "name": "tsrpc",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "TSRPC 2.x (both support HTTP and WebSocket)",
   "main": "index.js",
   "scripts": {
