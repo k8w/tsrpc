@@ -17,6 +17,8 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
 
     private _snCounter = new Counter(1);
 
+    lastReceivedBuf?: Uint8Array;
+
     constructor(options?: Partial<HttpClientOptions<ServiceType>>) {
         this._options = Object.assign({}, defaultHttpClientOptions, options);
         this.serviceMap = ServiceMapUtil.getServiceMap(this._options.proto);
@@ -95,6 +97,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
                 method: 'POST'
             }, httpRes => {
                 httpRes.on('data', (v: Buffer) => {
+                    this.lastReceivedBuf = v;
                     rs(v);
                 });
                 httpRes.on('end', () => {
