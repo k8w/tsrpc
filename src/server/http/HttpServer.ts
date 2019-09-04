@@ -41,6 +41,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     httpRes.setHeader('Access-Control-Allow-Origin', this.options.cors)
                 };
 
+                let chunks: Buffer[] = [];
                 httpReq.on('data', data => {
                     if (!conn) {
                         let ip = HttpUtil.getClientIp(httpReq);
@@ -50,8 +51,8 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                             httpReq: httpReq,
                             httpRes: httpRes
                         });
-                    }
-                    this.onData(conn, data);
+                    };
+                    chunks.push(data);
                 });
 
                 httpReq.on('end', () => {
@@ -59,7 +60,11 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                         httpRes.statusCode = 400;
                         httpRes.end();
                         this.logger.log(`[${HttpUtil.getClientIp(httpReq)}] [Bad Request] ${httpReq.method} ${httpReq.url}`)
+                        return;
                     }
+
+                    let buf = Buffer.concat(chunks);
+                    this.onData(conn, buf);
                 });
             });
 
