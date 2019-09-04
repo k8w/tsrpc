@@ -96,12 +96,12 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
             httpReq = http.request(this._options.server, {
                 method: 'POST'
             }, httpRes => {
-                let data: string = '';
+                let data: Buffer[] = [];
                 httpRes.on('data', (v: Buffer) => {
-                    data += v;
+                    data.push(v)
                 });
                 httpRes.on('end', () => {
-                    let buf = Buffer.from(data)
+                    let buf = Buffer.concat(data)
                     this.lastReceivedBuf = buf;
                     rs(buf);
                 })
