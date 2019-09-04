@@ -1,7 +1,7 @@
 import { BaseServiceType, ServiceProto, TsrpcError } from "tsrpc-proto";
 import { ServiceMapUtil, ServiceMap } from '../../models/ServiceMapUtil';
 import { TSBuffer } from "tsbuffer";
-import { TransportDataUtil } from '../../models/TransportDataUtil';
+import { TransportDataUtil, ParsedServerOutput } from '../../models/TransportDataUtil';
 import * as http from "http";
 import { Counter } from '../../models/Counter';
 import { Logger } from '../../server/Logger';
@@ -46,7 +46,17 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
             }
 
             // Parsed res
-            let parsed = TransportDataUtil.parseServerOutout(this.tsbuffer, this.serviceMap, resBuf);
+            let parsed: ParsedServerOutput;
+            try {
+                parsed = TransportDataUtil.parseServerOutout(this.tsbuffer, this.serviceMap, resBuf);
+            }
+            catch (e) {
+                throw new TsrpcError('Invalid server output', {
+                    code: 'SERVER_OUTPUT_ERR',
+                    parseError: e,
+                    buf: resBuf
+                });
+            }
             if (parsed.type !== 'api') {
                 throw new TsrpcError('Invalid response', 'INTERNAL_ERR');
             }
