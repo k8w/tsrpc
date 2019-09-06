@@ -93,7 +93,7 @@ export class TransportDataUtil {
             }
             let msg: unknown;
             try {
-                tsbuffer.decode(buffer, service.msg);
+                msg = tsbuffer.decode(buffer, service.msg);
             }
             catch (e) {
                 throw new TsrpcError('Cannot parse msg body', {
@@ -126,7 +126,7 @@ export class TransportDataUtil {
                 }
                 let res: unknown;
                 try {
-                    tsbuffer.decode(buffer, service.res);
+                    res = tsbuffer.decode(buffer, service.res);
                 }
                 catch (e) {
                     throw new TsrpcError('Cannot parse res body', {
