@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiServiceDef, MsgServiceDef, ServerInputData, ServerOutputData, ApiError } from 'tsrpc-proto';
+import { ApiServiceDef, MsgServiceDef, ServerInputData, ServerOutputData, ApiError, TsrpcError } from 'tsrpc-proto';
 import { ServiceMap } from "./ServiceMapUtil";
 import { TransportDataProto } from "tsrpc-proto";
 
@@ -66,7 +66,17 @@ export class TransportDataUtil {
     }
 
     static parseServerOutout(tsbuffer: TSBuffer, serviceMap: ServiceMap, buf: Uint8Array): ParsedServerOutput {
-        let serverOutputData = this.transportCoder.decode(buf, 'ServerOutputData') as ServerOutputData;
+        let serverOutputData: ServerOutputData;
+        try {
+            serverOutputData = this.transportCoder.decode(buf, 'ServerOutputData') as ServerOutputData;
+        }
+        catch (e) {
+            throw new TsrpcError('Cannot parse server output data', {
+                code: 'PARSE_SERVER_OUTPUT_ERR',
+                innerError: e
+            });
+        }
+
         let serviceId = serverOutputData[0];
         let buffer = serverOutputData[1];
         let apiError = serverOutputData[2];
@@ -81,7 +91,19 @@ export class TransportDataUtil {
             if (!buffer) {
                 throw new Error('Empty msg buffer');
             }
-            let msg = tsbuffer.decode(buffer, service.msg);
+            let msg: unknown;
+            try {
+                tsbuffer.decode(buffer, service.msg);
+            }
+            catch (e) {
+                throw new TsrpcError('Cannot parse msg body', {
+                    code: 'PARSE_MSG_BODY_ERR',
+                    service: service,
+                    innerError: e,
+                    buf: buffer
+                });
+            }
+
             return {
                 type: 'msg',
                 service: service,
@@ -102,7 +124,19 @@ export class TransportDataUtil {
                 if (!buffer) {
                     throw new Error('Empty res buffer');
                 }
-                let res = tsbuffer.decode(buffer, service.res);
+                let res: unknown;
+                try {
+                    tsbuffer.decode(buffer, service.res);
+                }
+                catch (e) {
+                    throw new TsrpcError('Cannot parse res body', {
+                        code: 'PARSE_RES_BODY_ERR',
+                        service: service,
+                        innerError: e,
+                        buf: buffer
+                    });
+                }
+
                 return {
                     type: 'api',
                     service: service,
