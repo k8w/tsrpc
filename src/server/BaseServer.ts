@@ -355,18 +355,19 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
 }
 
+let pid = process.pid.toString(16);
 export const consoleColorLogger: Logger = {
     debug(...args: any[]) {
-        console.debug.call(console, '[DEBUG]'.cyan, ...args);
+        console.debug.call(console, `<${pid}>`.gray, '[DEBUG]'.cyan, ...args);
     },
     log(...args: any[]) {
-        console.log.call(console, '[INFO]'.green, ...args);
+        console.log.call(console, `<${pid}>`.gray, '[INFO]'.green, ...args);
     },
     warn(...args: any[]) {
-        console.warn.call(console, '[WARN]'.yellow, ...args);
+        console.warn.call(console, `<${pid}>`.gray, '[WARN]'.yellow, ...args);
     },
     error(...args: any[]) {
-        console.error.call(console, '[ERROR]'.red, ...args);
+        console.error.call(console, `<${pid}>`.gray, '[ERROR]'.red, ...args);
     },
 }
 // defaultLogger.debug('Test Debug');
