@@ -3,6 +3,7 @@ import { ServiceMapUtil, ServiceMap } from '../../models/ServiceMapUtil';
 import { TSBuffer } from "tsbuffer";
 import { TransportDataUtil, ParsedServerOutput } from '../../models/TransportDataUtil';
 import * as http from "http";
+import * as https from "https";
 import { Counter } from '../../models/Counter';
 import { Logger } from '../../server/Logger';
 import { TransportOptions } from "../models/TransportOptions";
@@ -15,6 +16,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
     tsbuffer: TSBuffer;
     logger: Logger;
 
+    private _http: typeof http | typeof https;
     private _snCounter = new Counter(1);
 
     lastReceivedBuf?: Uint8Array;
@@ -24,6 +26,8 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         this.serviceMap = ServiceMapUtil.getServiceMap(this._options.proto);
         this.tsbuffer = new TSBuffer(this._options.proto.types);
         this.logger = this._options.logger;
+
+        this._http = this._options.server.startsWith('https://') ? https : http;
 
         this.logger.log('TSRPC HTTP Client :', this._options.server);
     }
@@ -93,7 +97,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         let promiseRj: Function;
         let promise = new SuperPromise<Buffer>((rs, rj) => {
             promiseRj = rj;
-            httpReq = http.request(this._options.server, {
+            httpReq = this._http.request(this._options.server, {
                 method: 'POST'
             }, httpRes => {
                 let data: Buffer[] = [];
