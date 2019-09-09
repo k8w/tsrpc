@@ -23,7 +23,6 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     // protected abstract _makeCall(conn: any, input: ParsedServerInput): BaseCall;
     protected abstract _poolApiCall: Pool<ApiCall>;
     protected abstract _poolMsgCall: Pool<MsgCall>;
-    abstract get dataFlow(): ((data: Buffer, conn: any) => (boolean | Promise<boolean>))[];
 
     // 配置及其衍生项
     readonly options: ServerOptions;
@@ -167,7 +166,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 sn: input.sn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefix: `API#${input.sn} [${input.service.name}]`
+                    prefixs: [`API#${input.sn} [${input.service.name}]`]
                 }),
                 service: input.service,
                 req: input.req
@@ -178,7 +177,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 conn: conn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefix: `MSG [${input.service.name}]`
+                    prefixs: [`MSG [${input.service.name}]`]
                 }),
                 service: input.service,
                 msg: input.msg

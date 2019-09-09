@@ -2,7 +2,7 @@ import { PoolItem, Pool } from '../models/Pool';
 
 export interface PrefixLoggerOptions {
     logger: Logger
-    prefix: string | (() => string | string[]);
+    prefixs: (string | (() => string))[];
 }
 
 export class PrefixLogger extends PoolItem<PrefixLoggerOptions> implements Logger {
@@ -10,13 +10,7 @@ export class PrefixLogger extends PoolItem<PrefixLoggerOptions> implements Logge
     static pool = new Pool<PrefixLogger>(PrefixLogger);
 
     getPrefix(): string[] {
-        if (typeof this.options.prefix === 'string') {
-            return [this.options.prefix]
-        }
-
-        let prefix = this.options.prefix();
-        let output = Array.isArray(prefix) ? prefix : [prefix];
-        return output;
+        return this.options.prefixs.map(v => typeof v === 'string' ? v : v());
     }
 
     log(...args: any[]) {

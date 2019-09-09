@@ -30,7 +30,7 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends PoolIte
         super.reset(options);
         this.logger = PrefixLogger.pool.get({
             logger: options.server.logger,
-            prefix: `[${options.ip}]`
+            prefixs: [`[${options.ip}]`]
         });
     }
 

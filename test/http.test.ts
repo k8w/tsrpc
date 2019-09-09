@@ -10,11 +10,11 @@ import { MsgChat } from './proto/MsgChat';
 import { TsrpcError } from 'tsrpc-proto';
 
 const serverLogger = PrefixLogger.pool.get({
-    prefix: '[Server Log]',
+    prefixs: ['[Server Log]'],
     logger: console
 });
 const clientLogger = PrefixLogger.pool.get({
-    prefix: '[Client Log]',
+    prefixs: ['[Client Log]'],
     logger: console
 })
 

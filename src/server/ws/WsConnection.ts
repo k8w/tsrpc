@@ -48,7 +48,7 @@ export class WsConnection<ServiceType extends BaseServiceType, SessionType> exte
         this.session = Object.merge({}, options.defaultSession);
         this.logger = PrefixLogger.pool.get({
             logger: this.options.server.logger,
-            prefix: `[Conn#${options.connId}] [${this.ip}]`
+            prefixs: [`[Conn#${options.connId}] [${this.ip}]`]
         });
 
         // Init WS
