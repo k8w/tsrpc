@@ -3,7 +3,7 @@ import * as http from "http";
 import { HttpServer } from './HttpServer';
 import { PrefixLogger } from '../Logger';
 import { BaseServiceType } from 'tsrpc-proto';
-import { ConnectionCloseReason } from '../BaseServer';
+import { ConnectionCloseReason, BaseConnection } from '../BaseServer';
 
 export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
     server: HttpServer<ServiceType>,
@@ -12,7 +12,7 @@ export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
     httpRes: http.ServerResponse
 }
 
-export class HttpConnection<ServiceType extends BaseServiceType> extends PoolItem<HttpConnectionOptions<ServiceType>> {
+export class HttpConnection<ServiceType extends BaseServiceType> extends PoolItem<HttpConnectionOptions<ServiceType>> implements BaseConnection {
 
     static pool = new Pool<HttpConnection<any>>(HttpConnection);
 
@@ -42,11 +42,17 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends PoolIte
 
     close(reason?: ConnectionCloseReason) {
         if (!this.options.httpRes.finished) {
-            if (reason === 'Invalid Buffer') {
-                this.options.httpRes.statusCode = 400;
+            // 有Reason代表是异常关闭
+            if (reason) {
+                this.logger.warn(`Conn closed unexpectly. url=${this.options.httpReq.url}, reason=${reason}`);
+                this.options.httpRes.setHeader('X-TSRPC-Exception', reason);
             }
             this.options.httpRes.end();
         }
+    }
+
+    get isClosed(): boolean {
+        return this.options.httpRes.finished;
     }
 
     // Put into pool

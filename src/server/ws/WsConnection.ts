@@ -1,13 +1,12 @@
 import * as http from "http";
 import * as WebSocket from "ws";
-import { ApiCall } from '../BaseCall';
 import { PrefixLogger } from '../Logger';
 import { BaseServiceType } from "tsrpc-proto";
 import { WsServer } from "./WsServer";
 import { PoolItem, Pool } from '../../models/Pool';
 import { HttpUtil } from "../../models/HttpUtil";
 import { TransportDataUtil } from '../../models/TransportDataUtil';
-import { ConnectionCloseReason } from '../BaseServer';
+import { ConnectionCloseReason, BaseConnection } from '../BaseServer';
 
 export interface WsConnectionOptions<ServiceType extends BaseServiceType, SessionType> {
     connId: number,
@@ -22,7 +21,7 @@ export interface WsConnectionOptions<ServiceType extends BaseServiceType, Sessio
 /**
  * 当前活跃的连接
  */
-export class WsConnection<ServiceType extends BaseServiceType, SessionType> extends PoolItem<WsConnectionOptions<ServiceType, SessionType>> {
+export class WsConnection<ServiceType extends BaseServiceType, SessionType> extends PoolItem<WsConnectionOptions<ServiceType, SessionType>> implements BaseConnection {
 
     static pool = new Pool<WsConnection<any, any>>(WsConnection);
 
@@ -98,5 +97,9 @@ export class WsConnection<ServiceType extends BaseServiceType, SessionType> exte
     close(reason?: ConnectionCloseReason) {
         // 已连接 Close之
         this.options.ws.close(1000, reason || 'Server Closed');
+    }
+
+    get isClosed(): boolean {
+        return this.options.ws.readyState !== WebSocket.OPEN;
     }
 }

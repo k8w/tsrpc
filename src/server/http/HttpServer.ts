@@ -13,6 +13,10 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     protected _poolApiCall: Pool<ApiCallHttp> = new Pool<ApiCallHttp>(ApiCallHttp);
     protected _poolMsgCall: Pool<MsgCallHttp> = new Pool<MsgCallHttp>(MsgCallHttp);
 
+    get dataFlow(): ((data: Buffer, conn: HttpConnection<any>) => (boolean | Promise<boolean>))[] {
+        return this._dataFlow;
+    };
+
     private _apiSnCounter = new Counter(1);
 
     constructor(options?: Partial<HttpServerOptions<ServiceType>>) {
@@ -34,8 +38,6 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
             this._status = 'opening';
             this.logger.log(`Starting HTTP server ...`);
             this._server = http.createServer((httpReq, httpRes) => {
-                let conn: HttpConnection<ServiceType> | undefined;
-
                 httpRes.statusCode = 200;
                 if (this.options.cors) {
                     httpRes.setHeader('Access-Control-Allow-Origin', this.options.cors)
@@ -43,25 +45,17 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
                 let chunks: Buffer[] = [];
                 httpReq.on('data', data => {
-                    if (!conn) {
-                        let ip = HttpUtil.getClientIp(httpReq);
-                        conn = HttpConnection.pool.get({
-                            server: this,
-                            ip: ip,
-                            httpReq: httpReq,
-                            httpRes: httpRes
-                        });
-                    };
                     chunks.push(data);
                 });
 
                 httpReq.on('end', () => {
-                    if (!conn) {
-                        httpRes.statusCode = 400;
-                        httpRes.end();
-                        this.logger.log(`[${HttpUtil.getClientIp(httpReq)}] [Bad Request] ${httpReq.method} ${httpReq.url}`)
-                        return;
-                    }
+                    let ip = HttpUtil.getClientIp(httpReq);
+                    let conn = HttpConnection.pool.get({
+                        server: this,
+                        ip: ip,
+                        httpReq: httpReq,
+                        httpRes: httpRes
+                    });
 
                     let buf = Buffer.concat(chunks);
                     this.onData(conn, buf);
@@ -118,13 +112,19 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
 export const defaultHttpServerOptions: HttpServerOptions<any> = {
     ...defualtBaseServerOptions,
-    port: 3000
+    port: 3000,
+    onDataFlowError: (e, conn) => {
+        let httpRes = (conn as HttpConnection<any>).options.httpRes;
+        httpRes.statusCode = 400;
+        httpRes.end();
+    }
 }
 
 export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
     port: number,
     socketTimeout?: number,
-    cors?: string
+    cors?: string,
+    onBadRequest?: (req: http.IncomingMessage) => void
 }
 
 type HttpServerStatus = 'opening' | 'open' | 'closing' | 'closed';

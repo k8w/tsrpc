@@ -19,6 +19,10 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
 
     private _connIdCounter = new Counter(1);
 
+    get dataFlow(): ((data: Buffer, conn: WsConnection<ServiceType, SessionType>) => (boolean | Promise<boolean>))[] {
+        return this._dataFlow;
+    };
+
     constructor(options?: Partial<WsServerOptions<ServiceType, SessionType>>) {
         super(Object.assign({}, defaultWsServerOptions, options));
     }

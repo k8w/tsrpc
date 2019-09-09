@@ -9,9 +9,9 @@ import { Pool } from '../models/Pool';
 import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';
 import 'colors';
 
-export type ConnectionCloseReason = 'Invalid Buffer';
-
-type Connection = {
+export type ConnectionCloseReason = 'INVALID_INPUT_BUFFER' | 'DATA_FLOW_BREAK';
+export type BaseConnection = {
+    isClosed: boolean;
     close: (reason?: ConnectionCloseReason) => void,
     ip: string,
     logger: Logger
@@ -23,6 +23,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     // protected abstract _makeCall(conn: any, input: ParsedServerInput): BaseCall;
     protected abstract _poolApiCall: Pool<ApiCall>;
     protected abstract _poolMsgCall: Pool<MsgCall>;
+    abstract get dataFlow(): ((data: Buffer, conn: any) => (boolean | Promise<boolean>))[];
 
     // 配置及其衍生项
     readonly options: ServerOptions;
@@ -30,6 +31,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     readonly serviceMap: ServiceMap;
 
     // Flows
+    protected _dataFlow: ((data: Buffer, conn: BaseConnection) => (boolean | Promise<boolean>))[] = [];
     readonly apiFlow: (<T extends string>(call: ApiCall<ServiceType['req'][T], ServiceType['res'][T]>) => (boolean | Promise<boolean>))[] = [];
     readonly msgFlow: (<T extends string>(call: MsgCall<ServiceType['msg'][T]>) => (boolean | Promise<boolean>))[] = [];
 
@@ -49,7 +51,27 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     }
 
     // #region Data process flow
-    async onData(conn: Connection, data: Buffer) {
+    async onData(conn: BaseConnection, data: Buffer) {
+        // DataFlow
+        let op = await this._execFlow(this._dataFlow, data, conn);
+        // 错误直接抛出
+        if (op.err) {
+            conn.logger.error('[DATA_FLOW_ERR]', op.err);
+            if (this.options.onDataFlowError) {
+                this.options.onDataFlowError(op.err, conn);
+            }
+            else {
+                throw (op.err);
+            }
+        }
+        // Data内部表示不需要再继续
+        if (!op.continue) {
+            if (!conn.isClosed) {
+                conn.close('DATA_FLOW_BREAK');
+            }
+            return;
+        }
+
         // Decrypt
         let buf: Uint8Array;
         if (this.options.decrypter) {
@@ -58,13 +80,15 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         else {
             buf = data;
         }
+
+        // Parse Server Input
         let input: ParsedServerInput;
         try {
             input = this._parseBuffer(conn, buf);
         }
         catch (e) {
-            this.logger.error(`[${conn.ip}] [Invalid Buffer] length=${buf.length}`, buf.subarray(0, 16))
-            conn.close('Invalid Buffer');
+            this.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
+            conn.close('INVALID_INPUT_BUFFER');
             return;
         }
 
@@ -132,11 +156,11 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         }
     }
 
-    protected _parseBuffer(conn: Connection, buf: Uint8Array): ParsedServerInput {
+    protected _parseBuffer(conn: BaseConnection, buf: Uint8Array): ParsedServerInput {
         return TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
     }
 
-    protected _makeCall(conn: Connection, input: ParsedServerInput): BaseCall {
+    protected _makeCall(conn: BaseConnection, input: ParsedServerInput): BaseCall {
         if (input.type === 'api') {
             return this._poolApiCall.get({
                 conn: conn,
@@ -162,10 +186,10 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         }
     }
 
-    private async _execFlow(flow: ((...args: any[]) => boolean | Promise<boolean>)[], params: any): Promise<{ continue: boolean, err?: Error }> {
+    private async _execFlow(flow: ((...args: any[]) => boolean | Promise<boolean>)[], ...params: any[]): Promise<{ continue: boolean, err?: Error }> {
         for (let i = 0; i < flow.length; ++i) {
             try {
-                let res = flow[i](params);
+                let res = flow[i](...params);
                 if (res instanceof Promise) {
                     res = await res;
                 }
@@ -187,7 +211,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         let op = await this._execFlow(this.apiFlow, call);
         // 打印错误信息
         if (op.err) {
-            call.logger.log('[API_FLOW_ERR]', op.err);
+            call.logger.error('[API_FLOW_ERR]', op.err);
         }
         // 已经返回过，强制中断
         if (call.res) {
@@ -201,7 +225,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             }
             // 服务器内部错误
             else {
-                call.logger.log('[API_FLOW_ERR]', op.err);
+                call.logger.error('[API_FLOW_ERR]', op.err);
                 call.error('Internal server error', 'INTERNAL_ERR');
             }
             return;
@@ -370,10 +394,6 @@ export const consoleColorLogger: Logger = {
         console.error.call(console, `<${pid}> ${new Date().format()}`.gray, '[ERROR]'.red, ...args);
     },
 }
-// defaultLogger.debug('Test Debug');
-// defaultLogger.log('Test Log');
-// defaultLogger.warn('Test Warn');
-// defaultLogger.error('Test Error');
 
 export const defualtBaseServerOptions: BaseServerOptions = {
     proto: { services: [], types: {} },
@@ -390,7 +410,9 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
     timeout?: number;
 
     // 是否在message后加入ErrorSN
-    showErrorSn?: boolean
+    showErrorSn?: boolean;
+
+    onDataFlowError?: (e: Error, conn: BaseConnection) => void;
 }
 
 export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res, ApiCallOptions>) => void | Promise<void>;
