@@ -7,6 +7,7 @@ import { ParsedServerInput } from '../../models/TransportDataUtil';
 import { BaseServiceType } from 'tsrpc-proto';
 import { Pool } from '../../models/Pool';
 import { Counter } from '../../models/Counter';
+import { tsrpcVersion } from '../../..';
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions<ServiceType>, ServiceType>{
 
@@ -39,6 +40,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
             this.logger.log(`Starting HTTP server ...`);
             this._server = http.createServer((httpReq, httpRes) => {
                 httpRes.statusCode = 200;
+                httpRes.setHeader('X-Powered-By', `TSRPC ${tsrpcVersion}`);
                 if (this.options.cors) {
                     httpRes.setHeader('Access-Control-Allow-Origin', this.options.cors)
                 };
