@@ -53,21 +53,12 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     async onData(conn: BaseConnection, data: Buffer) {
         // DataFlow
         let op = await this._execFlow(this._dataFlow, data, conn);
-        // 错误直接抛出
+        // 错误输出到日志
         if (op.err) {
             conn.logger.error('[DATA_FLOW_ERR]', op.err);
-            if (this.options.onDataFlowError) {
-                this.options.onDataFlowError(op.err, conn);
-            }
-            else {
-                throw (op.err);
-            }
         }
         // Data内部表示不需要再继续
         if (!op.continue) {
-            if (!conn.isClosed) {
-                conn.close('DATA_FLOW_BREAK');
-            }
             return;
         }
 
@@ -92,7 +83,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             else {
                 this.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
                 conn.close('INVALID_INPUT_BUFFER');
-            }            
+            }
             return;
         }
 

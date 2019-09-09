@@ -16,3 +16,5 @@ export { ApiHandler, ApiHandlerHttp, ApiHandlerWs };
 export { MsgHandler, MsgHandlerHttp, MsgHandlerWs };
 
 export { consoleColorLogger, PrefixLogger };
+
+export const tsrpcVersion = require('./package.json').version;

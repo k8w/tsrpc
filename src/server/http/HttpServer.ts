@@ -112,12 +112,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
 export const defaultHttpServerOptions: HttpServerOptions<any> = {
     ...defualtBaseServerOptions,
-    port: 3000,
-    onDataFlowError: (e, conn) => {
-        let httpRes = (conn as HttpConnection<any>).options.httpRes;
-        httpRes.statusCode = 400;
-        httpRes.end();
-    }
+    port: 3000
 }
 
 export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
