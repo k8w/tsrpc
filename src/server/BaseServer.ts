@@ -86,8 +86,13 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             input = this._parseBuffer(conn, buf);
         }
         catch (e) {
-            this.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
-            conn.close('INVALID_INPUT_BUFFER');
+            if (this.options.onServerInputError) {
+                this.options.onServerInputError(e, conn);
+            }
+            else {
+                this.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
+                conn.close('INVALID_INPUT_BUFFER');
+            }            
             return;
         }
 
@@ -411,7 +416,7 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
     // 是否在message后加入ErrorSN
     showErrorSn?: boolean;
 
-    onDataFlowError?: (e: Error, conn: BaseConnection) => void;
+    onServerInputError?: (e: Error, conn: BaseConnection) => void;
 }
 
 export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res, ApiCallOptions>) => void | Promise<void>;
