@@ -13,6 +13,7 @@ import AutoImplementProtocol from './models/AutoImplementProtocol';
 import EnableLog4js from './models/EnableLog4js';
 import 'k8w-extend-native';
 import * as bodyParser from 'body-parser';
+import { Overwrite } from 'k8w-extend-native';
 
 export type RouterHandler = (req: ApiRequest<any>, res: ApiResponse<any>, next: () => void) => any;
 
@@ -121,7 +122,7 @@ export default class TsrpcServer {
             }
         }))
         //extend rpcServer for req and res
-        expressApp.use((req: ApiRequest<any>, res: ApiResponse<any>, next) => {
+        expressApp.use((req: ApiRequest<any>, res: ApiResponse<any>, next: Function) => {
             req.rpcServer = this;
             res.rpcServer = this;
             next();
@@ -132,7 +133,7 @@ export default class TsrpcServer {
         //Res extend
         expressApp.use(ApiResponseExtend);
         //Check if protocol registered
-        expressApp.use((req: ApiRequest<TsrpcReq>, res: ApiResponse<TsrpcRes>, next) => {
+        expressApp.use((req: ApiRequest<TsrpcReq>, res: ApiResponse<TsrpcRes>, next: Function) => {
             if (!req.args) {
                 next();
                 return;
@@ -267,17 +268,17 @@ export default class TsrpcServer {
     use(handler: RouterHandler): void;
     use(path: string, handler: RouterHandler): void;
     use() {
-        this._routerBeforeApiHandler.use.apply(this._routerBeforeApiHandler, arguments);
+        this._routerBeforeApiHandler.use.apply(this._routerBeforeApiHandler, arguments as any);
     }
     get(handler: RouterHandler): void;
     get(path: string, handler: RouterHandler): void;
     get() {
-        this._routerBeforeApiHandler.get.apply(this._routerBeforeApiHandler, arguments);
+        this._routerBeforeApiHandler.get.apply(this._routerBeforeApiHandler, arguments as any);
     }
     post(handler: RouterHandler): void;
     post(path: string, handler: RouterHandler): void;
     post() {
-        this._routerBeforeApiHandler.post.apply(this._routerBeforeApiHandler, arguments);
+        this._routerBeforeApiHandler.post.apply(this._routerBeforeApiHandler, arguments as any);
     }
 
     //hooks
