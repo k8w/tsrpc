@@ -123,7 +123,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                     call.logger.log('[Res]', call.res.data);
                 }
                 else {
-                    call.logger.log('[ResError]', call.res.error);
+                    call.logger.warn('[ResError]', call.res.error);
                 }
             }
             else {
@@ -235,11 +235,11 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 }
             }
             catch (e) {
-                call.logger.error(e);
                 if (e instanceof TsrpcError) {
                     call.error(e.message, e.info);
                 }
                 else {
+                    call.logger.error(e);
                     call.error('Internal server error', 'INTERNAL_ERR');
                 }
             }
