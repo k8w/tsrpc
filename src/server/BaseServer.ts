@@ -41,7 +41,25 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
     readonly logger: Logger;
 
+    private static _isUncaughtExceptionProcessed = false;
+    static processUncaughtException() {
+        if (this._isUncaughtExceptionProcessed) {
+            return;
+        }
+        this._isUncaughtExceptionProcessed = true;
+
+        process.on('uncaughtException', e => {
+            console.error('uncaughtException', e);
+        });
+
+        process.on('unhandledRejection', e => {
+            console.error('unhandledRejection', e);
+        });
+    }
+
     constructor(options: ServerOptions) {
+        BaseServer.processUncaughtException();
+
         this.options = options;
         this.tsbuffer = new TSBuffer(this.options.proto.types);
         this.serviceMap = ServiceMapUtil.getServiceMap(this.options.proto);
@@ -412,11 +430,3 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
 
 export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res, ApiCallOptions>) => void | Promise<void>;
 export type MsgHandler<Msg = any> = (msg: MsgCall<Msg, MsgCallOptions>) => void | Promise<void>;
-
-process.on('uncaughtException', e => {
-    console.error(e);
-});
-
-process.on('unhandledRejection', e => {
-    console.error(e);
-});

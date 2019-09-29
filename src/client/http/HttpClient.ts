@@ -61,7 +61,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
                     code: 'SERVER_OUTPUT_ERR',
                     innerError: e,
                     buf: resBuf
-                });                
+                });
             }
             if (parsed.type !== 'api') {
                 throw new TsrpcError('Invalid response', 'INTERNAL_ERR');
