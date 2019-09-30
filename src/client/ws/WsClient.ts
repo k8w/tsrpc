@@ -58,14 +58,20 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
                 // 还在连接中，则连接失败
                 if (rj) {
                     this._connecting = undefined;
-                    rj(new TsrpcError(e.message, e.error && e.error.code));
+                    rj(new TsrpcError(e.message, {
+                        code: e.error && e.error.code,
+                        isNetworkError: true
+                    }));
                 }
             }
 
             ws.onclose = e => {
                 if (rj) {
                     this._connecting = undefined;
-                    rj(new TsrpcError('Network Error', e.reason));
+                    rj(new TsrpcError('Network Error', {
+                        code: e.reason,
+                        isNetworkError: true
+                    }));
                 }
 
                 // 清空WebSocket Listener
@@ -184,7 +190,11 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
         this._ws.send(buf, err => {
             if (err) {
                 this.logger.error('WebSocket Send Error:', err);
-                this._pendingApi[sn] && this._pendingApi[sn]!.rj(new TsrpcError('Network Error', err))
+                this._pendingApi[sn] && this._pendingApi[sn]!.rj(new TsrpcError('Network Error', {
+                    code: (err as any).code,
+                    isNetworkError: true,
+                    innerError: err
+                }))
             }
         });
 

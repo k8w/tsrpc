@@ -117,7 +117,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
         // Handle Call
         if (call.type === 'api') {
-            call.logger.log('[Req]', call.req);
+            call.logger.log('[Req]', this.options.logReqBody ? call.req : '');
             let sn = call.sn;
 
             await new Promise(rs => {
@@ -138,10 +138,10 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
             if (call.res) {
                 if (call.res.isSucc) {
-                    call.logger.log('[Res]', call.res.data);
+                    call.logger.log('[Res]', this.options.logResBody ? call.res.data : '');
                 }
                 else {
-                    call.logger.warn('[ResError]', call.res.error);
+                    call.logger.warn('[ResError]', call.res.error, `\nReq=${JSON.stringify(call.req)}`);
                 }
             }
             else {
@@ -410,12 +410,19 @@ export const consoleColorLogger: Logger = {
 
 export const defualtBaseServerOptions: BaseServerOptions = {
     proto: { services: [], types: {} },
-    logger: consoleColorLogger
+    logger: consoleColorLogger,
+    logReqBody: true,
+    logResBody: true
 }
 
 export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
     proto: ServiceProto<ServiceType>;
+
+    // LOG相关
     logger: Logger;
+    logReqBody: boolean;
+    logResBody: boolean;
+
     encrypter?: (src: Uint8Array) => Uint8Array | Promise<Uint8Array>;
     decrypter?: (cipher: Uint8Array) => Uint8Array | Promise<Uint8Array>;
 
