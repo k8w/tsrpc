@@ -48,7 +48,10 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         // Send
         return this._sendBuf(buf, options, 'api', sn).then(resBuf => {
             if (!resBuf) {
-                throw new TsrpcError('Unknown Error', 'NO_RES')
+                throw new TsrpcError('Unknown Error', {
+                    code: 'EMPTY_RES',
+                    isServerOutputError: true
+                })
             }
 
             // Parsed res
@@ -58,13 +61,17 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
             }
             catch (e) {
                 throw new TsrpcError('Invalid server output', {
-                    code: 'SERVER_OUTPUT_ERR',
+                    code: 'INVALID_SERVER_OUTPUT',
+                    isServerOutputError: true,
                     innerError: e,
                     buf: resBuf
                 });
             }
             if (parsed.type !== 'api') {
-                throw new TsrpcError('Invalid response', 'INTERNAL_ERR');
+                throw new TsrpcError('Invalid response', {
+                    code: 'INVALID_API_ID',
+                    isServerOutputError: true
+                });
             }
             if (parsed.isSucc) {
                 this.logger.log(`[ApiRes] #${sn}`, parsed.res)
@@ -123,7 +130,10 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
                     return;
                 }
 
-                rj(new TsrpcError(e.message, (e as any).code));
+                rj(new TsrpcError(e.message, {
+                    code: (e as any).code,
+                    isNetworkError: true
+                }));
             })
 
             httpReq.write(Buffer.from(buf));
@@ -140,7 +150,10 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
             timer = setTimeout(() => {
                 if (!promise.isCanceled && !promise.isDone) {
                     this.logger.log(`[${type === 'api' ? 'ApiTimeout' : 'MsgTimeout'}] #${sn}`);
-                    promiseRj(new TsrpcError('Request Timeout', 'TIMEOUT'));
+                    promiseRj(new TsrpcError('Request Timeout', {
+                        code: 'TIMEOUT',
+                        isNetworkError: true
+                    }));
                     httpReq.abort();
                 }
             }, timeout);

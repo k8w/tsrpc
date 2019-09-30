@@ -73,7 +73,7 @@ export class TransportDataUtil {
         catch (e) {
             throw new TsrpcError('Cannot parse server output data', {
                 code: 'PARSE_SERVER_OUTPUT_ERR',
-                innerError: e
+                innerError: e,                
             });
         }
 
