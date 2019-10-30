@@ -45,29 +45,29 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     readonly logger: Logger;
 
     private static _isUncaughtExceptionProcessed = false;
-    static processUncaughtException() {
+    static processUncaughtException(logger: Logger) {
         if (this._isUncaughtExceptionProcessed) {
             return;
         }
         this._isUncaughtExceptionProcessed = true;
 
         process.on('uncaughtException', e => {
-            console.error('uncaughtException', e);
+            logger.error('[uncaughtException]', e);
         });
 
         process.on('unhandledRejection', e => {
-            console.error('unhandledRejection', e);
+            logger.error('[unhandledRejection]', e);
         });
     }
 
     constructor(options: ServerOptions) {
-        BaseServer.processUncaughtException();
-
         this.options = options;
         this.tsbuffer = new TSBuffer(this.options.proto.types);
         this.serviceMap = ServiceMapUtil.getServiceMap(this.options.proto);
         this.logger = options.logger;
         this._msgHandlers = new HandlerManager(this.logger);
+
+        BaseServer.processUncaughtException(this.logger);
     }
 
     // #region Data process flow
@@ -147,7 +147,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                     call.logger.log('[Res]', this.options.logResBody ? call.res.data : '');
                 }
                 else {
-                    (call.res.error.info === BaseServer.INTERNAL_ERR_INFO ? call.logger.error : call.logger.log)
+                    call.logger[call.res.error.info === BaseServer.INTERNAL_ERR_INFO ? 'error' : 'log']
                         ('[ResError]', call.res.error, `\nReq=${JSON.stringify(call.req)}`);
                 }
             }
