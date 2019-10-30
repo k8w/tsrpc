@@ -39,6 +39,8 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
             this._status = 'opening';
             this.logger.log(`Starting HTTP server ...`);
             this._server = http.createServer((httpReq, httpRes) => {
+                let ip = HttpUtil.getClientIp(httpReq);
+
                 httpRes.statusCode = 200;
                 httpRes.setHeader('X-Powered-By', `TSRPC ${tsrpcVersion}`);
                 if (this.options.cors) {
@@ -50,9 +52,9 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     chunks.push(data);
                 });
 
-                httpReq.on('end', () => {
-                    let ip = HttpUtil.getClientIp(httpReq);
-                    let conn = HttpConnection.pool.get({
+                let conn: HttpConnection<any> | undefined;
+                httpReq.on('end', () => {                    
+                    conn = HttpConnection.pool.get({
                         server: this,
                         ip: ip,
                         httpReq: httpReq,
@@ -62,6 +64,18 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     let buf = Buffer.concat(chunks);
                     this.onData(conn, buf);
                 });
+
+                httpReq.on('close', () => {
+                    if (!httpRes.finished) {
+                        if (conn) {
+                            conn.close('NO_RES');
+                        }
+                        else {
+                            this.logger.log(`Client disconnected. url=${httpReq.url}, ip=${ip}`);
+                            httpRes.end();
+                        }                        
+                    }
+                })
             });
 
             if (this.options.socketTimeout) {
