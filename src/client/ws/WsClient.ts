@@ -221,7 +221,10 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
                     this.logger.log(`[ApiTimeout] #${sn}`);
                     let err: ApiError = {
                         message: 'Request Timeout',
-                        info: 'TIMEOUT'
+                        info: {
+                            code: 'TIMEOUT',
+                            isNetworkError: true
+                        }
                     }
                     this._pendingApi[sn]!.rj(err);
                 }

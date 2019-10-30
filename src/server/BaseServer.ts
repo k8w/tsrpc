@@ -18,6 +18,9 @@ export type BaseConnection = {
 }
 
 export abstract class BaseServer<ServerOptions extends BaseServerOptions, ServiceType extends BaseServiceType = any> {
+
+    static INTERNAL_ERR_INFO = 'INTERNAL_ERR';
+
     abstract start(): Promise<void>;
     abstract stop(immediately?: boolean): Promise<void>;
     // protected abstract _makeCall(conn: any, input: ParsedServerInput): BaseCall;
@@ -125,7 +128,10 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 if (this.options.timeout) {
                     setTimeout(() => {
                         if (call.type === 'api' && call.sn === sn && !call.res) {
-                            call.error('Server Timeout', 'TIMEOUT');
+                            call.error('Server Timeout', {
+                                code: 'TIMEOUT',
+                                isNetworkError: true
+                            });
                         }
                         rs();
                     }, this.options.timeout);
@@ -141,7 +147,8 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                     call.logger.log('[Res]', this.options.logResBody ? call.res.data : '');
                 }
                 else {
-                    call.logger.warn('[ResError]', call.res.error, `\nReq=${JSON.stringify(call.req)}`);
+                    (call.res.error.info === BaseServer.INTERNAL_ERR_INFO ? call.logger.error : call.logger.log)
+                        ('[ResError]', call.res.error, `\nReq=${JSON.stringify(call.req)}`);
                 }
             }
             else {
@@ -239,7 +246,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             // 服务器内部错误
             else {
                 call.logger.error('[API_FLOW_ERR]', op.err);
-                call.error('Internal server error', 'INTERNAL_ERR');
+                call.error('Internal server error', BaseServer.INTERNAL_ERR_INFO);
             }
             return;
         }
@@ -258,7 +265,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 }
                 else {
                     call.logger.error(e);
-                    call.error('Internal server error', 'INTERNAL_ERR');
+                    call.error('Internal server error', BaseServer.INTERNAL_ERR_INFO);
                 }
             }
         }

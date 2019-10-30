@@ -23,13 +23,13 @@ async function testApi(server: WsServer<ServiceType>, client: WsClient<ServiceTy
     assert.deepStrictEqual(await client.callApi('Test', {
         name: 'Req1'
     }), {
-            reply: 'Test reply: Req1'
-        });
+        reply: 'Test reply: Req1'
+    });
     assert.deepStrictEqual(await client.callApi('a/b/c/Test', {
         name: 'Req2'
     }), {
-            reply: 'a/b/c/Test reply: Req2'
-        });
+        reply: 'a/b/c/Test reply: Req2'
+    });
 
     // Inner error
     for (let v of ['Test', 'a/b/c/Test']) {
@@ -40,10 +40,10 @@ async function testApi(server: WsServer<ServiceType>, client: WsClient<ServiceTy
             message: e.message,
             info: e.info
         })), {
-                isSucc: false,
-                message: 'Internal server error',
-                info: 'INTERNAL_ERR'
-            });
+            isSucc: false,
+            message: 'Internal server error',
+            info: 'INTERNAL_ERR'
+        });
     }
 
     // TsrpcError
@@ -55,10 +55,10 @@ async function testApi(server: WsServer<ServiceType>, client: WsClient<ServiceTy
             message: e.message,
             info: e.info
         })), {
-                isSucc: false,
-                message: v + ' TsrpcError',
-                info: 'ErrInfo ' + v
-            });
+            isSucc: false,
+            message: v + ' TsrpcError',
+            info: 'ErrInfo ' + v
+        });
     }
 }
 
@@ -189,7 +189,7 @@ describe('WsClient', function () {
         await client1.connect().catch(e => {
             err1 = e
         })
-        assert.strictEqual(err1!.info, 'ECONNREFUSED');
+        assert.deepStrictEqual(err1!.info, { code: 'ECONNREFUSED', isNetworkError: true });
         assert(err1!.message.indexOf('ECONNREFUSED') > -1)
 
         await server.stop();
@@ -220,7 +220,11 @@ describe('WsClient', function () {
         await client.connect();
 
         let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
-        assert.deepStrictEqual(result, { message: 'Server Timeout', info: 'TIMEOUT' });
+        assert.deepStrictEqual(result, {
+            message: 'Server Timeout', info: {
+                code: 'TIMEOUT',
+                isNetworkError: true
+            }});
 
         await server.stop();
     });
@@ -251,7 +255,10 @@ describe('WsClient', function () {
 
         let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
         assert.strictEqual(result.message, 'Request Timeout');
-        assert.strictEqual(result.info, 'TIMEOUT');
+        assert.deepStrictEqual(result.info, {
+            code: 'TIMEOUT',
+            isNetworkError: true
+        });
 
         await server.stop();
     });

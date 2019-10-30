@@ -2,12 +2,12 @@ import { TsrpcError } from "tsrpc-proto";
 
 export class TsrpcClientErrorUtil {
 
-    // #region Error Codes
-    static TIMEOUT = 'TIMEOUT';
-    // #endregion    
-
     static isNetworkError(e: TsrpcError) {
         return e.info && e.info.isNetworkError;
+    }
+
+    static isTimeout(e: TsrpcError) {
+        return e.info && e.info.code === 'TIMEOUT';
     }
 
     static isServerOutputError(e: TsrpcError) {
