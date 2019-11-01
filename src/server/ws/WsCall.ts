@@ -30,7 +30,11 @@ export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType
         }
 
         let buf = TransportDataUtil.encodeApiSucc(this.conn.server.tsbuffer, this.service, res, this.sn);
-        this.res = { isSucc: true, data: res };
+        this.res = {
+            isSucc: true,
+            data: res,
+            usedTime: Date.now() - this.startTime
+        };
 
         return new Promise((rs, rj) => {
             this.conn.ws.send(buf, e => {
@@ -55,7 +59,8 @@ export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType
             error: {
                 message: message,
                 info: info
-            }
+            },
+            usedTime: Date.now() - this.startTime
         };
 
         return new Promise((rs, rj) => {

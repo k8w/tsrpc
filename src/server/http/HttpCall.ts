@@ -34,7 +34,8 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
 
         this.res = {
             isSucc: true,
-            data: res
+            data: res,
+            usedTime: Date.now() - this.startTime
         };
     }
 
@@ -56,7 +57,8 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
             error: {
                 message: message,
                 info: info
-            }
+            },
+            usedTime: Date.now() - this.startTime
         };
     }
 

@@ -144,15 +144,15 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
             if (call.res) {
                 if (call.res.isSucc) {
-                    call.logger.log('[Res]', this.options.logResBody ? call.res.data : '');
+                    call.logger.log('[Res]', `${call.res.usedTime}ms`, this.options.logResBody ? call.res.data : '');
                 }
                 else {
                     call.logger[call.res.error.info === BaseServer.INTERNAL_ERR_INFO ? 'error' : 'log']
-                        ('[ResError]', call.res.error, `\nReq=${JSON.stringify(call.req)}`);
+                        ('[ResError]', `${call.res.usedTime}ms`, call.res.error, `\nReq=${JSON.stringify(call.req)}`);
                 }
             }
             else {
-                call.logger.log('[NoRes]');
+                call.logger.log('[NoRes]', `${Date.now() - call.startTime}ms`);
             }
             this._afterApi(call);
         }
@@ -190,7 +190,8 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                     prefixs: [`API#${input.sn} [${input.service.name}]`]
                 }),
                 service: input.service,
-                req: input.req
+                req: input.req,
+                startTime: Date.now()
             })
         }
         else {

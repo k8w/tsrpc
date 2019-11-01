@@ -7,7 +7,8 @@ export interface ApiCallOptions {
     logger: PrefixLogger,
     service: ApiServiceDef,
     sn: number,
-    req: any
+    req: any,
+    startTime: number
 }
 export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallOptions = ApiCallOptions> extends PoolItem<CallOptions> {
     readonly type = 'api' as const;
@@ -17,7 +18,9 @@ export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallO
     sn!: number;
     req!: Req;
     // 已发送的响应
-    res?: { isSucc: true, data: Res } | ({ isSucc: false, error: ApiError});
+    res?: { isSucc: true, data: Res, usedTime: number } | ({ isSucc: false, error: ApiError, usedTime: number });
+    // Call开始的时间
+    startTime: number = 0;
 
     reset(options: ApiCallOptions) {
         this.logger = options.logger;
@@ -25,6 +28,7 @@ export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallO
         this.sn = options.sn;
         this.req = options.req;
         this.res = undefined;
+        this.startTime = options.startTime;
     }
 
     clean() {
