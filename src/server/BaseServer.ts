@@ -34,8 +34,8 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
     // Flows
     protected _dataFlow: ((data: Buffer, conn: BaseConnection) => (boolean | Promise<boolean>))[] = [];
-    readonly apiFlow: (<T extends string>(call: ApiCall<ServiceType['req'][T], ServiceType['res'][T]>) => (boolean | Promise<boolean>))[] = [];
-    readonly msgFlow: (<T extends string>(call: MsgCall<ServiceType['msg'][T]>) => (boolean | Promise<boolean>))[] = [];
+    readonly apiFlow: (<T extends keyof ServiceType['req']>(call: ApiCall<ServiceType['req'][T], ServiceType['res'][T]>) => (boolean | Promise<boolean>))[] = [];
+    readonly msgFlow: (<T extends keyof ServiceType['msg']>(call: MsgCall<ServiceType['msg'][T]>) => (boolean | Promise<boolean>))[] = [];
 
     // Handlers
     private _apiHandlers: { [apiName: string]: ((call: ApiCall) => any) | undefined } = {};
