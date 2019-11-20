@@ -105,7 +105,8 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         let promise = new SuperPromise<Buffer>((rs, rj) => {
             promiseRj = rj;
             httpReq = this._http.request(this._options.server, {
-                method: 'POST'
+                method: 'POST',
+                agent: this._options.agent
             }, httpRes => {
                 let data: Buffer[] = [];
                 httpRes.on('data', (v: Buffer) => {
@@ -193,5 +194,6 @@ export interface HttpClientOptions<ServiceType extends BaseServiceType> {
     logger: Logger;
     /** API超时时间（毫秒） */
     timeout: number;
+    agent?: http.Agent;
 }
 

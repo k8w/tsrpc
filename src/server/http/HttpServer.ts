@@ -7,7 +7,7 @@ import { ParsedServerInput } from '../../models/TransportDataUtil';
 import { BaseServiceType } from 'tsrpc-proto';
 import { Pool } from '../../models/Pool';
 import { Counter } from '../../models/Counter';
-import { tsrpcVersion } from '../../..';
+import { tsrpcVersion } from '../../tsrpcVersion';
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions<ServiceType>, ServiceType>{
 
@@ -53,7 +53,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 });
 
                 let conn: HttpConnection<any> | undefined;
-                httpReq.on('end', () => {                    
+                httpReq.on('end', () => {
                     conn = HttpConnection.pool.get({
                         server: this,
                         ip: ip,
@@ -73,7 +73,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                         else {
                             this.logger.log(`Client disconnected. url=${httpReq.url}, ip=${ip}`);
                             httpRes.end();
-                        }                        
+                        }
                     }
                 })
             });
