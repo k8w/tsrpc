@@ -8,7 +8,7 @@ import { HttpClient } from './src/client/http/HttpClient';
 import { ApiHandler, MsgHandler, consoleColorLogger } from './src/server/BaseServer';
 import { PrefixLogger } from './src/server/Logger';
 import { TsrpcClientErrorUtil } from './src/client/TsrpcClientErrorUtil';
-import { tsrpcVersion } from './src/tsrpcVersion';
+import { tsrpcVersion } from './tsrpcVersion';
 
 export { HttpServer as TsrpcServer, HttpClient as TsrpcClient };
 export { WsServer as TsrpcServerWs };

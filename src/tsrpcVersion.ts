@@ -1,1 +1,0 @@
-export const tsrpcVersion = require('../package.json').version;
