@@ -1,5 +1,5 @@
---compilers ts:ts-node/register,tsx:ts-node/register
---recursive
---timeout 999999
---colors
+--require ts-node/register
+--require ./test/Base.ts
 --exit
+--timeout 999999
+--preserve-symlinks
