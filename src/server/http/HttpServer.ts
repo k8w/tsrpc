@@ -61,7 +61,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                         httpRes: httpRes
                     });
 
-                    let buf = Buffer.concat(chunks);
+                    let buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
                     this.onData(conn, buf);
                 });
 
