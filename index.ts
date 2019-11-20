@@ -8,6 +8,7 @@ import { HttpClient } from './src/client/http/HttpClient';
 import { ApiHandler, MsgHandler, consoleColorLogger } from './src/server/BaseServer';
 import { PrefixLogger } from './src/server/Logger';
 import { TsrpcClientErrorUtil } from './src/client/TsrpcClientErrorUtil';
+import { tsrpcVersion } from './src/tsrpcVersion';
 
 export { HttpServer as TsrpcServer, HttpClient as TsrpcClient };
 export { WsServer as TsrpcServerWs };
@@ -19,4 +20,4 @@ export { TsrpcClientErrorUtil };
 
 export { consoleColorLogger, PrefixLogger };
 
-export const tsrpcVersion = require('./package.json').version;
+export { tsrpcVersion };

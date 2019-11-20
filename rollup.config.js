@@ -1,5 +1,5 @@
 import typescript from 'rollup-plugin-typescript2';
-import { uglify } from 'rollup-plugin-uglify';
+import { terser } from "rollup-plugin-terser";
 
 export default {
     input: './index.ts',
@@ -11,11 +11,15 @@ export default {
         typescript({
             tsconfigOverride: {
                 compilerOptions: {
+                    declaration: true,
                     module: 'es2015'
                 }
             }
         }),
-        uglify()
+        terser({
+            module: true,
+            toplevel: true
+        })
 
     ],
     external: ['tslib']
