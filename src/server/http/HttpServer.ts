@@ -7,7 +7,7 @@ import { ParsedServerInput } from '../../models/TransportDataUtil';
 import { BaseServiceType } from 'tsrpc-proto';
 import { Pool } from '../../models/Pool';
 import { Counter } from '../../models/Counter';
-import { tsrpcVersion } from '../../tsrpcVersion';
+import { tsrpcVersion } from '../../../tsrpcVersion';
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions<ServiceType>, ServiceType>{
 
