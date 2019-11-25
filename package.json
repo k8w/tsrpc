@@ -1,12 +1,13 @@
 {
   "name": "tsrpc",
-  "version": "2.2.19",
+  "version": "2.2.20",
   "description": "TSRPC 2.x (both support HTTP and WebSocket)",
   "main": "index.js",
   "scripts": {
     "test": "mocha test\\**\\*.test.ts",
     "build": "rm -rf dist && npx rollup -c && cp package.json LICENSE README.md dist/",
-    "bp": "npm version patch && npm run build && cd dist && npm publish & cd.."
+    "bp": "npm version patch && npm run build && cd dist && npm publish & cd..",
+    "build:debug": "rm -rf dist && tsc -d && cp package.json LICENSE README.md dist/"
   },
   "repository": {
     "type": "git",

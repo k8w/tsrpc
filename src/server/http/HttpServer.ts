@@ -11,8 +11,8 @@ import { tsrpcVersion } from '../../../tsrpcVersion';
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions<ServiceType>, ServiceType>{
 
-    protected _poolApiCall: Pool<ApiCallHttp> = new Pool<ApiCallHttp>(ApiCallHttp);
-    protected _poolMsgCall: Pool<MsgCallHttp> = new Pool<MsgCallHttp>(MsgCallHttp);
+    protected _poolApiCall: Pool<ApiCallHttp> = ApiCallHttp.pool;
+    protected _poolMsgCall: Pool<MsgCallHttp> = MsgCallHttp.pool;
 
     get dataFlow(): ((data: Buffer, conn: HttpConnection<any>) => (boolean | Promise<boolean>))[] {
         return this._dataFlow;
