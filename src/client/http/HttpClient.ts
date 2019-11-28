@@ -8,6 +8,7 @@ import { Counter } from '../../models/Counter';
 import { Logger } from '../../server/Logger';
 import { TransportOptions } from "../models/TransportOptions";
 import SuperPromise from 'k8w-super-promise';
+import { nodeUtf8 } from '../../models/nodeUtf8';
 
 export class HttpClient<ServiceType extends BaseServiceType = any> {
 
@@ -24,7 +25,9 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
     constructor(options?: Partial<HttpClientOptions<ServiceType>>) {
         this._options = Object.assign({}, defaultHttpClientOptions, options);
         this.serviceMap = ServiceMapUtil.getServiceMap(this._options.proto);
-        this.tsbuffer = new TSBuffer(this._options.proto.types);
+        this.tsbuffer = new TSBuffer(this._options.proto.types, {
+            utf8: nodeUtf8
+        });
         this.logger = this._options.logger;
 
         this._http = this._options.server.startsWith('https://') ? https : http;
@@ -137,7 +140,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
                 }));
             })
 
-            httpReq.write(Buffer.from(buf));
+            httpReq.write(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
             httpReq.end();
         });
 

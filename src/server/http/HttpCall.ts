@@ -9,8 +9,6 @@ export interface ApiCallHttpOptions<ServiceType extends BaseServiceType> extends
 }
 export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceType = any> extends ApiCall<Req, Res, ApiCallHttpOptions<ServiceType>> {
 
-    static pool = new Pool<ApiCallHttp>(ApiCallHttp);
-
     conn!: HttpConnection<ServiceType>;
 
     reset(options: ApiCallHttpOptions<ServiceType>) {
@@ -30,7 +28,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
         }
 
         let buf = TransportDataUtil.encodeApiSucc(this.conn.server.tsbuffer, this.service, res);
-        this.conn.options.httpRes.end(Buffer.from(buf));
+        this.conn.options.httpRes.end(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
 
         this.res = {
             isSucc: true,
@@ -50,7 +48,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
         }
 
         let buf = TransportDataUtil.encodeApiError(this.service, message, info, 0);
-        this.conn.options.httpRes.end(Buffer.from(buf));
+        this.conn.options.httpRes.end(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
 
         this.res = {
             isSucc: false,
@@ -63,7 +61,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
     }
 
     destroy(): void {
-        ApiCallHttp.pool.put(this);
+        this.conn.server['_poolApiCall'].put(this);
     }
 }
 
@@ -71,8 +69,6 @@ export interface MsgCallHttpOptions<ServiceType extends BaseServiceType> extends
     conn: HttpConnection<ServiceType>;
 }
 export class MsgCallHttp<Msg = any, ServiceType extends BaseServiceType = any> extends MsgCall<Msg, MsgCallHttpOptions<ServiceType>> {
-
-    static pool = new Pool<MsgCallHttp>(MsgCallHttp);
 
     conn!: HttpConnection<ServiceType>;
 
@@ -87,7 +83,7 @@ export class MsgCallHttp<Msg = any, ServiceType extends BaseServiceType = any> e
     }
 
     destroy(): void {
-        MsgCallHttp.pool.put(this);
+        this.conn.server['_poolMsgCall'].put(this);
     }
 
 }

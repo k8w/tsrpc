@@ -212,37 +212,39 @@ describe('HttpClient', function () {
             logger: clientLogger
         });
         let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
-        assert.deepStrictEqual(result, { message: 'Server Timeout', info: { code: 'TIMEOUT', isNetworkError: true } });
+        assert.deepStrictEqual(result, { message: 'Server Timeout', info: { code: 'SERVER_TIMEOUT' } });
 
         await server.stop();
     });
 
     it('client timeout', async function () {
-        let server = new HttpServer({
+        let server1 = new HttpServer({
             proto: serviceProto,
             logger: serverLogger
         });
-        server.implementApi('Test', call => {
+        server1.implementApi('Test', call => {
             return new Promise(rs => {
                 setTimeout(() => {
                     call.succ({
-                        reply: 'Hi, ' + call.req.name
+                        reply: 'Hello, ' + call.req.name
                     });
                     rs();
                 }, 2000)
             })
         })
-        await server.start();
+        await server1.start();
 
         let client = new HttpClient({
             timeout: 100,
             proto: serviceProto,
             logger: clientLogger
         });
-        let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
+        let start = Date.now();
+        let result = await client.callApi('Test', { name: 'Jack123' }).catch(e => e);
+        // SERVER TIMEOUT的call还没执行完，但是call却被放入Pool了，导致这个BUG
         assert.strictEqual(result.message, 'Request Timeout');
         assert.deepStrictEqual(result.info, { code: 'TIMEOUT', isNetworkError: true });
 
-        await server.stop();
+        await server1.stop();
     });
 })

@@ -10,8 +10,6 @@ export interface ApiCallWsOptions<ServiceType extends BaseServiceType, SessionTy
 
 export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType = any, SessionType = any> extends ApiCall<Req, Res, ApiCallWsOptions<ServiceType, SessionType>> {
 
-    static pool = new Pool<ApiCallWs>(ApiCallWs);
-
     conn!: WsConnection<ServiceType, SessionType>;
 
     reset(options: ApiCallWsOptions<ServiceType, SessionType>) {
@@ -71,7 +69,7 @@ export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType
     }
 
     destroy(): void {
-        ApiCallWs.pool.put(this);
+        this.conn.server['_poolApiCall'].put(this);
     }
 
 }
@@ -80,8 +78,6 @@ export interface MsgCallWsOptions<ServiceType extends BaseServiceType, SessionTy
     conn: WsConnection<ServiceType, SessionType>;
 }
 export class MsgCallWs<Msg = any, ServiceType extends BaseServiceType = any, SessionType = any> extends MsgCall<Msg, MsgCallWsOptions<ServiceType, SessionType>> {
-
-    static pool = new Pool<MsgCallWs>(MsgCallWs);
 
     conn!: WsConnection<ServiceType, SessionType>;
 
@@ -96,7 +92,7 @@ export class MsgCallWs<Msg = any, ServiceType extends BaseServiceType = any, Ses
     }
 
     destroy(): void {
-        MsgCallWs.pool.put(this);
+        this.conn.server['_poolMsgCall'].put(this);
     }
 
 }

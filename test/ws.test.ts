@@ -222,9 +222,9 @@ describe('WsClient', function () {
         let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
         assert.deepStrictEqual(result, {
             message: 'Server Timeout', info: {
-                code: 'TIMEOUT',
-                isNetworkError: true
-            }});
+                code: 'SERVER_TIMEOUT'
+            }
+        });
 
         await server.stop();
     });

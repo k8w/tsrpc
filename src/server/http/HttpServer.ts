@@ -11,8 +11,8 @@ import { tsrpcVersion } from '../../../tsrpcVersion';
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions<ServiceType>, ServiceType>{
 
-    protected _poolApiCall: Pool<ApiCallHttp> = ApiCallHttp.pool;
-    protected _poolMsgCall: Pool<MsgCallHttp> = MsgCallHttp.pool;
+    protected _poolApiCall: Pool<ApiCallHttp> = new Pool<ApiCallHttp>(ApiCallHttp);
+    protected _poolMsgCall: Pool<MsgCallHttp> = new Pool<MsgCallHttp>(MsgCallHttp);
 
     get dataFlow(): ((data: Buffer, conn: HttpConnection<any>) => (boolean | Promise<boolean>))[] {
         return this._dataFlow;
@@ -91,7 +91,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     }
 
     stop(): Promise<void> {
-        return new Promise(rs => {
+        return new Promise((rs, rj) => {
             if (!this._server) {
                 rs();
                 return;
@@ -100,9 +100,14 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
             // 立即close，不再接受新请求
             // 等所有连接都断开后rs
-            this._server.close(() => {
-                this.logger.log('Server stopped');
-                rs();
+            this._server.close(err => {
+                if (err) {
+                    rj(err)
+                }
+                else {
+                    this.logger.log('Server stopped');
+                    rs();
+                }
             });
 
             this._server = undefined;
