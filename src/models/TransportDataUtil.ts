@@ -2,6 +2,7 @@ import { TSBuffer } from "tsbuffer";
 import { ApiServiceDef, MsgServiceDef, ServerInputData, ServerOutputData, ApiError, TsrpcError } from 'tsrpc-proto';
 import { ServiceMap } from "./ServiceMapUtil";
 import { TransportDataProto } from "tsrpc-proto";
+import { nodeUtf8 } from './nodeUtf8';
 
 export type ParsedServerInput = { type: 'api', service: ApiServiceDef, req: any, sn: number } | { type: 'msg', service: MsgServiceDef, msg: any };
 export type ParsedServerOutput = { type: 'api', service: ApiServiceDef, sn: number } & ({ isSucc: true, res: any } | { isSucc: false, error: ApiError }) | { type: 'msg', service: MsgServiceDef, msg: any };
@@ -11,7 +12,7 @@ export class TransportDataUtil {
     private static _transportCoder?: TSBuffer;
     static get transportCoder(): TSBuffer {
         if (!this._transportCoder) {
-            this._transportCoder = new TSBuffer(TransportDataProto)
+            this._transportCoder = new TSBuffer(TransportDataProto, { utf8: nodeUtf8 })
         }
 
         return this._transportCoder;

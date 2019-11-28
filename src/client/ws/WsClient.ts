@@ -8,6 +8,7 @@ import { Logger } from '../../server/Logger';
 import { ServiceProto, BaseServiceType, TsrpcError, ApiError } from 'tsrpc-proto';
 import { TransportOptions } from '../models/TransportOptions';
 import SuperPromise from 'k8w-super-promise';
+import { nodeUtf8 } from '../../models/nodeUtf8';
 
 export class WsClient<ServiceType extends BaseServiceType = any> {
 
@@ -22,7 +23,7 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
 
     constructor(options: Partial<WsClientOptions<ServiceType>>) {
         this.options = Object.assign({}, defaultClientOptions, options);
-        this.tsbuffer = new TSBuffer(this.options.proto.types);
+        this.tsbuffer = new TSBuffer(this.options.proto.types, { utf8: nodeUtf8 });
         this.serviceMap = ServiceMapUtil.getServiceMap(this.options.proto);
         this.logger = this.options.logger;
         this._msgHandlers = new HandlerManager(this.logger);

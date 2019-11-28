@@ -212,6 +212,7 @@ describe('HttpClient', function () {
             logger: clientLogger
         });
         let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
+        
         assert.deepStrictEqual(result, { message: 'Server Timeout', info: { code: 'TIMEOUT', isNetworkError: true } });
 
         await server.stop();
@@ -240,6 +241,7 @@ describe('HttpClient', function () {
             logger: clientLogger
         });
         let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
+        
         assert.strictEqual(result.message, 'Request Timeout');
         assert.deepStrictEqual(result.info, { code: 'TIMEOUT', isNetworkError: true });
 

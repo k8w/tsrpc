@@ -8,6 +8,7 @@ import { ServiceMapUtil, ServiceMap } from '../models/ServiceMapUtil';
 import { Pool } from '../models/Pool';
 import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';
 import 'colors';
+import { nodeUtf8 } from '../models/nodeUtf8';
 
 export type ConnectionCloseReason = 'INVALID_INPUT_BUFFER' | 'DATA_FLOW_BREAK' | 'NO_RES';
 export type BaseConnection = {
@@ -62,7 +63,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
     constructor(options: ServerOptions) {
         this.options = options;
-        this.tsbuffer = new TSBuffer(this.options.proto.types);
+        this.tsbuffer = new TSBuffer(this.options.proto.types, { utf8: nodeUtf8 });
         this.serviceMap = ServiceMapUtil.getServiceMap(this.options.proto);
         this.logger = options.logger;
         this._msgHandlers = new HandlerManager(this.logger);

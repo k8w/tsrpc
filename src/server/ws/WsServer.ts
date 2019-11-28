@@ -11,8 +11,8 @@ import { BaseServiceType } from 'tsrpc-proto';
 
 export class WsServer<ServiceType extends BaseServiceType = any, SessionType = { [key: string]: any | undefined }> extends BaseServer<WsServerOptions<ServiceType, SessionType>, ServiceType> {
 
-    protected _poolApiCall: Pool<ApiCallWs> = ApiCallWs.pool;
-    protected _poolMsgCall: Pool<MsgCallWs> = MsgCallWs.pool;
+    protected _poolApiCall: Pool<ApiCallWs> = new Pool<ApiCallWs>(ApiCallWs);
+    protected _poolMsgCall: Pool<MsgCallWs> = new Pool<MsgCallWs>(MsgCallWs);
 
     private readonly _conns: WsConnection<ServiceType, SessionType>[] = [];
     private readonly _id2Conn: { [connId: string]: WsConnection<ServiceType, SessionType> | undefined } = {};
