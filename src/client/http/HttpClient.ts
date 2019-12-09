@@ -53,7 +53,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
             if (!resBuf) {
                 throw new TsrpcError('Unknown Error', {
                     code: 'EMPTY_RES',
-                    isServerOutputError: true
+                    isServerError: true
                 })
             }
 
@@ -65,7 +65,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
             catch (e) {
                 throw new TsrpcError('Invalid server output', {
                     code: 'INVALID_SERVER_OUTPUT',
-                    isServerOutputError: true,
+                    isServerError: true,
                     innerError: e,
                     buf: resBuf
                 });
@@ -73,7 +73,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
             if (parsed.type !== 'api') {
                 throw new TsrpcError('Invalid response', {
                     code: 'INVALID_API_ID',
-                    isServerOutputError: true
+                    isServerError: true
                 });
             }
             if (parsed.isSucc) {

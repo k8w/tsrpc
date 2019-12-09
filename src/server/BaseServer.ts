@@ -9,6 +9,7 @@ import { Pool } from '../models/Pool';
 import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';
 import 'colors';
 import { nodeUtf8 } from '../models/nodeUtf8';
+import { TsrpcClientErrorUtil } from '../client/TsrpcClientErrorUtil';
 
 export type ConnectionCloseReason = 'INVALID_INPUT_BUFFER' | 'DATA_FLOW_BREAK' | 'NO_RES';
 export type BaseConnection = {
@@ -19,8 +20,6 @@ export type BaseConnection = {
 }
 
 export abstract class BaseServer<ServerOptions extends BaseServerOptions, ServiceType extends BaseServiceType = any> {
-
-    static INTERNAL_ERR_INFO = 'INTERNAL_ERR';
 
     abstract start(): Promise<void>;
     abstract stop(immediately?: boolean): Promise<void>;
@@ -133,7 +132,8 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                     timer = setTimeout(() => {
                         if (call.type === 'api' && call.sn === sn && !call.res) {
                             call.error('Server Timeout', {
-                                code: 'SERVER_TIMEOUT'
+                                code: 'SERVER_TIMEOUT',
+                                isServerError: true
                             });
                         }
                         rs();
@@ -151,7 +151,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                     call.logger.log('[Res]', `${call.res.usedTime}ms`, this.options.logResBody ? call.res.data : '');
                 }
                 else {
-                    call.logger[call.res.error.info === BaseServer.INTERNAL_ERR_INFO ? 'error' : 'log']
+                    call.logger[TsrpcClientErrorUtil.isApiError(call.res.error as TsrpcError) ? 'log' : 'error']
                         ('[ResError]', `${call.res.usedTime}ms`, call.res.error, `\nReq=${JSON.stringify(call.req)}`);
                 }
             }
@@ -251,7 +251,10 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             // 服务器内部错误
             else {
                 call.logger.error('[API_FLOW_ERR]', op.err);
-                call.error('Internal server error', BaseServer.INTERNAL_ERR_INFO);
+                call.error('Internal server error', {
+                    code: 'INTERNAL_ERR',
+                    isServerError: true
+                });
             }
             return;
         }
@@ -270,7 +273,10 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 }
                 else {
                     call.logger.error(e);
-                    call.error('Internal server error', BaseServer.INTERNAL_ERR_INFO);
+                    call.error('Internal server error', {
+                        code: 'INTERNAL_ERR',
+                        isServerError: true
+                    });
                 }
             }
         }

@@ -42,7 +42,10 @@ async function testApi(server: WsServer<ServiceType>, client: WsClient<ServiceTy
         })), {
             isSucc: false,
             message: 'Internal server error',
-            info: 'INTERNAL_ERR'
+            info: {
+                code: 'INTERNAL_ERR',
+                isServerError: true
+            }
         });
     }
 
@@ -222,7 +225,8 @@ describe('WsClient', function () {
         let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
         assert.deepStrictEqual(result, {
             message: 'Server Timeout', info: {
-                code: 'SERVER_TIMEOUT'
+                code: 'SERVER_TIMEOUT',
+                isServerError: true
             }
         });
 

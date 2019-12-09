@@ -8,7 +8,7 @@ export class TsrpcClientErrorUtil {
     }
 
     static isServerError(e: TsrpcError) {
-        return e.info && (e.info.code === 'SERVER_TIMEOUT' || e.info.code === BaseServer.INTERNAL_ERR_INFO || e.info.isServerOutputError);
+        return e.info && e.info.isServerError;
     }
 
     static isApiError(e: TsrpcError) {
