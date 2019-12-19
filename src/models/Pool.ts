@@ -2,13 +2,15 @@ export class Pool<ItemClass extends PoolItem<any>> {
 
     private _pools: ItemClass[] = [];
     private _itemClass: { new(): ItemClass };
+    enabled: boolean;
 
-    constructor(itemClass: { new(): ItemClass }) {
+    constructor(itemClass: { new(): ItemClass }, enabled: boolean) {
         this._itemClass = itemClass;
+        this.enabled = enabled;
     }
 
     get(options: ItemClass['options']) {
-        let item = this._pools.pop();
+        let item = this.enabled && this._pools.pop();
         if (!item) {
             item = new this._itemClass();
         }
@@ -17,7 +19,7 @@ export class Pool<ItemClass extends PoolItem<any>> {
     }
 
     put(item: ItemClass) {
-        if (this._pools.indexOf(item) > -1) {
+        if (!this.enabled || this._pools.indexOf(item) > -1) {
             return;
         }
 
@@ -28,12 +30,22 @@ export class Pool<ItemClass extends PoolItem<any>> {
 }
 
 export class PoolItem<Options> {
-    options!: Options;
+    protected _options?: Options;
+    public get options(): Options {
+        if (!this._options) {
+            throw new Error('Cannot use a recycled pool item');
+        }
+        return this._options;
+    }
+    public set options(v: Options) {
+        this._options = v;
+    }
+
     reset(options: Options) {
-        this.options = options;
+        this._options = options;
     }
 
     clean() {
-        this.options = undefined as any;
+        this._options = undefined as any;
     }
 }

@@ -11,8 +11,9 @@ import { tsrpcVersion } from '../../../tsrpcVersion';
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions<ServiceType>, ServiceType>{
 
-    protected _poolApiCall: Pool<ApiCallHttp> = new Pool<ApiCallHttp>(ApiCallHttp);
-    protected _poolMsgCall: Pool<MsgCallHttp> = new Pool<MsgCallHttp>(MsgCallHttp);
+    protected _poolApiCall: Pool<ApiCallHttp>;
+    protected _poolMsgCall: Pool<MsgCallHttp>;
+    protected _poolConn: Pool<HttpConnection<any>>;
 
     get dataFlow(): ((data: Buffer, conn: HttpConnection<any>) => (boolean | Promise<boolean>))[] {
         return this._dataFlow;
@@ -22,6 +23,9 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
     constructor(options?: Partial<HttpServerOptions<ServiceType>>) {
         super(Object.assign({}, defaultHttpServerOptions, options));
+        this._poolApiCall = new Pool<ApiCallHttp>(ApiCallHttp, this.options.enablePool);
+        this._poolMsgCall = new Pool<MsgCallHttp>(MsgCallHttp, this.options.enablePool);
+        this._poolConn = new Pool<HttpConnection<any>>(HttpConnection, this.options.enablePool);
     }
 
     private _status: HttpServerStatus = 'closed';
@@ -54,7 +58,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
                 let conn: HttpConnection<any> | undefined;
                 httpReq.on('end', () => {
-                    conn = HttpConnection.pool.get({
+                    conn = this._poolConn.get({
                         server: this,
                         ip: ip,
                         httpReq: httpReq,

@@ -11,8 +11,9 @@ import { BaseServiceType } from 'tsrpc-proto';
 
 export class WsServer<ServiceType extends BaseServiceType = any, SessionType = { [key: string]: any | undefined }> extends BaseServer<WsServerOptions<ServiceType, SessionType>, ServiceType> {
 
-    protected _poolApiCall: Pool<ApiCallWs> = new Pool<ApiCallWs>(ApiCallWs);;
-    protected _poolMsgCall: Pool<MsgCallWs> = new Pool<MsgCallWs>(MsgCallWs);
+    protected _poolApiCall: Pool<ApiCallWs>;
+    protected _poolMsgCall: Pool<MsgCallWs>;
+    protected _poolConn: Pool<WsConnection<any, any>>;
 
     private readonly _conns: WsConnection<ServiceType, SessionType>[] = [];
     private readonly _id2Conn: { [connId: string]: WsConnection<ServiceType, SessionType> | undefined } = {};
@@ -25,6 +26,9 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
 
     constructor(options?: Partial<WsServerOptions<ServiceType, SessionType>>) {
         super(Object.assign({}, defaultWsServerOptions, options));
+        this._poolApiCall = new Pool<ApiCallWs>(ApiCallWs, this.options.enablePool);
+        this._poolMsgCall = new Pool<MsgCallWs>(MsgCallWs, this.options.enablePool);
+        this._poolConn = new Pool<WsConnection<any, any>>(WsConnection, this.options.enablePool);
     }
 
     private _status: WsServerStatus = 'closed';
@@ -133,7 +137,7 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
         }
 
         // Create Active Connection
-        let conn = WsConnection.pool.get({
+        let conn = this._poolConn.get({
             connId: connId,
             server: this,
             ws: ws,

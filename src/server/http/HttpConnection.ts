@@ -1,4 +1,4 @@
-import { PoolItem, Pool } from '../../models/Pool';
+import { PoolItem } from '../../models/Pool';
 import * as http from "http";
 import { HttpServer } from './HttpServer';
 import { PrefixLogger } from '../Logger';
@@ -13,9 +13,6 @@ export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
 }
 
 export class HttpConnection<ServiceType extends BaseServiceType> extends PoolItem<HttpConnectionOptions<ServiceType>> implements BaseConnection {
-
-    static pool = new Pool<HttpConnection<any>>(HttpConnection);
-
     logger!: PrefixLogger;
 
     get ip(): string {
@@ -58,7 +55,7 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends PoolIte
     // Put into pool
     destroy() {
         this.close();
-        HttpConnection.pool.put(this);
+        this.server['_poolConn'].put(this);
     }
 
 }

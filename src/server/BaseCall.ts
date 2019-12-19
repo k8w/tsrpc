@@ -2,38 +2,46 @@ import { PrefixLogger } from './Logger';
 import { ApiError, ApiServiceDef, MsgServiceDef } from 'tsrpc-proto';
 import { PoolItem } from '../models/Pool';
 
-export interface ApiCallOptions {
+export interface ApiCallOptions<Req=any, Res=any> {
     conn: any,
     logger: PrefixLogger,
     service: ApiServiceDef,
     sn: number,
-    req: any,
+    req: Req,
+    // 已发送的响应
+    res?: { isSucc: true, data: Res, usedTime: number } | ({ isSucc: false, error: ApiError, usedTime: number }),
     startTime: number
 }
-export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallOptions = ApiCallOptions> extends PoolItem<CallOptions> {
+export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallOptions<Req,Res> = ApiCallOptions<Req,Res>> extends PoolItem<CallOptions> {
     readonly type = 'api' as const;
 
-    logger!: PrefixLogger;
-    service!: ApiServiceDef;
-    sn!: number;
-    req!: Req;
-    // 已发送的响应
-    res?: { isSucc: true, data: Res, usedTime: number } | ({ isSucc: false, error: ApiError, usedTime: number });
-    // Call开始的时间
-    startTime: number = 0;
+    get logger() {
+        return this.options.logger;
+    }
 
-    reset(options: ApiCallOptions) {
-        this.logger = options.logger;
-        this.service = options.service;
-        this.sn = options.sn;
-        this.req = options.req;
-        this.res = undefined;
-        this.startTime = options.startTime;
+    get service() {
+        return this.options.service;
+    }
+
+    get sn() {
+        return this.options.sn;
+    }
+
+    get req() {
+        return this.options.req;
+    }
+
+    get res() {
+        return this.options.res;
+    }
+
+    get startTime() {
+        return this.options.startTime;
     }
 
     clean() {
-        PrefixLogger.pool.put(this.logger);
-        this.logger = this.service = this.sn = this.req = this.res = undefined as any;
+        PrefixLogger.pool.put(this.options.logger);
+        super.clean();
     }
 
     abstract succ(data: Res): void;

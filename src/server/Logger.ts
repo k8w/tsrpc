@@ -6,8 +6,7 @@ export interface PrefixLoggerOptions {
 }
 
 export class PrefixLogger extends PoolItem<PrefixLoggerOptions> implements Logger {
-
-    static pool = new Pool<PrefixLogger>(PrefixLogger);
+    static pool = new Pool<PrefixLogger>(PrefixLogger, false);
 
     getPrefix(): string[] {
         return this.options.prefixs.map(v => typeof v === 'string' ? v : v());

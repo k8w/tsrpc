@@ -30,7 +30,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
         let buf = TransportDataUtil.encodeApiSucc(this.conn.server.tsbuffer, this.service, res);
         this.conn.options.httpRes.end(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
 
-        this.res = {
+        this.options.res = {
             isSucc: true,
             data: res,
             usedTime: Date.now() - this.startTime
@@ -50,7 +50,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
         let buf = TransportDataUtil.encodeApiError(this.service, message, info, 0);
         this.conn.options.httpRes.end(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
 
-        this.res = {
+        this.options.res = {
             isSucc: false,
             error: {
                 message: message,

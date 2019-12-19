@@ -266,4 +266,64 @@ describe('WsClient', function () {
 
         await server.stop();
     });
+
+    it('enablePool: false', async function () {
+        let server = new WsServer({
+            proto: serviceProto,
+            logger: serverLogger
+        });
+        await server.start();
+
+        server.implementApi('Test', call => {
+            let callOptions = call.options;
+            let logger = call.logger;
+            let loggerOptions = call.logger.options;
+            call.succ({ reply: 'ok' });
+            setTimeout(() => {
+                assert.strictEqual(call['_options'], callOptions);
+                assert.strictEqual(call.logger, logger);
+                assert.strictEqual(call.logger['_options'], loggerOptions);
+            }, 200)
+        });
+
+        let client = new WsClient({
+            proto: serviceProto,
+            logger: clientLogger
+        });
+        await client.connect();
+
+        await client.callApi('Test', { name: 'xx' });
+        await new Promise(rs => setTimeout(rs, 300));
+
+        await server.stop();
+    })
+
+    it('enablePool: true', async function () {
+        let server = new WsServer({
+            proto: serviceProto,
+            logger: serverLogger,
+            enablePool: true
+        });
+        await server.start();
+
+        server.implementApi('Test', call => {
+            let logger = call.logger;
+            call.succ({ reply: 'ok' });
+            setTimeout(() => {
+                assert.strictEqual(call['_options'], undefined);
+                assert.strictEqual(logger['_options'], undefined);
+            }, 200)
+        });
+
+        let client = new WsClient({
+            proto: serviceProto,
+            logger: clientLogger
+        });
+        await client.connect();
+
+        await client.callApi('Test', { name: 'xx' });
+        await new Promise(rs => setTimeout(rs, 300));
+
+        await server.stop();
+    })
 })

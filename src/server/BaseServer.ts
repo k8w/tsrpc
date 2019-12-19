@@ -68,6 +68,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         this.serviceMap = ServiceMapUtil.getServiceMap(this.options.proto);
         this.logger = options.logger;
         this._msgHandlers = new HandlerManager(this.logger);
+        PrefixLogger.pool.enabled = this.options.enablePool;
 
         BaseServer.processUncaughtException(this.logger);
     }
@@ -430,7 +431,8 @@ export const defualtBaseServerOptions: BaseServerOptions = {
     proto: { services: [], types: {} },
     logger: consoleColorLogger,
     logReqBody: true,
-    logResBody: true
+    logResBody: true,
+    enablePool: false
 }
 
 export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
@@ -451,6 +453,11 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
     showErrorSn?: boolean;
 
     onServerInputError?: (e: Error, conn: BaseConnection) => void;
+
+    /** 是否对Conn和Call启用Pool，开启将极大优化内存
+     * 但要自己额外确保每个Api/Msg Handler返回后，不会再引用到call
+     */
+    enablePool: boolean;
 }
 
 export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res, ApiCallOptions>) => void | Promise<void>;

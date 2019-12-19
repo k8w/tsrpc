@@ -3,7 +3,7 @@ import * as WebSocket from "ws";
 import { PrefixLogger } from '../Logger';
 import { BaseServiceType } from "tsrpc-proto";
 import { WsServer } from "./WsServer";
-import { PoolItem, Pool } from '../../models/Pool';
+import { PoolItem } from '../../models/Pool';
 import { HttpUtil } from "../../models/HttpUtil";
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { ConnectionCloseReason, BaseConnection } from '../BaseServer';
@@ -22,8 +22,6 @@ export interface WsConnectionOptions<ServiceType extends BaseServiceType, Sessio
  * 当前活跃的连接
  */
 export class WsConnection<ServiceType extends BaseServiceType, SessionType> extends PoolItem<WsConnectionOptions<ServiceType, SessionType>> implements BaseConnection {
-
-    static pool = new Pool<WsConnection<any, any>>(WsConnection);
 
     ip!: string;
     session!: SessionType;
@@ -76,7 +74,7 @@ export class WsConnection<ServiceType extends BaseServiceType, SessionType> exte
     }
 
     destroy() {
-        WsConnection.pool.put(this);
+        this.server['_poolConn'].put(this);
     }
 
     // Send Msg

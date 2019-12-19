@@ -28,7 +28,7 @@ export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType
         }
 
         let buf = TransportDataUtil.encodeApiSucc(this.conn.server.tsbuffer, this.service, res, this.sn);
-        this.res = {
+        this.options.res = {
             isSucc: true,
             data: res,
             usedTime: Date.now() - this.startTime
@@ -52,7 +52,7 @@ export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType
         }
 
         let buf = TransportDataUtil.encodeApiError(this.service, message, info, this.sn);
-        this.res = {
+        this.options.res = {
             isSucc: false,
             error: {
                 message: message,
