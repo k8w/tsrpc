@@ -2,7 +2,7 @@ import { ApiCall, MsgCall, ApiCallOptions, MsgCallOptions } from '../BaseCall';
 import { HttpConnection } from './HttpConnection';
 import { Pool } from '../../models/Pool';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
-import { BaseServiceType } from 'tsrpc-proto';
+import { BaseServiceType, TsrpcError } from 'tsrpc-proto';
 
 export interface ApiCallHttpOptions<ServiceType extends BaseServiceType> extends ApiCallOptions {
     conn: HttpConnection<ServiceType>;
@@ -52,10 +52,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
 
         this.options.res = {
             isSucc: false,
-            error: {
-                message: message,
-                info: info
-            },
+            error: new TsrpcError(message, info),
             usedTime: Date.now() - this.startTime
         };
     }

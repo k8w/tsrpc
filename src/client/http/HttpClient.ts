@@ -42,7 +42,10 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         // GetService
         let service = this.serviceMap.apiName2Service[apiName as string];
         if (!service) {
-            throw new Error('Invalid api name: ' + apiName);
+            throw new TsrpcError('Invalid api name: ' + apiName, {
+                code: 'INVALID_SERVICE_NAME',
+                isClientError: true
+            });
         }
 
         // Encode
@@ -94,7 +97,10 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         // GetService
         let service = this.serviceMap.msgName2Service[msgName as string];
         if (!service) {
-            throw new Error('Invalid msg name: ' + msgName);
+            throw new TsrpcError('Invalid msg name: ' + msgName, {
+                code: 'INVALID_SERVICE_NAME',
+                isClientError: true
+            });
         }
 
         let buf = TransportDataUtil.encodeMsg(this.tsbuffer, service, msg);
@@ -105,7 +111,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         let httpReq: http.ClientRequest;
 
         let promiseRj: Function;
-        let promise = new SuperPromise<Buffer>((rs, rj) => {
+        let promise = new SuperPromise<Buffer, TsrpcError>((rs, rj) => {
             promiseRj = rj;
             httpReq = this._http.request(this._options.server, {
                 method: 'POST',

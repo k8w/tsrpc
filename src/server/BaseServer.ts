@@ -9,7 +9,6 @@ import { Pool } from '../models/Pool';
 import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';
 import 'colors';
 import { nodeUtf8 } from '../models/nodeUtf8';
-import { TsrpcClientErrorUtil } from '../client/TsrpcClientErrorUtil';
 
 export type ConnectionCloseReason = 'INVALID_INPUT_BUFFER' | 'DATA_FLOW_BREAK' | 'NO_RES';
 export type BaseConnection = {
@@ -152,7 +151,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                     call.logger.log('[Res]', `${call.res.usedTime}ms`, this.options.logResBody ? call.res.data : '');
                 }
                 else {
-                    call.logger[TsrpcClientErrorUtil.isApiError(call.res.error as TsrpcError) ? 'log' : 'error']
+                    call.logger[call.res.error.type === 'ApiError' ? 'log' : 'error']
                         ('[ResError]', `${call.res.usedTime}ms`, call.res.error, `\nReq=${JSON.stringify(call.req)}`);
                 }
             }

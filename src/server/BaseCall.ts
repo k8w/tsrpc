@@ -1,5 +1,5 @@
 import { PrefixLogger } from './Logger';
-import { ApiError, ApiServiceDef, MsgServiceDef } from 'tsrpc-proto';
+import { ApiError, ApiServiceDef, MsgServiceDef, TsrpcError } from 'tsrpc-proto';
 import { PoolItem } from '../models/Pool';
 
 export interface ApiCallOptions<Req=any, Res=any> {
@@ -9,7 +9,7 @@ export interface ApiCallOptions<Req=any, Res=any> {
     sn: number,
     req: Req,
     // 已发送的响应
-    res?: { isSucc: true, data: Res, usedTime: number } | ({ isSucc: false, error: ApiError, usedTime: number }),
+    res?: { isSucc: true, data: Res, usedTime: number } | ({ isSucc: false, error: TsrpcError, usedTime: number }),
     startTime: number
 }
 export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallOptions<Req,Res> = ApiCallOptions<Req,Res>> extends PoolItem<CallOptions> {

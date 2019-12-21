@@ -12,7 +12,7 @@ export default {
             tsconfigOverride: {
                 compilerOptions: {
                     declaration: true,
-                    module: 'es2015'
+                    module: 'esnext'
                 }
             }
         }),

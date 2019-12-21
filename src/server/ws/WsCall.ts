@@ -1,4 +1,4 @@
-import { BaseServiceType } from 'tsrpc-proto';
+import { BaseServiceType, TsrpcError } from 'tsrpc-proto';
 import { WsConnection } from './WsConnection';
 import { ApiCall, ApiCallOptions, MsgCall, MsgCallOptions } from '../BaseCall';
 import { Pool } from '../../models/Pool';
@@ -54,10 +54,7 @@ export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType
         let buf = TransportDataUtil.encodeApiError(this.service, message, info, this.sn);
         this.options.res = {
             isSucc: false,
-            error: {
-                message: message,
-                info: info
-            },
+            error: new TsrpcError(message, info),
             usedTime: Date.now() - this.startTime
         };
 

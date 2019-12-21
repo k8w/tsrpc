@@ -169,13 +169,19 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
         this.logger.log(`[ApiReq] #${sn}`, apiName, req);
 
         if (!this._ws) {
-            throw new Error('Not connected')
+            throw new TsrpcError('WebSocket not connected', {
+                code: 'CONN_ERROR',
+                isClientError: true
+            })
         }
 
         // GetService
         let service = this.serviceMap.apiName2Service[apiName as string];
         if (!service) {
-            throw new Error('Invalid api name: ' + apiName);
+            throw new TsrpcError('Invalid api name: ' + apiName, {
+                code: 'INVALID_SERVICE_NAME',
+                isClientError: true
+            });
         }
 
         // Encode        
@@ -270,13 +276,19 @@ export class WsClient<ServiceType extends BaseServiceType = any> {
         this.logger.log('[SendMsg]', msgName, msg);
 
         if (!this._ws) {
-            throw new Error('Not connected')
+            throw new TsrpcError('WebSocket not connected', {
+                code: 'CONN_ERROR',
+                isClientError: true
+            })
         }
 
         // GetService
         let service = this.serviceMap.msgName2Service[msgName as string];
         if (!service) {
-            throw new Error('Invalid msg name: ' + msgName)
+            throw new TsrpcError('Invalid msg name: ' + msgName, {
+                code: 'INVALID_SERVICE_NAME',
+                isClientError: true
+            })
         }
 
         // Encode
