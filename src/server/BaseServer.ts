@@ -9,6 +9,7 @@ import { Pool } from '../models/Pool';
 import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';
 import 'colors';
 import { nodeUtf8 } from '../models/nodeUtf8';
+import { TSBufferOptions } from 'tsbuffer/src/TSBuffer';
 
 export type ConnectionCloseReason = 'INVALID_INPUT_BUFFER' | 'DATA_FLOW_BREAK' | 'NO_RES';
 export type BaseConnection = {
@@ -62,7 +63,8 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     constructor(options: ServerOptions) {
         this.options = options;
         this.tsbuffer = new TSBuffer(this.options.proto.types, {
-            utf8: nodeUtf8
+            utf8: nodeUtf8,
+            ...this.options.tsbufferOptions
         });
         this.serviceMap = ServiceMapUtil.getServiceMap(this.options.proto);
         this.logger = options.logger;
@@ -436,6 +438,7 @@ export const defualtBaseServerOptions: BaseServerOptions = {
 
 export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
     proto: ServiceProto<ServiceType>;
+    tsbufferOptions?: Partial<TSBufferOptions>;
 
     // LOG相关
     logger: Logger;
