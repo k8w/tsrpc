@@ -8,6 +8,7 @@ import { HttpClient } from './src/client/http/HttpClient';
 import { ApiHandler, MsgHandler, consoleColorLogger } from './src/server/BaseServer';
 import { PrefixLogger, Logger } from './src/server/Logger';
 import { tsrpcVersion } from './tsrpcVersion';
+import { TsrpcError } from 'tsrpc-proto';
 
 export { HttpServer as TsrpcServer, HttpClient as TsrpcClient };
 export { WsServer as TsrpcServerWs };
@@ -15,6 +16,8 @@ export { ApiCall, ApiCallHttp, ApiCallWs };
 export { MsgCall, MsgCallHttp, MsgCallWs };
 export { ApiHandler, ApiHandlerHttp, ApiHandlerWs };
 export { MsgHandler, MsgHandlerHttp, MsgHandlerWs };
+
+export { TsrpcError };
 
 export { consoleColorLogger, PrefixLogger, Logger };
 
