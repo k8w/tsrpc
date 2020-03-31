@@ -148,18 +148,32 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 });
             })
 
+            // Api no response
+            if (!call.res) {
+                call.error('Api no response', {
+                    code: 'API_NO_RES',
+                    isServerError: true
+                });
+            }
+
+            // 至此 应必定有 call.res
             if (call.res) {
                 if (call.res.isSucc) {
                     call.logger.log('[Res]', `${call.res.usedTime}ms`, this.options.logResBody ? call.res.data : '');
                 }
                 else {
-                    call.logger[call.res.error.type === 'ApiError' ? 'log' : 'error']
-                        ('[ResError]', `${call.res.usedTime}ms`, call.res.error, `\nReq=${JSON.stringify(call.req)}`);
+                    if (call.res.error.type === 'ApiError') {
+                        call.logger.log('[ResError]', `${call.res.usedTime}ms`, call.res.error.message, call.res.error.info, 'req=', call.req);
+                    }
+                    else {
+                        call.logger.error('[ResError]', `${call.res.usedTime}ms`, call.res.error, 'req=', call.req)
+                    }
                 }
             }
             else {
-                call.logger.log('[NoRes]', `${Date.now() - call.startTime}ms`);
+                call.logger.error('Invalid implement of ApiCall: no call.res');
             }
+
             this._afterApi(call);
         }
         else {

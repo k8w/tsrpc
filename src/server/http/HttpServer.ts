@@ -2,7 +2,7 @@ import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../Base
 import * as http from "http";
 import { HttpConnection } from './HttpConnection';
 import { HttpUtil } from '../../models/HttpUtil';
-import { ApiCallHttp, MsgCallHttp } from './HttpCall';
+import { ApiCallHttp, MsgCallHttp, HttpCall } from './HttpCall';
 import { ParsedServerInput } from '../../models/TransportDataUtil';
 import { BaseServiceType } from 'tsrpc-proto';
 import { Pool } from '../../models/Pool';
@@ -69,17 +69,51 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     this.onData(conn, buf);
                 });
 
-                httpReq.on('close', () => {
-                    if (!httpRes.finished) {
+                // 处理连接异常关闭的情况
+                httpRes.on('close', () => {
+                    // 客户端Abort
+                    if (httpReq.aborted) {
                         if (conn) {
-                            conn.close('NO_RES');
+                            if (conn.options.call) {
+                                conn.options.call.logger.log('[Aborted]');
+                            }
+                            else {
+                                conn.logger.log('[Aborted]');
+                            }
                         }
                         else {
-                            this.logger.log(`Client disconnected. url=${httpReq.url}, ip=${ip}`);
-                            httpRes.end();
+                            this.logger.log('[RequestAborted]', {
+                                url: httpReq.url,
+                                method: httpReq.method,
+                                ip: ip,
+                                chunksLength: chunks.length,
+                                chunksSize: chunks.sum(v => v.byteLength),
+                                reqComplete: httpReq.complete,
+                                headers: httpReq.rawHeaders
+                            });
                         }
+                        return;
                     }
-                })
+
+                    // 非Abort，异常中断：直到连接关闭，Client也未end（Conn未生成）
+                    if (!conn) {
+                        this.logger.warn('Socket closed before request end', {
+                            url: httpReq.url,
+                            method: httpReq.method,
+                            ip: ip,
+                            chunksLength: chunks.length,
+                            chunksSize: chunks.sum(v => v.byteLength),
+                            reqComplete: httpReq.complete,
+                            headers: httpReq.rawHeaders
+                        });
+                        return;
+                    }
+
+                    // 有Conn，但连接非正常end：直到连接关闭，也未调用过 httpRes.end 方法
+                    if (!httpRes.writableEnded) {
+                        (conn.options.call?.logger || conn.logger).warn('Socket closed without response')
+                    }
+                });
             });
 
             if (this.options.socketTimeout) {
@@ -128,6 +162,13 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
             conn.close();
         }
         return parsed;
+    }
+
+    // HTTP Server 一个conn只有一个call，对应关联之
+    protected _makeCall(conn: HttpConnection<any>, input: ParsedServerInput): HttpCall {
+        let call = super._makeCall(conn, input) as HttpCall;
+        conn.options.call = call;
+        return call;
     }
 
     // Override function type

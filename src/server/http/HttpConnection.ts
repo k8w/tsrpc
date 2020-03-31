@@ -4,12 +4,14 @@ import { HttpServer } from './HttpServer';
 import { PrefixLogger } from '../Logger';
 import { BaseServiceType } from 'tsrpc-proto';
 import { ConnectionCloseReason, BaseConnection } from '../BaseServer';
+import { HttpCall } from './HttpCall';
 
 export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
     server: HttpServer<ServiceType>,
     ip: string;
     httpReq: http.IncomingMessage,
-    httpRes: http.ServerResponse
+    httpRes: http.ServerResponse,
+    call?: HttpCall;
 }
 
 export class HttpConnection<ServiceType extends BaseServiceType> extends PoolItem<HttpConnectionOptions<ServiceType>> implements BaseConnection {
