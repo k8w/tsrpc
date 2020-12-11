@@ -267,10 +267,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             // 服务器内部错误
             else {
                 call.logger.error('[API_FLOW_ERR]', op.err);
-                call.error('Internal server error', {
-                    code: 'INTERNAL_ERR',
-                    isServerError: true
-                });
+                this.options.onInternalServerError(op.err || new Error('Internal server error'), call);
             }
             return;
         }
@@ -289,10 +286,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 }
                 else {
                     call.logger.error(e);
-                    call.error('Internal server error', {
-                        code: 'INTERNAL_ERR',
-                        isServerError: true
-                    });
+                    this.options.onInternalServerError(e, call);
                 }
             }
         }
@@ -447,7 +441,13 @@ export const defualtBaseServerOptions: BaseServerOptions = {
     logger: consoleColorLogger,
     logReqBody: true,
     logResBody: true,
-    enablePool: false
+    enablePool: false,
+    onInternalServerError: (err, call) => {
+        call.error('Internal server error', {
+            code: 'INTERNAL_ERR',
+            isServerError: true
+        });
+    }    
 }
 
 export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
@@ -469,6 +469,7 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
     showErrorSn?: boolean;
 
     onServerInputError?: (e: Error, conn: BaseConnection) => void;
+    onInternalServerError: (e: Error, call: ApiCall) => void
 
     /** 是否对Conn和Call启用Pool，开启将极大优化内存
      * 但要自己额外确保每个Api/Msg Handler返回后，不会再引用到call
