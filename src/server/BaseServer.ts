@@ -88,9 +88,11 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         }
 
         // Decrypt
+        this.options.debugBuf && conn.logger.debug('[RecvBuf]', data);
         let buf: Uint8Array;
         if (this.options.decrypter) {
-            buf = await this.options.decrypter(data);
+            buf = this.options.decrypter(data);
+            this.options.debugBuf && conn.logger.debug('[DecryptedBuf]', data);
         }
         else {
             buf = data;
@@ -127,7 +129,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             call.logger.log('[Req]', this.options.logReqBody ? call.req : '');
             let sn = call.sn;
 
-            await new Promise(rs => {
+            await new Promise<void>(rs => {
                 // Timeout
                 let timer: NodeJS.Timer | undefined;
                 if (this.options.timeout) {
@@ -179,7 +181,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         else {
             call.logger.log('Msg=', call.msg);
 
-            await new Promise(rs => {
+            await new Promise<void>(rs => {
                 // Timeout
                 if (this.options.timeout) {
                     setTimeout(() => {
@@ -447,7 +449,7 @@ export const defualtBaseServerOptions: BaseServerOptions = {
             code: 'INTERNAL_ERR',
             isServerError: true
         });
-    }    
+    }
 }
 
 export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
@@ -459,8 +461,10 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
     logReqBody: boolean;
     logResBody: boolean;
 
-    encrypter?: (src: Uint8Array) => Uint8Array | Promise<Uint8Array>;
-    decrypter?: (cipher: Uint8Array) => Uint8Array | Promise<Uint8Array>;
+    encrypter?: (src: Uint8Array) => Uint8Array;
+    decrypter?: (cipher: Uint8Array) => Uint8Array;
+    /** 为true时将在控制台debug打印buffer信息 */
+    debugBuf?: boolean;
 
     /** 处理API和MSG的最大执行时间，超过此时间call将被释放 */
     timeout?: number;

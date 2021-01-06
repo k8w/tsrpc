@@ -107,11 +107,17 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
         return this._sendBuf(buf, options, 'msg', sn).then(() => { })
     }
 
-    protected _sendBuf(buf: Uint8Array, options: TransportOptions = {}, type: 'api' | 'msg', sn: number): SuperPromise<Buffer | undefined, TsrpcError> {
+    protected _sendBuf(buf: Uint8Array, options: TransportOptions = {}, type: 'api' | 'msg', sn: number): SuperPromise<Uint8Array | undefined, TsrpcError> {
+        this._options.debugBuf && this.logger.debug('[SendBuf]', '#' + sn, buf);
+        if (this._options.encrypter) {
+            buf = this._options.encrypter(buf);
+        }
+        this._options.debugBuf && this.logger.debug('[EncryptedBuf]', '#' + sn, buf);
+
         let httpReq: http.ClientRequest;
 
         let promiseRj: Function;
-        let promise = new SuperPromise<Buffer, TsrpcError>((rs, rj) => {
+        let promise = new SuperPromise<Uint8Array, TsrpcError>((rs, rj) => {
             promiseRj = rj;
             httpReq = this._http.request(this._options.server, {
                 method: 'POST',
@@ -122,8 +128,13 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
                     data.push(v)
                 });
                 httpRes.on('end', () => {
-                    let buf = Buffer.concat(data)
+                    let buf: Uint8Array = Buffer.concat(data)
                     this.lastReceivedBuf = buf;
+                    this._options.debugBuf && this.logger.debug('[RecvBuf]', '#' + sn, buf);
+                    if (this._options.decrypter) {
+                        buf = this._options.decrypter(buf);
+                    }
+                    this._options.debugBuf && this.logger.debug('[DecryptedBuf]', '#' + sn, buf);
                     rs(buf);
                 })
             });
@@ -204,5 +215,11 @@ export interface HttpClientOptions<ServiceType extends BaseServiceType> {
     /** API超时时间（毫秒） */
     timeout: number;
     agent?: http.Agent;
+
+    // 加密选项
+    encrypter?: (src: Uint8Array) => Uint8Array;
+    decrypter?: (cipher: Uint8Array) => Uint8Array;
+    /** 为true时将会把buf信息打印在log中 */
+    debugBuf?: boolean
 }
 

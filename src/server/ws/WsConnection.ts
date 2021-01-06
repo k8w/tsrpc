@@ -85,7 +85,10 @@ export class WsConnection<ServiceType extends BaseServiceType, SessionType> exte
         }
 
         let buf = TransportDataUtil.encodeMsg(this.options.server.tsbuffer, service, msg);
-        return new Promise((rs, rj) => {
+        if (this.server.options.encrypter) {
+            buf = this.server.options.encrypter(buf);
+        }
+        return new Promise<void>((rs, rj) => {
             this.options.ws.send(buf, e => {
                 e ? rj(e) : rs();
             })

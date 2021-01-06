@@ -28,6 +28,12 @@ export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType
         }
 
         let buf = TransportDataUtil.encodeApiSucc(this.conn.server.tsbuffer, this.service, res, this.sn);
+        this.conn.server.options.debugBuf && this.logger.debug('[SendBuf]', buf);
+        if (this.conn.server.options.encrypter) {
+            buf = this.conn.server.options.encrypter(buf);
+            this.conn.server.options.debugBuf && this.logger.debug('[EncryptedBuf]', buf);
+        }
+
         this.options.res = {
             isSucc: true,
             data: res,
@@ -52,6 +58,12 @@ export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType
         }
 
         let buf = TransportDataUtil.encodeApiError(this.service, message, info, this.sn);
+        this.conn.server.options.debugBuf && this.logger.debug('[SendBuf]', buf);
+        if (this.conn.server.options.encrypter) {
+            buf = this.conn.server.options.encrypter(buf);
+            this.conn.server.options.debugBuf && this.logger.debug('[EncryptedBuf]', buf);
+        }
+
         this.options.res = {
             isSucc: false,
             error: new TsrpcError(message, info),

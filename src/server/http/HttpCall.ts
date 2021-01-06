@@ -28,6 +28,11 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
         }
 
         let buf = TransportDataUtil.encodeApiSucc(this.conn.server.tsbuffer, this.service, res);
+        this.conn.server.options.debugBuf && this.logger.debug('[SendBuf]', buf);
+        if (this.conn.server.options.encrypter) {
+            buf = this.conn.server.options.encrypter(buf);
+            this.conn.server.options.debugBuf && this.logger.debug('[EncryptedBuf]', buf);
+        }
         this.conn.options.httpRes.end(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
 
         this.options.res = {
@@ -48,6 +53,11 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
         }
 
         let buf = TransportDataUtil.encodeApiError(this.service, message, info, 0);
+        this.conn.server.options.debugBuf && this.logger.debug('[SendBuf]', buf);
+        if (this.conn.server.options.encrypter) {
+            buf = this.conn.server.options.encrypter(buf);
+            this.conn.server.options.debugBuf && this.logger.debug('[EncryptedBuf]', buf);
+        }
         this.conn.options.httpRes.end(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
 
         this.options.res = {
