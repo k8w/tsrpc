@@ -130,11 +130,14 @@ export class HttpClient<ServiceType extends BaseServiceType = any> {
                 httpRes.on('end', () => {
                     let buf: Uint8Array = Buffer.concat(data)
                     this.lastReceivedBuf = buf;
+
+                    // Decrypt
                     this._options.debugBuf && this.logger.debug('[RecvBuf]', '#' + sn, buf);
                     if (this._options.decrypter) {
                         buf = this._options.decrypter(buf);
                     }
                     this._options.debugBuf && this.logger.debug('[DecryptedBuf]', '#' + sn, buf);
+
                     rs(buf);
                 })
             });
