@@ -1,6 +1,6 @@
 import { ReqTest, ResTest } from "../proto/PtlTest";
 import { TsrpcError } from "tsrpc-proto";
-import { ApiCall } from '../../src/server/BaseCall';
+import { ApiCall } from '../../src/server/base/BaseCall';
 
 export async function ApiTest(call: ApiCall<ReqTest, ResTest>) {
     if (call.req.name === 'InnerError') {

@@ -1,6 +1,5 @@
-import { ApiCall, MsgCall, ApiCallOptions, MsgCallOptions } from '../BaseCall';
+import { ApiCall, MsgCall, ApiCallOptions, MsgCallOptions } from '../base/BaseCall';
 import { HttpConnection } from './HttpConnection';
-import { Pool } from '../../models/Pool';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { BaseServiceType, TsrpcError } from 'tsrpc-proto';
 
@@ -9,17 +8,13 @@ export interface ApiCallHttpOptions<ServiceType extends BaseServiceType> extends
 }
 export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceType = any> extends ApiCall<Req, Res, ApiCallHttpOptions<ServiceType>> {
 
-    conn!: HttpConnection<ServiceType>;
-
     reset(options: ApiCallHttpOptions<ServiceType>) {
         super.reset(options);
-        this.conn = options.conn;
     }
 
     clean() {
         super.clean();
         this.conn.destroy();
-        this.conn = undefined as any;
     }
 
     succ(res: Res): void {

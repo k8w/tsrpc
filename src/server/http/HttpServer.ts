@@ -1,4 +1,4 @@
-import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../BaseServer';
+import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../base/BaseServer';
 import * as http from "http";
 import { HttpConnection } from './HttpConnection';
 import { HttpUtil } from '../../models/HttpUtil';

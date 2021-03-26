@@ -3,7 +3,7 @@ import { Server as WebSocketServer } from 'ws';
 import * as http from "http";
 import { WsConnection } from './WsConnection';
 import { Counter } from '../../models/Counter';
-import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../BaseServer';
+import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../base/BaseServer';
 import { ApiCallWs, MsgCallWs } from './WsCall';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { Pool } from '../../models/Pool';

@@ -1,5 +1,5 @@
 import { Logger } from 'tsrpc-proto';
-import { PoolItem, Pool } from '../models/Pool';
+import { PoolItem, Pool } from '../../models/Pool';
 
 export interface PrefixLoggerOptions {
     logger: Logger

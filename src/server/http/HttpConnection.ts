@@ -1,9 +1,9 @@
 import { PoolItem } from '../../models/Pool';
 import * as http from "http";
 import { HttpServer } from './HttpServer';
-import { PrefixLogger } from '../PrefixLogger';
+import { PrefixLogger } from '../models/PrefixLogger';
 import { BaseServiceType } from 'tsrpc-proto';
-import { ConnectionCloseReason, BaseConnection } from '../BaseServer';
+import { ConnectionCloseReason, BaseConnection } from '../base/BaseServer';
 import { HttpCall } from './HttpCall';
 
 export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {

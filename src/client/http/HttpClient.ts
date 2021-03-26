@@ -5,7 +5,7 @@ import { TransportDataUtil, ParsedServerOutput } from '../../models/TransportDat
 import * as http from "http";
 import * as https from "https";
 import { Counter } from '../../models/Counter';
-import { Logger } from '../../server/PrefixLogger';
+import { Logger } from '../../server/models/PrefixLogger';
 import { TransportOptions } from "../models/TransportOptions";
 import SuperPromise from 'k8w-super-promise';
 import { nodeUtf8 } from '../../models/nodeUtf8';

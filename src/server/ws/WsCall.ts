@@ -1,6 +1,6 @@
 import { BaseServiceType, TsrpcError } from 'tsrpc-proto';
 import { WsConnection } from './WsConnection';
-import { ApiCall, ApiCallOptions, MsgCall, MsgCallOptions } from '../BaseCall';
+import { ApiCall, ApiCallOptions, MsgCall, MsgCallOptions } from '../base/BaseCall';
 import { Pool } from '../../models/Pool';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
 
@@ -10,16 +10,14 @@ export interface ApiCallWsOptions<ServiceType extends BaseServiceType, SessionTy
 
 export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType = any, SessionType = any> extends ApiCall<Req, Res, ApiCallWsOptions<ServiceType, SessionType>> {
 
-    conn!: WsConnection<ServiceType, SessionType>;
+    // conn!: WsConnection<ServiceType, SessionType>;
 
     reset(options: ApiCallWsOptions<ServiceType, SessionType>) {
         super.reset(options);
-        this.conn = options.conn;
     }
 
     clean() {
         super.clean();
-        this.conn = undefined as any;
     }
 
     async succ(res: Res): Promise<void> {

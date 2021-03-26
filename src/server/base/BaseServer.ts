@@ -1,22 +1,16 @@
 import { ApiCall, MsgCall, BaseCall, ApiCallOptions, MsgCallOptions } from './BaseCall';
-import { PrefixLogger } from './PrefixLogger';
-import { HandlerManager } from '../models/HandlerManager';
+import { PrefixLogger } from '../models/PrefixLogger';
+import { HandlerManager } from '../../models/HandlerManager';
 import { TSBuffer, TSBufferOptions } from 'tsbuffer';
 import * as path from "path";
 import { BaseServiceType, ServiceProto, ApiServiceDef, TsrpcError, Logger } from 'tsrpc-proto';
-import { ServiceMapUtil, ServiceMap } from '../models/ServiceMapUtil';
-import { Pool } from '../models/Pool';
-import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';
+import { ServiceMapUtil, ServiceMap } from '../../models/ServiceMapUtil';
+import { Pool } from '../../models/Pool';
+import { ParsedServerInput, TransportDataUtil } from '../../models/TransportDataUtil';
 import 'colors';
-import { nodeUtf8 } from '../models/nodeUtf8';
-
-export type ConnectionCloseReason = 'INVALID_INPUT_BUFFER' | 'DATA_FLOW_BREAK' | 'NO_RES';
-export type BaseConnection = {
-    isClosed: boolean;
-    close: (reason?: ConnectionCloseReason) => void,
-    ip: string,
-    logger: Logger
-}
+import { nodeUtf8 } from '../../models/nodeUtf8';
+import { BaseConnection } from './BaseConnection';
+import { consoleColorLogger } from '../models/consoleColorLogger';
 
 export abstract class BaseServer<ServerOptions extends BaseServerOptions, ServiceType extends BaseServiceType = any> {
 
@@ -419,22 +413,6 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     };
     // #endregion   
 
-}
-
-let pid = process.pid.toString(16);
-export const consoleColorLogger: Logger = {
-    debug(...args: any[]) {
-        console.debug.call(console, `<${pid}> ${new Date().format()}`.gray, '[DEBUG]'.cyan, ...args);
-    },
-    log(...args: any[]) {
-        console.log.call(console, `<${pid}> ${new Date().format()}`.gray, '[INFO]'.green, ...args);
-    },
-    warn(...args: any[]) {
-        console.warn.call(console, `<${pid}> ${new Date().format()}`.gray, '[WARN]'.yellow, ...args);
-    },
-    error(...args: any[]) {
-        console.error.call(console, `<${pid}> ${new Date().format()}`.gray, '[ERROR]'.red, ...args);
-    },
 }
 
 export const defualtBaseServerOptions: BaseServerOptions = {

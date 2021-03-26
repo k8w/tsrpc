@@ -1,9 +1,10 @@
-import { PrefixLogger } from './PrefixLogger';
+import { PrefixLogger } from '../models/PrefixLogger';
 import { ApiError, ApiServiceDef, MsgServiceDef, TsrpcError } from 'tsrpc-proto';
-import { PoolItem } from '../models/Pool';
+import { PoolItem } from '../../models/Pool';
+import { BaseConnection } from './BaseConnection';
 
 export interface ApiCallOptions<Req=any, Res=any> {
-    conn: any,
+    conn: BaseConnection,
     logger: PrefixLogger,
     service: ApiServiceDef,
     sn: number,
@@ -14,6 +15,10 @@ export interface ApiCallOptions<Req=any, Res=any> {
 }
 export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallOptions<Req,Res> = ApiCallOptions<Req,Res>> extends PoolItem<CallOptions> {
     readonly type = 'api' as const;
+
+    get conn(): CallOptions['conn'] {
+        return this.options.conn;
+    }
 
     get logger() {
         return this.options.logger;
