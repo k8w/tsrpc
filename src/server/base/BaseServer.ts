@@ -7,8 +7,8 @@ import { nodeUtf8 } from '../../models/nodeUtf8';
 import { Pool } from '../../models/Pool';
 import { ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
 import { ParsedServerInput, TransportDataUtil } from '../../models/TransportDataUtil';
-import { consoleColorLogger } from '../models/_ConsoleColorLogger';
 import { PrefixLogger } from '../models/PrefixLogger';
+import { TerminalColorLogger } from '../models/TerminalColorLogger';
 import { ApiCall, ApiCallOptions, BaseCall, MsgCall, MsgCallOptions } from './BaseCall';
 import { BaseConnection } from './BaseConnection';
 
@@ -426,7 +426,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
 export const defualtBaseServerOptions: BaseServerOptions = {
     proto: { services: [], types: {} },
-    logger: consoleColorLogger,
+    logger: new TerminalColorLogger,
     logReqBody: true,
     logResBody: true,
     enablePool: false,

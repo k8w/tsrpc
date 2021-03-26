@@ -1,9 +1,9 @@
-import { PrefixLogger } from '../models/PrefixLogger';
-import { ApiError, ApiServiceDef, MsgServiceDef, TsrpcError } from 'tsrpc-proto';
+import { ApiServiceDef, MsgServiceDef, TsrpcError } from 'tsrpc-proto';
 import { PoolItem } from '../../models/Pool';
+import { PrefixLogger } from '../models/PrefixLogger';
 import { BaseConnection } from './BaseConnection';
 
-export interface ApiCallOptions<Req=any, Res=any> {
+export interface ApiCallOptions<Req = any, Res = any> {
     conn: BaseConnection,
     logger: PrefixLogger,
     service: ApiServiceDef,
@@ -13,7 +13,23 @@ export interface ApiCallOptions<Req=any, Res=any> {
     res?: { isSucc: true, data: Res, usedTime: number } | ({ isSucc: false, error: TsrpcError, usedTime: number }),
     startTime: number
 }
-export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallOptions<Req,Res> = ApiCallOptions<Req,Res>> extends PoolItem<CallOptions> {
+
+export interface ApiReturnSucc<Res> {
+    isSucc: true,
+    res: Res,
+    err?: undefined
+}
+export interface ApiReturnError {
+    isSucc: false,
+    res?: undefined,
+    err: {
+        message: string,
+        info?: any
+    }
+}
+export type ApiReturn<Res> = ApiReturnSucc<Res> | ApiReturnError;
+
+export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallOptions<Req, Res> = ApiCallOptions<Req, Res>> extends PoolItem<CallOptions> {
     readonly type = 'api' as const;
 
     get conn(): CallOptions['conn'] {
