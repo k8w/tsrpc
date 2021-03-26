@@ -1,7 +1,7 @@
 import { ApiCall, MsgCall, BaseCall, ApiCallOptions, MsgCallOptions } from './BaseCall';
-import { Logger, PrefixLogger } from './Logger';
+import { Logger, PrefixLogger } from './PrefixLogger';
 import { HandlerManager } from '../models/HandlerManager';
-import { TSBuffer } from 'tsbuffer';
+import { TSBuffer, TSBufferOptions } from 'tsbuffer';
 import * as path from "path";
 import { BaseServiceType, ServiceProto, ApiServiceDef, TsrpcError } from 'tsrpc-proto';
 import { ServiceMapUtil, ServiceMap } from '../models/ServiceMapUtil';
@@ -9,7 +9,6 @@ import { Pool } from '../models/Pool';
 import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';
 import 'colors';
 import { nodeUtf8 } from '../models/nodeUtf8';
-import { TSBufferOptions } from 'tsbuffer/src/TSBuffer';
 
 export type ConnectionCloseReason = 'INVALID_INPUT_BUFFER' | 'DATA_FLOW_BREAK' | 'NO_RES';
 export type BaseConnection = {
@@ -452,24 +451,52 @@ export const defualtBaseServerOptions: BaseServerOptions = {
     }
 }
 
+/** @public */
 export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
     proto: ServiceProto<ServiceType>;
+    /** Object.assign to tsbuffer default options */
     tsbufferOptions?: Partial<TSBufferOptions>;
 
     // LOG相关
+    /**
+     * Where the log is output to
+     * @defaultValue `consoleColorLogger` (print to console with color)
+     */
     logger: Logger;
+    /** 
+     * Print req body in log (may increase log size)
+     * @defaultValue `true`
+     */
     logReqBody: boolean;
+    /** 
+     * Print res body in log (may increase log size)
+     * @defaultValue `true`
+     */
     logResBody: boolean;
 
+    // 加密解密相关
+    /** 
+     * Encrypt buffer before send
+     * @defaultValue `undefined` (not encrypt)
+     */
     encrypter?: (src: Uint8Array) => Uint8Array;
+    /**
+     * Decrypt buffer after received
+     * @defaultValue `undefined` (not decrypt)
+     */
     decrypter?: (cipher: Uint8Array) => Uint8Array;
     /** 为true时将在控制台debug打印buffer信息 */
     debugBuf?: boolean;
 
-    /** 处理API和MSG的最大执行时间，超过此时间call将被释放 */
+    /** 
+     * 处理API和MSG的最大执行时间，超过此时间call将被释放并返回超时错误
+     * 为 `undefined` 则不限制处理时间
+     */
     timeout?: number;
 
-    // 是否在message后加入ErrorSN
+    /**
+     * 是否在message后加入ErrorSN
+     */
     showErrorSn?: boolean;
 
     onServerInputError?: (e: Error, conn: BaseConnection) => void;
@@ -477,6 +504,7 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
 
     /** 是否对Conn和Call启用Pool，开启将极大优化内存
      * 但要自己额外确保每个Api/Msg Handler返回后，不会再引用到call
+     * @defaultValue false
      */
     enablePool: boolean;
 }

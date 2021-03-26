@@ -1,7 +1,7 @@
 import { PoolItem } from '../../models/Pool';
 import * as http from "http";
 import { HttpServer } from './HttpServer';
-import { PrefixLogger } from '../Logger';
+import { PrefixLogger } from '../PrefixLogger';
 import { BaseServiceType } from 'tsrpc-proto';
 import { ConnectionCloseReason, BaseConnection } from '../BaseServer';
 import { HttpCall } from './HttpCall';

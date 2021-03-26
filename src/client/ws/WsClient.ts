@@ -4,7 +4,7 @@ import { Counter } from '../../models/Counter';
 import { TransportDataUtil, ParsedServerOutput } from '../../models/TransportDataUtil';
 import { TSBuffer } from 'tsbuffer';
 import { ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
-import { Logger } from '../../server/Logger';
+import { Logger } from '../../server/PrefixLogger';
 import { ServiceProto, BaseServiceType, TsrpcError, ApiError } from 'tsrpc-proto';
 import { TransportOptions } from '../models/TransportOptions';
 import SuperPromise from 'k8w-super-promise';

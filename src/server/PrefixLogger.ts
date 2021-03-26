@@ -1,3 +1,4 @@
+import { Logger } from 'tsrpc-proto';
 import { PoolItem, Pool } from '../models/Pool';
 
 export interface PrefixLoggerOptions {
@@ -32,11 +33,4 @@ export class PrefixLogger extends PoolItem<PrefixLoggerOptions> implements Logge
         PrefixLogger.pool.put(this);
     }
 
-}
-
-export interface Logger {
-    debug(...args: any[]): void;
-    log(...args: any[]): void;
-    warn(...args: any[]): void;
-    error(...args: any[]): void;
 }

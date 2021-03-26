@@ -4,7 +4,7 @@ import { WsClient } from '../src/client/ws/WsClient';
 import { serviceProto, ServiceType } from './proto/serviceProto';
 import { ApiTest } from './api/ApiTest';
 import { ApiTest as ApiAbcTest } from './api/a/b/c/ApiTest';
-import { PrefixLogger } from '../src/server/Logger';
+import { PrefixLogger } from '../src/server/PrefixLogger';
 import * as path from "path";
 import { MsgChat } from './proto/MsgChat';
 import { TsrpcError } from 'tsrpc-proto';

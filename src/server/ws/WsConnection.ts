@@ -1,6 +1,6 @@
 import * as http from "http";
 import * as WebSocket from "ws";
-import { PrefixLogger } from '../Logger';
+import { PrefixLogger } from '../PrefixLogger';
 import { BaseServiceType } from "tsrpc-proto";
 import { WsServer } from "./WsServer";
 import { PoolItem } from '../../models/Pool';

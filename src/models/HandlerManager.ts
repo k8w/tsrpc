@@ -1,4 +1,4 @@
-import { Logger } from '../server/Logger';
+import { Logger } from '../server/PrefixLogger';
 export class HandlerManager {
     private _handlers: { [key: string]: Function[] | undefined } = {}
 

@@ -1,4 +1,4 @@
-import { PrefixLogger } from './Logger';
+import { PrefixLogger } from './PrefixLogger';
 import { ApiError, ApiServiceDef, MsgServiceDef, TsrpcError } from 'tsrpc-proto';
 import { PoolItem } from '../models/Pool';
 
