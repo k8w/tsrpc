@@ -1,9 +1,9 @@
 import { ApiCall, MsgCall, BaseCall, ApiCallOptions, MsgCallOptions } from './BaseCall';
-import { Logger, PrefixLogger } from './PrefixLogger';
+import { PrefixLogger } from './PrefixLogger';
 import { HandlerManager } from '../models/HandlerManager';
 import { TSBuffer, TSBufferOptions } from 'tsbuffer';
 import * as path from "path";
-import { BaseServiceType, ServiceProto, ApiServiceDef, TsrpcError } from 'tsrpc-proto';
+import { BaseServiceType, ServiceProto, ApiServiceDef, TsrpcError, Logger } from 'tsrpc-proto';
 import { ServiceMapUtil, ServiceMap } from '../models/ServiceMapUtil';
 import { Pool } from '../models/Pool';
 import { ParsedServerInput, TransportDataUtil } from '../models/TransportDataUtil';
@@ -62,7 +62,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     constructor(options: ServerOptions) {
         this.options = options;
         this.tsbuffer = new TSBuffer(this.options.proto.types, {
-            utf8: nodeUtf8,
+            utf8Coder: nodeUtf8,
             ...this.options.tsbufferOptions
         });
         this.serviceMap = ServiceMapUtil.getServiceMap(this.options.proto);
@@ -454,6 +454,7 @@ export const defualtBaseServerOptions: BaseServerOptions = {
 /** @public */
 export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
     proto: ServiceProto<ServiceType>;
+
     /** Object.assign to tsbuffer default options */
     tsbufferOptions?: Partial<TSBufferOptions>;
 
@@ -485,7 +486,10 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
      * @defaultValue `undefined` (not decrypt)
      */
     decrypter?: (cipher: Uint8Array) => Uint8Array;
-    /** 为true时将在控制台debug打印buffer信息 */
+    
+    /** 
+     * 为true时将在控制台debug打印buffer信息
+     */
     debugBuf?: boolean;
 
     /** 
