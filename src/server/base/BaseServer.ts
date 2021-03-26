@@ -1,21 +1,30 @@
-import { ApiCall, MsgCall, BaseCall, ApiCallOptions, MsgCallOptions } from './BaseCall';
-import { PrefixLogger } from '../models/PrefixLogger';
-import { HandlerManager } from '../../models/HandlerManager';
-import { TSBuffer, TSBufferOptions } from 'tsbuffer';
-import * as path from "path";
-import { BaseServiceType, ServiceProto, ApiServiceDef, TsrpcError, Logger } from 'tsrpc-proto';
-import { ServiceMapUtil, ServiceMap } from '../../models/ServiceMapUtil';
-import { Pool } from '../../models/Pool';
-import { ParsedServerInput, TransportDataUtil } from '../../models/TransportDataUtil';
 import 'colors';
+import * as path from "path";
+import { TSBuffer, TSBufferOptions } from 'tsbuffer';
+import { ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError } from 'tsrpc-proto';
+import { HandlerManager } from '../../models/HandlerManager';
 import { nodeUtf8 } from '../../models/nodeUtf8';
+import { Pool } from '../../models/Pool';
+import { ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
+import { ParsedServerInput, TransportDataUtil } from '../../models/TransportDataUtil';
+import { consoleColorLogger } from '../models/_ConsoleColorLogger';
+import { PrefixLogger } from '../models/PrefixLogger';
+import { ApiCall, ApiCallOptions, BaseCall, MsgCall, MsgCallOptions } from './BaseCall';
 import { BaseConnection } from './BaseConnection';
-import { consoleColorLogger } from '../models/consoleColorLogger';
 
 export abstract class BaseServer<ServerOptions extends BaseServerOptions, ServiceType extends BaseServiceType = any> {
 
+    /**
+     * Start server
+     */
     abstract start(): Promise<void>;
+
+    /**
+     * Wait all requests finished and the stop server
+     * @param immediately Stop server immediately, not waiting for the requests ending
+     */
     abstract stop(immediately?: boolean): Promise<void>;
+
     // protected abstract _makeCall(conn: any, input: ParsedServerInput): BaseCall;
     protected abstract _poolApiCall: Pool<ApiCall>;
     protected abstract _poolMsgCall: Pool<MsgCall>;
@@ -464,7 +473,7 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
      * @defaultValue `undefined` (not decrypt)
      */
     decrypter?: (cipher: Uint8Array) => Uint8Array;
-    
+
     /** 
      * 为true时将在控制台debug打印buffer信息
      */

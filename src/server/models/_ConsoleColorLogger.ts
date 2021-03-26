@@ -1,7 +1,7 @@
 import { Logger } from "tsrpc-proto";
 
 let pid = process.pid.toString(16);
-export const consoleColorLogger: Logger = {
+export const ConsoleColorLogger: Logger = {
     debug(...args: any[]) {
         console.debug.call(console, `<${pid}> ${new Date().format()}`.gray, '[DEBUG]'.cyan, ...args);
     },

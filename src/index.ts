@@ -6,7 +6,7 @@ export { ApiCall, MsgCall } from './server/base/BaseCall';
 export { ApiHandler, MsgHandler } from './server/base/BaseServer';
 export { ApiCallHttp, MsgCallHttp } from './server/http/HttpCall';
 export { ApiHandlerHttp, HttpServer, MsgHandlerHttp } from './server/http/HttpServer';
-export { consoleColorLogger } from './server/models/consoleColorLogger';
+export { consoleColorLogger } from './server/models/_ConsoleColorLogger';
 export { PrefixLogger } from './server/models/PrefixLogger';
 export { ApiCallWs, MsgCallWs } from './server/ws/WsCall';
 export { ApiHandlerWs, MsgHandlerWs, WsServer } from './server/ws/WsServer';
