@@ -1,18 +1,11 @@
+import { TsrpcError } from "tsrpc-proto";
 import { BaseConnection } from "../server/base/BaseConnection";
 
-export interface ExecSucc<T> {
-    /** If continue exec latter flow items */
-    continue: boolean
-    output: T,
-    errMsg?: undefined
-}
-export interface ExecFail {
-    /** If continue exec latter flow items */
-    continue: boolean
-    errMsg: string,
-    output?: undefined
-}
-export type FlowExecResult<T> = ExecSucc<T> | ExecFail;
+/**
+ * @returns `T` represents succ & continue, `null | undefined` represents break.
+ * If error is throwed, `TsrpcError` would be returned to client, `Error` would be converted to "Internal Server Error".
+ */
+export type FlowExecResult<T> = T | null | undefined;
 
 export type FlowItem<T> = (item: T) => FlowExecResult<T> | Promise<FlowExecResult<T>>;
 

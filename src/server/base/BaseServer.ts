@@ -1,7 +1,7 @@
 import 'colors';
 import * as path from "path";
-import { TSBuffer, TSBufferOptions } from 'tsbuffer';
-import { ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError } from 'tsrpc-proto';
+import { TSBuffer } from 'tsbuffer';
+import { ApiServiceDef, BaseServiceType, Logger, TsrpcError } from 'tsrpc-proto';
 import { HandlerManager } from '../../models/HandlerManager';
 import { nodeUtf8 } from '../../models/nodeUtf8';
 import { Pool } from '../../models/Pool';
@@ -439,11 +439,13 @@ export const defualtBaseServerOptions: BaseServerOptions = {
 }
 
 /** @public */
-export interface BaseServerOptions<ServiceType extends BaseServiceType = any> {
-    proto: ServiceProto<ServiceType>;
-
-    /** Object.assign to tsbuffer default options */
-    tsbufferOptions?: Partial<TSBufferOptions>;
+export interface BaseServerOptions {
+    // TSBuffer相关
+    /**
+     * `undefined` 和 `null` 是否可以混合编码
+     * 默认: `false`
+     */
+    strictNullChecks: boolean,
 
     // LOG相关
     /**

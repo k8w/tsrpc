@@ -220,7 +220,7 @@ export interface ServerEventData {
     resError: any
 }
 
-export interface WsServerOptions<ServiceType extends BaseServiceType, SessionType> extends BaseServerOptions<ServiceType> {
+export interface WsServerOptions<ServiceType extends BaseServiceType, SessionType> extends BaseServerOptions {
     port: number;
     defaultSession: SessionType;
 };

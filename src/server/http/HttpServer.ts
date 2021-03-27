@@ -1,13 +1,13 @@
-import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../base/BaseServer';
 import * as http from "http";
-import { HttpConnection } from './HttpConnection';
-import { HttpUtil } from '../../models/HttpUtil';
-import { ApiCallHttp, MsgCallHttp, HttpCall } from './HttpCall';
-import { ParsedServerInput } from '../../models/TransportDataUtil';
 import { BaseServiceType } from 'tsrpc-proto';
-import { Pool } from '../../models/Pool';
-import { Counter } from '../../models/Counter';
 import { tsrpcVersion } from '../../../tsrpcVersion';
+import { Counter } from '../../models/Counter';
+import { HttpUtil } from '../../models/HttpUtil';
+import { Pool } from '../../models/Pool';
+import { ParsedServerInput } from '../../models/TransportDataUtil';
+import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../base/BaseServer';
+import { ApiCallHttp, HttpCall, MsgCallHttp } from './HttpCall';
+import { HttpConnection } from './HttpConnection';
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions<ServiceType>, ServiceType>{
 
@@ -181,11 +181,30 @@ export const defaultHttpServerOptions: HttpServerOptions<any> = {
     port: 3000
 }
 
-export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
+export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions {
     port: number,
     socketTimeout?: number,
     cors?: string,
-    onBadRequest?: (req: http.IncomingMessage) => void
+
+    /**
+     * 是否启用 JSON
+     * 启用后可兼容 http JSON 方式的调用，具体方法为：
+     * 1. Header 加入：`Content-type: application/json`
+     * 2. POST /{jsonUrlPath}/a/b/c/Test
+     * 3. body 为 JSON
+     * 4. 返回亦为JSON
+     * 默认为 `false`
+     */
+    jsonEnabled: boolean,
+    /**
+     * 默认为 `'/'`
+     */
+    jsonUrlPath: string,
+    /**
+     * 是否剔除协议中未定义的多余字段
+     * 默认为 `true`
+     */
+    jsonPrune: boolean
 }
 
 type HttpServerStatus = 'opening' | 'open' | 'closing' | 'closed';
