@@ -12,24 +12,21 @@ export type FlowItem<T> = (item: T) => FlowExecResult<T> | Promise<FlowExecResul
 export class Flow<T> extends Array<FlowItem<T>> {
 
     async exec(item: T): Promise<FlowExecResult<T>> {
-        for (let i = 0; i < this.length; ++i) {
-            try {
-                let res = this[i](item);
-                if (res instanceof Promise) {
-                    res = await res;
-                }
+        let output: FlowExecResult<T> = item;
 
-                // Return 非true 表示不继续后续流程 立即中止
-                if (!res) {
-                    return { continue: false };
-                }
+        for (let i = 0; i < this.length; ++i) {
+            let res = this[i](item);
+            if (res instanceof Promise) {
+                res = await res;
             }
-            // 一旦有异常抛出 立即中止处理流程
-            catch (e) {
-                return { continue: false, err: e };
+            output = res;
+            // Return 非true 表示不继续后续流程 立即中止
+            if (res === null || res === undefined) {
+                break;
             }
         }
-        return { continue: true };
+        
+        return output;
     }
 
 }
