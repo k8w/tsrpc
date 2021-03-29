@@ -1,15 +1,16 @@
 import * as http from "http";
-import * as WebSocket from "ws";
-import { PrefixLogger } from '../models/PrefixLogger';
 import { BaseServiceType } from "tsrpc-proto";
-import { WsServer } from "./WsServer";
-import { PoolItem } from '../../models/Pool';
+import * as WebSocket from "ws";
 import { HttpUtil } from "../../models/HttpUtil";
+import { PoolItem } from '../../models/Pool';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
-import { ConnectionCloseReason, BaseConnection } from '../base/BaseServer';
+import { BaseConnection, ConnectionCloseReason } from '../base/BaseServer';
+import { PrefixLogger } from '../models/PrefixLogger';
+import { WsServer } from "./WsServer";
 
 export interface WsConnectionOptions<ServiceType extends BaseServiceType, SessionType> {
-    connId: number,
+    /** Server端自增 */
+    id: string,
     server: WsServer<ServiceType, SessionType>,
     ws: WebSocket,
     httpReq: http.IncomingMessage,

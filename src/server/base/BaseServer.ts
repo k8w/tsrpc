@@ -1,7 +1,7 @@
 import 'colors';
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
-import { ApiServiceDef, BaseServiceType, Logger, TsrpcError } from 'tsrpc-proto';
+import { ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError } from 'tsrpc-proto';
 import { HandlerManager } from '../../models/HandlerManager';
 import { nodeUtf8 } from '../../models/nodeUtf8';
 import { Pool } from '../../models/Pool';
@@ -30,13 +30,14 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     protected abstract _poolMsgCall: Pool<MsgCall>;
 
     // 配置及其衍生项
+    readonly proto: ServiceProto<ServiceType>;
     readonly options: ServerOptions;
     readonly tsbuffer: TSBuffer;
     readonly serviceMap: ServiceMap;
 
     // Flows
     protected _dataFlow: ((data: Buffer, conn: BaseConnection) => (boolean | Promise<boolean>))[] = [];
-    readonly apiFlow: (<T extends keyof ServiceType['req']>(call: ApiCall<ServiceType['req'][T], ServiceType['res'][T]>) => (boolean | Promise<boolean>))[] = [];
+    readonly apiFlow: (<T extends keyof ServiceType['api']>(call: ApiCall<ServiceType['api'][T]['req'], ServiceType['api'][T]['res']>) => (boolean | Promise<boolean>))[] = [];
     readonly msgFlow: (<T extends keyof ServiceType['msg']>(call: MsgCall<ServiceType['msg'][T]>) => (boolean | Promise<boolean>))[] = [];
 
     // Handlers
@@ -62,13 +63,14 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         });
     }
 
-    constructor(options: ServerOptions) {
+    constructor(proto: ServiceProto<ServiceType>, options: ServerOptions) {
+        this.proto = proto;
         this.options = options;
-        this.tsbuffer = new TSBuffer(this.options.proto.types, {
-            utf8Coder: nodeUtf8,
-            ...this.options.tsbufferOptions
+        this.tsbuffer = new TSBuffer(proto.types, {
+            strictNullChecks: this.options.strictNullChecks,
+            utf8Coder: nodeUtf8
         });
-        this.serviceMap = ServiceMapUtil.getServiceMap(this.options.proto);
+        this.serviceMap = ServiceMapUtil.getServiceMap(proto);
         this.logger = options.logger;
         this._msgHandlers = new HandlerManager(this.logger);
         PrefixLogger.pool.enabled = this.options.enablePool;
@@ -106,13 +108,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             input = this._parseBuffer(conn, buf);
         }
         catch (e) {
-            if (this.options.onServerInputError) {
-                this.options.onServerInputError(e, conn);
-            }
-            else {
-                this.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
-                conn.close('INVALID_INPUT_BUFFER');
-            }
+            this.options.onServerInputError(e, conn, buf);
             return;
         }
 
@@ -136,7 +132,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
                 let timer: NodeJS.Timer | undefined;
                 if (this.options.timeout) {
                     timer = setTimeout(() => {
-                        if (call.type === 'api' && call.sn === sn && !call.res) {
+                        if (call.type === 'api' && call.sn === sn && !call.sendedRes) {
                             call.error('Server Timeout', {
                                 code: 'SERVER_TIMEOUT',
                                 isServerError: true
@@ -153,29 +149,29 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             })
 
             // Api no response
-            if (!call.res) {
+            if (!call.sendedRes) {
                 call.error('Api no response', {
                     code: 'API_NO_RES',
                     isServerError: true
                 });
             }
 
-            // 至此 应必定有 call.res
-            if (call.res) {
-                if (call.res.isSucc) {
-                    call.logger.log('[Res]', `${call.res.usedTime}ms`, this.options.logResBody ? call.res.data : '');
+            // 至此 应必定有 call.sendedRes
+            if (call.sendedRes) {
+                if (call.sendedRes.isSucc) {
+                    call.logger.log('[Res]', `${call.usedTime}ms`, this.options.logResBody ? call.sendedRes.res : '');
                 }
                 else {
-                    if (call.res.error.type === 'ApiError') {
-                        call.logger.log('[ResError]', `${call.res.usedTime}ms`, call.res.error.message, call.res.error.info, 'req=', call.req);
+                    if (call.sendedRes.err.type === 'ApiError') {
+                        call.logger.log('[ResError]', `${call.usedTime}ms`, call.sendedRes.err.message, call.sendedRes.err.info, 'req=', call.req);
                     }
                     else {
-                        call.logger.error('[ResError]', `${call.res.usedTime}ms`, call.res.error, 'req=', call.req)
+                        call.logger.error('[ResError]', `${call.usedTime}ms`, call.sendedRes.err, 'req=', call.req)
                     }
                 }
             }
             else {
-                call.logger.error('Invalid implement of ApiCall: no call.res');
+                call.logger.error('Invalid implement of ApiCall: no call.sendedRes');
             }
 
             this._afterApi(call);
@@ -259,7 +255,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
             call.logger.error('[API_FLOW_ERR]', op.err);
         }
         // 已经返回过，强制中断
-        if (call.res) {
+        if (call.sendedRes) {
             return;
         }
         // Flow内部表示不需要再继续
@@ -296,7 +292,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         }
         // 未找到ApiHandler，且未进行任何输出
         else {
-            call.error(`Unhandled API: ${call.service.name}`, 'UNHANDLED_API')
+            call.error(`Unhandled API: ${call.service.name}`, { code: 'UNHANDLED_API' })
         }
     }
 
@@ -329,7 +325,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 
     // #region Api/Msg handler register
     // API 只能实现一次
-    implementApi<T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandler<ServiceType['req'][T], ServiceType['res'][T]>): void {
+    implementApi<T extends keyof ServiceType['api']>(apiName: T, handler: ApiHandler<ServiceType['api'][T]['req'], ServiceType['api'][T]['res']>): void {
         if (this._apiHandlers[apiName as string]) {
             throw new Error('Already exist handler for API: ' + apiName);
         }
@@ -425,7 +421,7 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
 }
 
 export const defualtBaseServerOptions: BaseServerOptions = {
-    proto: { services: [], types: {} },
+    strictNullChecks: true,
     logger: new TerminalColorLogger,
     logReqBody: true,
     logResBody: true,
@@ -435,6 +431,10 @@ export const defualtBaseServerOptions: BaseServerOptions = {
             code: 'INTERNAL_ERR',
             isServerError: true
         });
+    },
+    onServerInputError: (e, conn, buf) => {
+        conn.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
+        conn.close('INVALID_INPUT_BUFFER');
     }
 }
 
@@ -443,7 +443,7 @@ export interface BaseServerOptions {
     // TSBuffer相关
     /**
      * `undefined` 和 `null` 是否可以混合编码
-     * 默认: `false`
+     * 默认: `true`
      */
     strictNullChecks: boolean,
 
@@ -492,8 +492,10 @@ export interface BaseServerOptions {
      */
     showErrorSn?: boolean;
 
-    onServerInputError?: (e: Error, conn: BaseConnection) => void;
+    onServerInputError: (e: Error, conn: BaseConnection, buf: Uint8Array) => void;
     onInternalServerError: (e: Error, call: ApiCall) => void
+    // onErrorInternal?: () => void,
+    // onErrorInput?: ()=>void,
 
     /** 是否对Conn和Call启用Pool，开启将极大优化内存
      * 但要自己额外确保每个Api/Msg Handler返回后，不会再引用到call
