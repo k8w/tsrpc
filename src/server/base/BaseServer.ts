@@ -1,7 +1,8 @@
 import 'colors';
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
-import { ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError } from 'tsrpc-proto';
+import { ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
+import { Flow } from '../../models/Flow';
 import { HandlerManager } from '../../models/HandlerManager';
 import { nodeUtf8 } from '../../models/nodeUtf8';
 import { Pool } from '../../models/Pool';
@@ -9,10 +10,16 @@ import { ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
 import { ParsedServerInput, TransportDataUtil } from '../../models/TransportDataUtil';
 import { PrefixLogger } from '../models/PrefixLogger';
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
-import { ApiCall, ApiCallOptions, BaseCall, MsgCall, MsgCallOptions } from './BaseCall';
+import { ApiCall, ApiCallOptions, ApiResponse, ApiReturn, BaseCall, MsgCall, MsgCallOptions } from './BaseCall';
 import { BaseConnection } from './BaseConnection';
 
-export abstract class BaseServer<ServerOptions extends BaseServerOptions, ServiceType extends BaseServiceType = any> {
+export abstract class BaseServer<
+    ConnType extends BaseConnection = BaseConnection,
+    ApiCallType extends ApiCall = ApiCall,
+    MsgCallType extends MsgCall = MsgCall,
+    ServerOptions extends BaseServerOptions = BaseServerOptions,
+    ServiceType extends BaseServiceType = any
+    > {
 
     /**
      * Start server
@@ -25,7 +32,6 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
      */
     abstract stop(immediately?: boolean): Promise<void>;
 
-    // protected abstract _makeCall(conn: any, input: ParsedServerInput): BaseCall;
     protected abstract _poolApiCall: Pool<ApiCall>;
     protected abstract _poolMsgCall: Pool<MsgCall>;
 
@@ -35,10 +41,25 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
     readonly tsbuffer: TSBuffer;
     readonly serviceMap: ServiceMap;
 
-    // Flows
-    protected _dataFlow: ((data: Buffer, conn: BaseConnection) => (boolean | Promise<boolean>))[] = [];
-    readonly apiFlow: (<T extends keyof ServiceType['api']>(call: ApiCall<ServiceType['api'][T]['req'], ServiceType['api'][T]['res']>) => (boolean | Promise<boolean>))[] = [];
-    readonly msgFlow: (<T extends keyof ServiceType['msg']>(call: MsgCall<ServiceType['msg'][T]>) => (boolean | Promise<boolean>))[] = [];
+    // Conn Flows
+    readonly postConnectFlow = new Flow<ConnType>();
+    readonly preDisconnectFlow = new Flow<ConnType>();
+    readonly postDisconnectFlow = new Flow<ConnType>();
+
+    // Buffer Flows
+    readonly postRecvBufferFlow = new Flow<{ conn: ConnType, buf: Uint8Array }>();
+    readonly preSendBufferFlow = new Flow<{ conn: ConnType, buf: Uint8Array, call?: ApiCallType | MsgCallType }>();
+    readonly postSendBufferFlow = new Flow<{ conn: ConnType, buf: Uint8Array, call?: ApiCallType | MsgCallType }>();
+
+    // ApiCall Flows
+    readonly preApiCallFlow = new Flow<ApiCallType>();
+    readonly preApiReturnFlow = new Flow<{ call: ApiCallType, return: ApiReturn<any> }>();
+    readonly postApiReturnFlow = new Flow<{ call: ApiCallType, return: ApiReturn<any> }>();
+    readonly postApiCallFlow = new Flow<ApiCallType>();
+
+    // MsgCall Flows
+    readonly preMsgCallFlow = new Flow<MsgCallType>();
+    readonly postMsgCallFlow = new Flow<MsgCallType>();
 
     // Handlers
     private _apiHandlers: { [apiName: string]: ((call: ApiCall) => any) | undefined } = {};
@@ -75,11 +96,12 @@ export abstract class BaseServer<ServerOptions extends BaseServerOptions, Servic
         this._msgHandlers = new HandlerManager(this.logger);
         PrefixLogger.pool.enabled = this.options.enablePool;
 
+        // Process uncaught exception, so that Node.js process would not exit easily
         BaseServer.processUncaughtException(this.logger);
     }
 
     // #region Data process flow
-    async onData(conn: BaseConnection, data: Buffer) {
+    protected async _onRecvBuffer(conn: BaseConnection, data: Buffer) {
         // DataFlow
         let op = await this._execFlow(this._dataFlow, data, conn);
         // 错误输出到日志
@@ -426,16 +448,22 @@ export const defualtBaseServerOptions: BaseServerOptions = {
     logReqBody: true,
     logResBody: true,
     enablePool: false,
+    onInvalidInputBuffer: (e, conn, buf) => {
+        conn.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
+        conn.close('INVALID_INPUT_BUFFER');
+    },
     onInternalServerError: (err, call) => {
         call.error('Internal server error', {
             code: 'INTERNAL_ERR',
-            isServerError: true
+            type: TsrpcErrorType.ServerError,
+            innerError: call.conn.server.options.returnInnerError ? {
+                message: err.message,
+                stack: err.stack
+            } : undefined
         });
     },
-    onServerInputError: (e, conn, buf) => {
-        conn.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
-        conn.close('INVALID_INPUT_BUFFER');
-    }
+    returnInnerError: process.env['NODE_ENV'] !== 'production'
+
 }
 
 /** @public */
@@ -464,38 +492,34 @@ export interface BaseServerOptions {
      */
     logResBody: boolean;
 
-    // 加密解密相关
-    /** 
-     * Encrypt buffer before send
-     * @defaultValue `undefined` (not encrypt)
-     */
-    encrypter?: (src: Uint8Array) => Uint8Array;
-    /**
-     * Decrypt buffer after received
-     * @defaultValue `undefined` (not decrypt)
-     */
-    decrypter?: (cipher: Uint8Array) => Uint8Array;
-
     /** 
      * 为true时将在控制台debug打印buffer信息
      */
     debugBuf?: boolean;
 
     /** 
-     * 处理API和MSG的最大执行时间，超过此时间call将被释放并返回超时错误
+     * 处理API的最大执行时间，超过此时间call将被释放并返回超时错误
      * 为 `undefined` 则不限制处理时间
      */
-    timeout?: number;
+    apiTimeout?: number | undefined;
 
     /**
-     * 是否在message后加入ErrorSN
+     * When the server cannot parse input buffer to api/msg call
+     * By default, it will return "INVALID_INPUT_BUFFER" .
      */
-    showErrorSn?: boolean;
-
-    onServerInputError: (e: Error, conn: BaseConnection, buf: Uint8Array) => void;
-    onInternalServerError: (e: Error, call: ApiCall) => void
-    // onErrorInternal?: () => void,
-    // onErrorInput?: ()=>void,
+    onInvalidInputBuffer: (e: Error, conn: BaseConnection, buf: Uint8Array) => void;
+    /**
+     * On error throwed inside (not TsrpcError)
+     * By default, it will return a "Internal server error".
+     * If `returnInnerError` is `true`, an `innerError` field would be returned.
+     */
+    onInternalServerError: (e: Error, call: ApiCall) => void;
+    /**
+     * When "Internal server error" occured,
+     * whether to return `innerError` to client. 
+     * It depends on `NODE_ENV` by default. (be `false` when `NODE_ENV` is `production`, otherwise be `true`)
+     */
+    returnInnerError: boolean;
 
     /** 是否对Conn和Call启用Pool，开启将极大优化内存
      * 但要自己额外确保每个Api/Msg Handler返回后，不会再引用到call

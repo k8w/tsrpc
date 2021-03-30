@@ -1,4 +1,5 @@
 import { Logger } from "tsrpc-proto";
+import { BaseServer } from "./BaseServer";
 
 export type ConnectionCloseReason = 'INVALID_INPUT_BUFFER' | 'DATA_FLOW_BREAK' | 'NO_RES';
 export type BaseConnection = {
@@ -7,5 +8,6 @@ export type BaseConnection = {
     isClosed: boolean;
     close: (reason?: ConnectionCloseReason) => void,
     ip: string,
-    logger: Logger
+    logger: Logger,
+    server: BaseServer
 }

@@ -19,7 +19,7 @@ export interface ApiCallOptions<Req = any, Res = any> {
      * Sended Response Data
      * `undefined` means it have not sendRes yet
      */
-    sendedRes?: ApiResponse<Res>,
+    return?: ApiReturn<Res>,
 
     /** Time that the server received the req */
     startTime: number,
@@ -27,17 +27,17 @@ export interface ApiCallOptions<Req = any, Res = any> {
     usedTime?: number
 }
 
-export interface ApiResponseSucc<Res> {
+export interface ApiReturnSucc<Res> {
     isSucc: true,
     res: Res,
     err?: undefined
 }
-export interface ApiResponseError {
+export interface ApiReturnError {
     isSucc: false,
     res?: undefined,
     err: TsrpcError
 }
-export type ApiResponse<Res> = ApiResponseSucc<Res> | ApiResponseError;
+export type ApiReturn<Res> = ApiReturnSucc<Res> | ApiReturnError;
 
 export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallOptions<Req, Res> = ApiCallOptions<Req, Res>> extends PoolItem<CallOptions> {
     readonly type = 'api' as const;
@@ -62,8 +62,8 @@ export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallO
         return this.options.req;
     }
 
-    get sendedRes() {
-        return this.options.sendedRes;
+    get return() {
+        return this.options.return;
     }
 
     get startTime() {
@@ -80,7 +80,7 @@ export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallO
     }
 
     succ(res: Res): void {
-        this._prepareRes({
+        this._prepareReturn({
             isSucc: true,
             res: res
         })
@@ -90,14 +90,14 @@ export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallO
     error(message: string, info?: Partial<TsrpcErrorData>): void;
     error(errOrMsg: string | TsrpcError, info?: Partial<TsrpcErrorData>): void {
         let error: TsrpcError = typeof errOrMsg === 'string' ? new TsrpcError(errOrMsg, info) : errOrMsg;
-        this._prepareRes({
+        this._prepareReturn({
             isSucc: false,
             err: error
         })
     };
 
-    protected _prepareRes(apiRes: ApiResponse<Res>) {
-        if (this.sendedRes) {
+    protected _prepareReturn(ret: ApiReturn<Res>) {
+        if (this.return) {
             this.logger.warn('Send API res (succ) duplicately.')
             return;
         }
@@ -106,12 +106,12 @@ export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallO
         // prevent (maybe)
 
         // Do Send!
-        this.options.sendedRes = apiRes;
+        this.options.return = ret;
         this.options.usedTime = Date.now() - this.startTime;
-        this._sendRes(apiRes);
+        this._sendReturn(ret);
     }
 
-    protected abstract _sendRes(apiRes: ApiResponse<Res>): void;
+    protected abstract _sendReturn(ret: ApiReturn<Res>): void;
 
     // Put into pool
     abstract destroy(): void;
