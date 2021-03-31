@@ -2,6 +2,7 @@ import { ApiServiceDef, MsgServiceDef, TsrpcError, TsrpcErrorData } from 'tsrpc-
 import { PoolItem } from '../../models/Pool';
 import { PrefixLogger } from '../models/PrefixLogger';
 import { BaseConnection } from './BaseConnection';
+import { BaseServer } from './BaseServer';
 
 export interface ApiCallOptions<Req = any, Res = any> {
     /** Connection */
@@ -79,39 +80,60 @@ export abstract class ApiCall<Req = any, Res = any, CallOptions extends ApiCallO
         super.clean();
     }
 
-    succ(res: Res): void {
-        this._prepareReturn({
+    succ(res: Res): Promise<void> {
+        return this._prepareReturn({
             isSucc: true,
             res: res
         })
     }
 
-    error(err: TsrpcError): void;
-    error(message: string, info?: Partial<TsrpcErrorData>): void;
-    error(errOrMsg: string | TsrpcError, info?: Partial<TsrpcErrorData>): void {
+    error(err: TsrpcError): Promise<void>;
+    error(message: string, info?: Partial<TsrpcErrorData>): Promise<void>;
+    error(errOrMsg: string | TsrpcError, info?: Partial<TsrpcErrorData>): Promise<void> {
         let error: TsrpcError = typeof errOrMsg === 'string' ? new TsrpcError(errOrMsg, info) : errOrMsg;
-        this._prepareReturn({
+        return this._prepareReturn({
             isSucc: false,
             err: error
         })
     };
 
-    protected _prepareReturn(ret: ApiReturn<Res>) {
+    protected async _prepareReturn(ret: ApiReturn<Res>): Promise<void> {
         if (this.return) {
-            this.logger.warn('Send API res (succ) duplicately.')
+            this.logger.debug('API return duplicately.')
             return;
         }
 
-        // TODO exec send res flow
-        // prevent (maybe)
+        let server: BaseServer<any, any, any, any, any> = this.conn.server;
 
-        // Do Send!
+        // Pre Flow
+        let preFlow = await server.preApiReturnFlow.exec({ call: this, return: ret });
+        // Stopped!
+        if (!preFlow) {
+            return;
+        }
+        ret = preFlow.return;
+
+        // Do send!
         this.options.return = ret;
         this.options.usedTime = Date.now() - this.startTime;
-        this._sendReturn(ret);
+        if (ret.isSucc) {
+            this.logger.log('[Res]', `${this.usedTime}ms`, server.options.logResBody ? ret.res : '');
+        }
+        else {
+            if (ret.err.type === 'ApiError') {
+                this.logger.log('[ApiError]', `${this.usedTime}ms`, ret.err, 'req=', this.req);
+            }
+            else {
+                this.logger.error(`[${ret.err.type}]`, `${this.usedTime}ms`, ret.err, 'req=', this.req)
+            }
+        }
+        await this._sendReturn(ret);
+
+        // Post Flow
+        await server.postApiReturnFlow.exec(preFlow);
     }
 
-    protected abstract _sendReturn(ret: ApiReturn<Res>): void;
+    protected abstract _sendReturn(ret: ApiReturn<Res>): Promise<void>;
 
     // Put into pool
     abstract destroy(): void;

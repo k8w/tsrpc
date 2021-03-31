@@ -6,11 +6,11 @@ import { Flow } from '../../models/Flow';
 import { MsgHandlerManager } from '../../models/MsgHandlerManager';
 import { nodeUtf8 } from '../../models/nodeUtf8';
 import { Pool } from '../../models/Pool';
-import { ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
+import { MsgService, ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
 import { ParsedServerInput, TransportDataUtil } from '../../models/TransportDataUtil';
 import { PrefixLogger } from '../models/PrefixLogger';
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
-import { ApiCall, ApiCallOptions, ApiReturn, BaseCall, MsgCall, MsgCallOptions } from './BaseCall';
+import { ApiCall, ApiCallOptions, ApiReturn, MsgCall, MsgCallOptions } from './BaseCall';
 import { BaseConnection } from './BaseConnection';
 
 export abstract class BaseServer<
@@ -32,8 +32,8 @@ export abstract class BaseServer<
      */
     abstract stop(immediately?: boolean): Promise<void>;
 
-    protected abstract _poolApiCall: Pool<ApiCall>;
-    protected abstract _poolMsgCall: Pool<MsgCall>;
+    protected abstract _poolApiCall: Pool<ApiCallType>;
+    protected abstract _poolMsgCall: Pool<MsgCallType>;
 
     // 配置及其衍生项
     readonly proto: ServiceProto<ServiceType>;
@@ -60,6 +60,8 @@ export abstract class BaseServer<
     // MsgCall Flows
     readonly preMsgCallFlow = new Flow<MsgCallType>();
     readonly postMsgCallFlow = new Flow<MsgCallType>();
+    readonly preSendMsgFlow = new Flow<{ service: MsgService, msg: any }>();
+    readonly postSendMsgFlow = new Flow<{ service: MsgService, msg: any }>();
 
     // Handlers
     private _apiHandlers: { [apiName: string]: ((call: ApiCall) => any) | undefined } = {};
@@ -112,80 +114,19 @@ export abstract class BaseServer<
             return;
         }
 
-        // Parse ServerInput
-        let serverInput: ParsedServerInput;
-        try {
-            serverInput = this._parseBuffer(conn, buf);
-        }
-        catch (e) {
-            this.options.onServerInputError(e, conn, buf);
+        // Parse Call
+        let opInput = TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
+        if (!opInput.isSucc) {
+            this.options.onParseCallError(opInput.errMsg, conn, buf);
             return;
         }
+        let call = this._makeCall(conn, opInput.result);
 
-        // Parse RPC Call
-        let call: BaseCall;
-        try {
-            call = this._makeCall(conn, input);
-        }
-        catch (e) {
-            this.logger.error('Buffer cannot be resolved.', e);
-            return;
-        }
-
-        // Handle Call
+        // ApiCall Flow
         if (call.type === 'api') {
-            call.logger.log('[Req]', this.options.logReqBody ? call.req : '');
-            let sn = call.sn;
-
-            await new Promise<void>(rs => {
-                // Timeout
-                let timer: NodeJS.Timer | undefined;
-                if (this.options.timeout) {
-                    timer = setTimeout(() => {
-                        if (call.type === 'api' && call.sn === sn && !call.sendedRes) {
-                            call.error('Server Timeout', {
-                                code: 'SERVER_TIMEOUT',
-                                isServerError: true
-                            });
-                        }
-                        rs();
-                    }, this.options.timeout);
-                }
-                // Handle API
-                this._handleApi(call as ApiCall).then(() => {
-                    timer && clearTimeout(timer);
-                    rs();
-                });
-            })
-
-            // Api no response
-            if (!call.sendedRes) {
-                call.error('Api no response', {
-                    code: 'API_NO_RES',
-                    isServerError: true
-                });
-            }
-
-            // 至此 应必定有 call.sendedRes
-            if (call.sendedRes) {
-                if (call.sendedRes.isSucc) {
-                    call.logger.log('[Res]', `${call.usedTime}ms`, this.options.logResBody ? call.sendedRes.res : '');
-                }
-                else {
-                    if (call.sendedRes.err.type === 'ApiError') {
-                        call.logger.log('[ResError]', `${call.usedTime}ms`, call.sendedRes.err.message, call.sendedRes.err.info, 'req=', call.req);
-                    }
-                    else {
-                        call.logger.error('[ResError]', `${call.usedTime}ms`, call.sendedRes.err, 'req=', call.req)
-                    }
-                }
-            }
-            else {
-                call.logger.error('Invalid implement of ApiCall: no call.sendedRes');
-            }
-
-            this._afterApi(call);
+            this._handleApi(call);
         }
+        // MsgCall Flow
         else {
             call.logger.log('Msg=', call.msg);
 
@@ -206,11 +147,7 @@ export abstract class BaseServer<
         }
     }
 
-    protected _parseServerInput(conn: ConnType, buf: Uint8Array): ParsedServerInput {
-        return TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
-    }
-
-    protected _makeCall(conn: ConnType, input: ParsedServerInput): BaseCall {
+    protected _makeCall(conn: ConnType, input: ParsedServerInput): ApiCallType | MsgCallType {
         if (input.type === 'api') {
             return this._poolApiCall.get({
                 conn: conn,
@@ -258,52 +195,50 @@ export abstract class BaseServer<
         return { continue: true };
     }
 
-    protected async _handleApi(call: ApiCall) {
-        let op = await this._execFlow(this.apiFlow, call);
-        // 打印错误信息
-        if (op.err) {
-            call.logger.error('[API_FLOW_ERR]', op.err);
-        }
-        // 已经返回过，强制中断
-        if (call.sendedRes) {
+    protected async _handleApi(call: ApiCallType) {
+        // Pre Flow
+        let preFlow = await this.preApiCallFlow.exec(call);
+        if (!preFlow) {
             return;
         }
-        // Flow内部表示不需要再继续
-        if (!op.continue) {
-            // TsrpcError 抛给前台
-            if (op.err && op.err instanceof TsrpcError) {
-                call.error(op.err.message, op.err.info);
+        call = preFlow;
+
+        // exec ApiCall
+        call.logger.log('[Req]', this.options.logReqBody ? call.req : '');
+        let handler = this._apiHandlers[call.service.name];
+        // 未找到ApiHandler，且未进行任何输出
+        if (!handler) {
+            call.error(`Unhandled API: ${call.service.name}`, { code: 'UNHANDLED_API', type: TsrpcErrorType.ServerError })
+            return;
+        }
+        // exec
+        try {
+            await handler(call);
+        }
+        catch (e) {
+            if (e instanceof TsrpcError) {
+                call.error(e);
             }
-            // 服务器内部错误
             else {
-                call.logger.error('[API_FLOW_ERR]', op.err);
-                this.options.onInternalServerError(op.err || new Error('Internal server error'), call);
+                this.options.onApiInnerError(e, call);
             }
-            return;
         }
 
-        let handler = this._apiHandlers[call.service.name];
-        if (handler) {
-            try {
-                let res = handler(call);
-                if (res instanceof Promise) {
-                    await res;
-                }
-            }
-            catch (e) {
-                if (e instanceof TsrpcError) {
-                    call.error(e.message, e.info);
-                }
-                else {
-                    call.logger.error(e);
-                    this.options.onInternalServerError(e, call);
-                }
-            }
+        // Post Flow
+        let postFlow = await this.postApiCallFlow.exec(call);
+        if (!postFlow) {
+            return;
         }
-        // 未找到ApiHandler，且未进行任何输出
-        else {
-            call.error(`Unhandled API: ${call.service.name}`, { code: 'UNHANDLED_API' })
+        call = postFlow;
+
+        // After API
+        if (!call.return) {
+            await call.error('Api no response', {
+                code: 'API_NO_RES',
+                type: TsrpcErrorType.ServerError
+            });
         }
+        call.destroy();
     }
 
     protected async _handleMsg(call: MsgCall) {
@@ -323,10 +258,6 @@ export abstract class BaseServer<
         else {
             await Promise.all(promises);
         }
-    }
-
-    protected _afterApi(call: ApiCall) {
-        call.destroy();
     }
     protected _afterMsg(call: MsgCall) {
         call.destroy();
@@ -436,20 +367,20 @@ export const defualtBaseServerOptions: BaseServerOptions = {
     logReqBody: true,
     logResBody: true,
     enablePool: false,
-    onRecvBufferError: (e, conn, buf) => {
-        conn.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
-        conn.close('INVALID_INPUT_BUFFER');
-    },
-    onApiC: (err, call) => {
-        call.error('Internal server error', {
-            code: 'INTERNAL_ERR',
-            type: TsrpcErrorType.ServerError,
-            innerError: call.conn.server.options.returnInnerError ? {
-                message: err.message,
-                stack: err.stack
-            } : undefined
-        });
-    },
+    // onRecvBufferError: (e, conn, buf) => {
+    //     conn.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
+    //     conn.close('INVALID_INPUT_BUFFER');
+    // },
+    // onApiC: (err, call) => {
+    //     call.error('Internal server error', {
+    //         code: 'INTERNAL_ERR',
+    //         type: TsrpcErrorType.ServerError,
+    //         innerError: call.conn.server.options.returnInnerError ? {
+    //             message: err.message,
+    //             stack: err.stack
+    //         } : undefined
+    //     });
+    // },
     returnInnerError: process.env['NODE_ENV'] !== 'production'
 
 }
@@ -485,23 +416,17 @@ export interface BaseServerOptions<ConnType extends BaseConnection> {
      */
     debugBuf?: boolean;
 
-    /** 
-     * 处理API的最大执行时间，超过此时间call将被释放并返回超时错误
-     * 为 `undefined` 则不限制处理时间
-     */
-    apiTimeout?: number | undefined;
-
     /**
      * When the server cannot parse input buffer to api/msg call
      * By default, it will return "INVALID_INPUT_BUFFER" .
      */
-    onRecvBufferError: (e: Error | TsrpcError, conn: ConnType, buf: Uint8Array) => void;
+    onParseCallError: (errMsg: string, conn: ConnType, buf: Uint8Array) => void;
     /**
      * On error throwed inside (not TsrpcError)
      * By default, it will return a "Internal server error".
      * If `returnInnerError` is `true`, an `innerError` field would be returned.
      */
-    onApiCallInternalError: (e: Error | TsrpcError, call: ApiCall) => void;
+    onApiInnerError: (e: Error, call: ApiCall) => void;
     /**
      * When "Internal server error" occured,
      * whether to return `innerError` to client. 
