@@ -9,12 +9,25 @@ export class ServiceMapUtil {
         }
 
         for (let v of proto.services) {
-            map.id2Service[v.id] = v;
+            let match = v.name.match(/(.+\/)?([^\/]+)$/)!;
+            let path = match[1] || '';
+            let name = match[2];
             if (v.type === 'api') {
-                map.apiName2Service[v.name] = v;
+                let svc: ApiService = {
+                    ...v,
+                    reqSchemaId: path + 'Req' + name,
+                    resSchemaId: path + 'Res' + name
+                }
+                map.apiName2Service[v.name] = svc;
+                map.id2Service[v.id] = svc;
             }
             else {
-                map.msgName2Service[v.name] = v;
+                let svc: MsgService = {
+                    ...v,
+                    msgSchemaId: path + 'Msg' + name
+                };
+                map.msgName2Service[v.name] = svc;
+                map.id2Service[v.id] = svc;
             }
         }
 
@@ -23,7 +36,16 @@ export class ServiceMapUtil {
 }
 
 export interface ServiceMap {
-    id2Service: { [serviceId: number]: ServiceDef },
-    apiName2Service: { [apiName: string]: ApiServiceDef | undefined },
-    msgName2Service: { [msgName: string]: MsgServiceDef | undefined }
+    id2Service: { [serviceId: number]: ApiService | MsgService },
+    apiName2Service: { [apiName: string]: ApiService | undefined },
+    msgName2Service: { [msgName: string]: MsgService | undefined }
+}
+
+export interface ApiService extends ApiServiceDef {
+    reqSchemaId: string,
+    resSchemaId: string
+}
+
+export interface MsgService extends MsgServiceDef {
+    msgSchemaId: string
 }

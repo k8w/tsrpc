@@ -206,7 +206,7 @@ export abstract class BaseServer<
         }
     }
 
-    protected _parseBuffer(conn: ConnType, buf: Uint8Array): ParsedServerInput {
+    protected _parseServerInput(conn: ConnType, buf: Uint8Array): ParsedServerInput {
         return TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
     }
 
