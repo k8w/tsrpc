@@ -3,16 +3,10 @@ import { Logger } from "tsrpc-proto";
 export class MsgHandlerManager {
     private _handlers: { [key: string]: Function[] | undefined } = {}
 
-    logger: Logger;
-
-    constructor(logger: Logger) {
-        this.logger = logger;
-    }
-
     /**
      * @return handlers count
      */
-    forEachHandler(key: string, ...args: any[]): (any | Promise<any>)[] {
+    forEachHandler(key: string, logger: Logger, ...args: any[]): (any | Promise<any>)[] {
         let handlers = this._handlers[key];
         if (!handlers) {
             return [];
@@ -24,7 +18,7 @@ export class MsgHandlerManager {
                 output.push(handler(...args));
             }
             catch (e) {
-                this.logger.error('MsgHandlerError', e);
+                logger.error('[MsgHandlerError]', e);
             }
         }
         return output;

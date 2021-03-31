@@ -99,7 +99,7 @@ export abstract class BaseServer<
 
         this.logger = options.logger;
 
-        this._msgHandlers = new MsgHandlerManager(this.logger);
+        this._msgHandlers = new MsgHandlerManager();
         PrefixLogger.pool.enabled = this.options.enablePool;
 
         // Process uncaught exception, so that Node.js process would not exit easily
@@ -122,28 +122,11 @@ export abstract class BaseServer<
         }
         let call = this._makeCall(conn, opInput.result);
 
-        // ApiCall Flow
         if (call.type === 'api') {
-            this._handleApi(call);
+            this._onApiCall(call);
         }
-        // MsgCall Flow
         else {
-            call.logger.log('Msg=', call.msg);
-
-            await new Promise<void>(rs => {
-                // Timeout
-                if (this.options.timeout) {
-                    setTimeout(() => {
-                        rs();
-                    }, this.options.timeout);
-                }
-                // Handle API
-                this._handleMsg(call as MsgCall).then(() => {
-                    rs();
-                });
-            })
-
-            this._afterMsg(call);
+            this._onMsgCall(call);
         }
     }
 
@@ -154,7 +137,7 @@ export abstract class BaseServer<
                 sn: input.sn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefixs: [`API#${input.sn} [${input.service.name}]`]
+                    prefixs: [`Api:${input.service.name}${input.sn !== undefined ? ` SN=${input.sn}` : ''}`]
                 }),
                 service: input.service,
                 req: input.req,
@@ -166,7 +149,7 @@ export abstract class BaseServer<
                 conn: conn,
                 logger: PrefixLogger.pool.get({
                     logger: conn.logger,
-                    prefixs: [`MSG [${input.service.name}]`]
+                    prefixs: [`Msg:${input.service.name}`]
                 }),
                 service: input.service,
                 msg: input.msg
@@ -174,28 +157,7 @@ export abstract class BaseServer<
         }
     }
 
-    private async _execFlow(flow: ((...args: any[]) => boolean | Promise<boolean>)[], ...params: any[]): Promise<{ continue: boolean, err?: Error }> {
-        for (let i = 0; i < flow.length; ++i) {
-            try {
-                let res = flow[i](...params);
-                if (res instanceof Promise) {
-                    res = await res;
-                }
-
-                // Return 非true 表示不继续后续流程 立即中止
-                if (!res) {
-                    return { continue: false };
-                }
-            }
-            // 一旦有异常抛出 立即中止处理流程
-            catch (e) {
-                return { continue: false, err: e };
-            }
-        }
-        return { continue: true };
-    }
-
-    protected async _handleApi(call: ApiCallType) {
+    protected async _onApiCall(call: ApiCallType) {
         // Pre Flow
         let preFlow = await this.preApiCallFlow.exec(call);
         if (!preFlow) {
@@ -231,7 +193,7 @@ export abstract class BaseServer<
         }
         call = postFlow;
 
-        // After API
+        // Destroy call
         if (!call.return) {
             await call.error('Api no response', {
                 code: 'API_NO_RES',
@@ -241,27 +203,28 @@ export abstract class BaseServer<
         call.destroy();
     }
 
-    protected async _handleMsg(call: MsgCall) {
-        let op = await this._execFlow(this.msgFlow, call);
-        if (!op.continue) {
-            if (op.err) {
-                call.logger.error('[MSG_FLOW_ERR]', op.err);
-            }
+    protected async _onMsgCall(call: MsgCallType) {
+        // Pre Flow
+        let preFlow = await this.preMsgCallFlow.exec(call);
+        if (!preFlow) {
             return;
         }
+        call = preFlow;
 
         // MsgHandler
-        let promises = this._msgHandlers.forEachHandler(call.service.name, call);
+        call.logger.log('[Msg]', call.msg);
+        let promises = this._msgHandlers.forEachHandler(call.service.name, call.logger);
         if (!promises.length) {
             this.logger.debug('[UNHANDLED_MSG]', call.service.name);
         }
         else {
             await Promise.all(promises);
         }
-    }
-    protected _afterMsg(call: MsgCall) {
+
+        // Post Flow
+        await this.postMsgCallFlow.exec(call);
         call.destroy();
-    };
+    }
     // #endregion    
 
     // #region Api/Msg handler register
@@ -274,7 +237,7 @@ export abstract class BaseServer<
         this.logger.log(`API implemented succ: [${apiName}]`);
     };
 
-    autoImplementApi(apiPath: string, apiNamePrefix?: string): { succ: string[], fail: string[] } {
+    async autoImplementApi(apiPath: string, apiNamePrefix?: string): Promise<{ succ: string[], fail: string[] }> {
         let apiServices = Object.values(this.serviceMap.apiName2Service) as ApiServiceDef[];
         let output: { succ: string[], fail: string[] } = { succ: [], fail: [] };
 
@@ -311,9 +274,9 @@ export abstract class BaseServer<
             let requireError: Error & { code: string } | undefined;
             let modulePath = path.resolve(apiPath, handlerPath, 'Api' + handlerName);
             try {
-                let handlerModule = require(modulePath);
+                let handlerModule = await import(modulePath);
                 // ApiName同名
-                apiHandler = handlerModule['Api' + handlerName];
+                apiHandler = handlerModule['Api' + handlerName] || handlerModule.default;
             }
             catch (e) {
                 requireError = e;
@@ -361,28 +324,27 @@ export abstract class BaseServer<
 
 }
 
-export const defualtBaseServerOptions: BaseServerOptions = {
+export const defualtBaseServerOptions: BaseServerOptions<any> = {
     strictNullChecks: true,
     logger: new TerminalColorLogger,
     logReqBody: true,
     logResBody: true,
     enablePool: false,
-    // onRecvBufferError: (e, conn, buf) => {
-    //     conn.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
-    //     conn.close('INVALID_INPUT_BUFFER');
-    // },
-    // onApiC: (err, call) => {
-    //     call.error('Internal server error', {
-    //         code: 'INTERNAL_ERR',
-    //         type: TsrpcErrorType.ServerError,
-    //         innerError: call.conn.server.options.returnInnerError ? {
-    //             message: err.message,
-    //             stack: err.stack
-    //         } : undefined
-    //     });
-    // },
+    onParseCallError: (e, conn, buf) => {
+        conn.logger.error(`[${conn.ip}] [Invalid input buffer] length=${buf.length}`, buf.subarray(0, 16))
+        conn.close('INVALID_INPUT_BUFFER');
+    },
+    onApiInnerError: (err, call) => {
+        call.error('Internal Server Error', {
+            code: 'INTERNAL_ERR',
+            type: TsrpcErrorType.ServerError,
+            innerError: call.conn.server.options.returnInnerError ? {
+                message: err.message,
+                stack: err.stack
+            } : undefined
+        });
+    },
     returnInnerError: process.env['NODE_ENV'] !== 'production'
-
 }
 
 /** @public */
