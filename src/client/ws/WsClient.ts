@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import { HandlerManager } from '../../models/HandlerManager';
+import { HandlerManager } from '../../models/MsgHandlerManager';
 import { Counter } from '../../models/Counter';
 import { TransportDataUtil, ParsedServerOutput } from '../../models/TransportDataUtil';
 import { TSBuffer } from 'tsbuffer';

@@ -3,22 +3,22 @@ import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
 import { ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { Flow } from '../../models/Flow';
-import { HandlerManager } from '../../models/HandlerManager';
+import { MsgHandlerManager } from '../../models/MsgHandlerManager';
 import { nodeUtf8 } from '../../models/nodeUtf8';
 import { Pool } from '../../models/Pool';
 import { ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
 import { ParsedServerInput, TransportDataUtil } from '../../models/TransportDataUtil';
 import { PrefixLogger } from '../models/PrefixLogger';
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
-import { ApiCall, ApiCallOptions, ApiResponse, ApiReturn, BaseCall, MsgCall, MsgCallOptions } from './BaseCall';
+import { ApiCall, ApiCallOptions, ApiReturn, BaseCall, MsgCall, MsgCallOptions } from './BaseCall';
 import { BaseConnection } from './BaseConnection';
 
 export abstract class BaseServer<
-    ConnType extends BaseConnection = BaseConnection,
-    ApiCallType extends ApiCall = ApiCall,
-    MsgCallType extends MsgCall = MsgCall,
-    ServerOptions extends BaseServerOptions = BaseServerOptions,
-    ServiceType extends BaseServiceType = any
+    ConnType extends BaseConnection,
+    ApiCallType extends ApiCall,
+    MsgCallType extends MsgCall,
+    ServerOptions extends BaseServerOptions<ConnType>,
+    ServiceType extends BaseServiceType
     > {
 
     /**
@@ -64,7 +64,7 @@ export abstract class BaseServer<
     // Handlers
     private _apiHandlers: { [apiName: string]: ((call: ApiCall) => any) | undefined } = {};
     // 多个Handler将异步并行执行
-    private _msgHandlers: HandlerManager;
+    private _msgHandlers: MsgHandlerManager;
 
     readonly logger: Logger;
 
@@ -87,47 +87,35 @@ export abstract class BaseServer<
     constructor(proto: ServiceProto<ServiceType>, options: ServerOptions) {
         this.proto = proto;
         this.options = options;
+
         this.tsbuffer = new TSBuffer(proto.types, {
             strictNullChecks: this.options.strictNullChecks,
             utf8Coder: nodeUtf8
         });
+
         this.serviceMap = ServiceMapUtil.getServiceMap(proto);
+
         this.logger = options.logger;
-        this._msgHandlers = new HandlerManager(this.logger);
+
+        this._msgHandlers = new MsgHandlerManager(this.logger);
         PrefixLogger.pool.enabled = this.options.enablePool;
 
         // Process uncaught exception, so that Node.js process would not exit easily
         BaseServer.processUncaughtException(this.logger);
     }
 
-    // #region Data process flow
-    protected async _onRecvBuffer(conn: BaseConnection, data: Buffer) {
-        // DataFlow
-        let op = await this._execFlow(this._dataFlow, data, conn);
-        // 错误输出到日志
-        if (op.err) {
-            conn.logger.error('[DATA_FLOW_ERR]', op.err);
-        }
-        // Data内部表示不需要再继续
-        if (!op.continue) {
+    // #region receive buffer process flow
+    protected async _onRecvBuffer(conn: ConnType, buf: Buffer) {
+        // postRecvBufferFlow
+        let opPostRecvBuffer = await this.postRecvBufferFlow.exec({ conn: conn, buf: buf });
+        if (!opPostRecvBuffer) {
             return;
         }
 
-        // Decrypt
-        this.options.debugBuf && conn.logger.debug('[RecvBuf]', data);
-        let buf: Uint8Array;
-        if (this.options.decrypter) {
-            buf = this.options.decrypter(data);
-            this.options.debugBuf && conn.logger.debug('[DecryptedBuf]', data);
-        }
-        else {
-            buf = data;
-        }
-
-        // Parse Server Input
-        let input: ParsedServerInput;
+        // Parse ServerInput
+        let serverInput: ParsedServerInput;
         try {
-            input = this._parseBuffer(conn, buf);
+            serverInput = this._parseBuffer(conn, buf);
         }
         catch (e) {
             this.options.onServerInputError(e, conn, buf);
@@ -218,11 +206,11 @@ export abstract class BaseServer<
         }
     }
 
-    protected _parseBuffer(conn: BaseConnection, buf: Uint8Array): ParsedServerInput {
+    protected _parseBuffer(conn: ConnType, buf: Uint8Array): ParsedServerInput {
         return TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
     }
 
-    protected _makeCall(conn: BaseConnection, input: ParsedServerInput): BaseCall {
+    protected _makeCall(conn: ConnType, input: ParsedServerInput): BaseCall {
         if (input.type === 'api') {
             return this._poolApiCall.get({
                 conn: conn,
@@ -448,11 +436,11 @@ export const defualtBaseServerOptions: BaseServerOptions = {
     logReqBody: true,
     logResBody: true,
     enablePool: false,
-    onInvalidInputBuffer: (e, conn, buf) => {
+    onRecvBufferError: (e, conn, buf) => {
         conn.logger.error(`[${conn.ip}] [Invalid Input Buffer] length=${buf.length}`, buf.subarray(0, 16))
         conn.close('INVALID_INPUT_BUFFER');
     },
-    onInternalServerError: (err, call) => {
+    onApiC: (err, call) => {
         call.error('Internal server error', {
             code: 'INTERNAL_ERR',
             type: TsrpcErrorType.ServerError,
@@ -467,7 +455,7 @@ export const defualtBaseServerOptions: BaseServerOptions = {
 }
 
 /** @public */
-export interface BaseServerOptions {
+export interface BaseServerOptions<ConnType extends BaseConnection> {
     // TSBuffer相关
     /**
      * `undefined` 和 `null` 是否可以混合编码
@@ -507,13 +495,13 @@ export interface BaseServerOptions {
      * When the server cannot parse input buffer to api/msg call
      * By default, it will return "INVALID_INPUT_BUFFER" .
      */
-    onInvalidInputBuffer: (e: Error, conn: BaseConnection, buf: Uint8Array) => void;
+    onRecvBufferError: (e: Error | TsrpcError, conn: ConnType, buf: Uint8Array) => void;
     /**
      * On error throwed inside (not TsrpcError)
      * By default, it will return a "Internal server error".
      * If `returnInnerError` is `true`, an `innerError` field would be returned.
      */
-    onInternalServerError: (e: Error, call: ApiCall) => void;
+    onApiCallInternalError: (e: Error | TsrpcError, call: ApiCall) => void;
     /**
      * When "Internal server error" occured,
      * whether to return `innerError` to client. 

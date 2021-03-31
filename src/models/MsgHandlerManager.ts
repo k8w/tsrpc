@@ -1,5 +1,6 @@
-import { Logger } from '../server/models/PrefixLogger';
-export class HandlerManager {
+import { Logger } from "tsrpc-proto";
+
+export class MsgHandlerManager {
     private _handlers: { [key: string]: Function[] | undefined } = {}
 
     logger: Logger;
