@@ -18,8 +18,7 @@ export abstract class BaseServer<
     ApiCallType extends ApiCall,
     MsgCallType extends MsgCall,
     ServerOptions extends BaseServerOptions<ConnType>,
-    ServiceType extends BaseServiceType
-    > {
+    ServiceType extends BaseServiceType>{
 
     /**
      * Start server
