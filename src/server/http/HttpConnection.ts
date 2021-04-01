@@ -1,54 +1,49 @@
-import { PoolItem } from '../../models/Pool';
 import * as http from "http";
-import { HttpServer } from './HttpServer';
+import { BaseConnection, BaseConnectionOptions, ConnectionStatus } from '../base/BaseConnection';
 import { PrefixLogger } from '../models/PrefixLogger';
-import { BaseServiceType } from 'tsrpc-proto';
-import { HttpCall } from './HttpCall';
-import { BaseConnection, BaseConnectionOptions } from '../base/BaseConnection';
+import { HttpServer } from './HttpServer';
 
-export interface HttpConnectionOptions<ServiceType extends BaseServiceType> extends BaseConnectionOptions<HttpServer> {
-    server: HttpServer<ServiceType>,
-    ip: string;
+export interface HttpConnectionOptions extends BaseConnectionOptions {
+    // server: HttpServer,
     httpReq: http.IncomingMessage,
-    httpRes: http.ServerResponse,
-    call?: HttpCall;
+    httpRes: http.ServerResponse
 }
 
-export class HttpConnection<ServiceType extends BaseServiceType> extends BaseConnection<HttpServer, HttpConnectionOptions<ServiceType>> {
+export class HttpConnection extends BaseConnection {
+    readonly type = 'SHORT';
 
-    reset(options: this['options']) {
-        super.reset(options);
-        this.logger = PrefixLogger.pool.get({
+    readonly httpReq: http.IncomingMessage;
+    readonly httpRes: http.ServerResponse;
+
+    constructor(options: HttpConnectionOptions) {
+        super(options, new PrefixLogger({
             logger: options.server.logger,
             prefixs: [`[${options.ip}]`]
-        });
+        }));
+
+        this.httpReq = options.httpReq;
+        this.httpRes = options.httpRes;
     }
 
-    clean() {
-        super.clean();
-        this.logger.destroy();
-        this.logger = undefined as any;
+
+    private _status: ConnectionStatus = ConnectionStatus.Opened;
+    public get status(): ConnectionStatus {
+        // TODO
+        if (this.httpRes.writableEnded) {
+            return ConnectionStatus.Closed;
+        }
+        this.httpRes.socket
+        return ConnectionStatus.Opened;
     }
 
-    close(reason?: ConnectionCloseReason) {
-        if (!this.options.httpRes.finished) {
+    close(reason?: string): void {
+        if (!this.httpRes.writableEnded) {
             // 有Reason代表是异常关闭
             if (reason) {
-                this.logger.warn(`Conn closed unexpectly. url=${this.options.httpReq.url}, reason=${reason}`);
-                this.options.httpRes.setHeader('X-TSRPC-Exception', reason);
+                this.logger.warn(`Conn closed unexpectly. url=${this.httpReq.url}, reason=${reason}`);
+                this.httpRes.setHeader('X-TSRPC-Exception', reason);
             }
-            this.options.httpRes.end();
+            this.httpRes.end(reason);
         }
     }
-
-    get isClosed(): boolean {
-        return this.options.httpRes.finished;
-    }
-
-    // Put into pool
-    destroy() {
-        this.close();
-        this.server['_poolConn'].put(this);
-    }
-
 }

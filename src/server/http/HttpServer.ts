@@ -5,15 +5,11 @@ import { Counter } from '../../models/Counter';
 import { HttpUtil } from '../../models/HttpUtil';
 import { Pool } from '../../models/Pool';
 import { ParsedServerInput } from '../../models/TransportDataUtil';
-import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../base/BaseServer';
+import { BaseServer, BaseServerOptions } from '../base/BaseServer';
 import { ApiCallHttp, HttpCall, MsgCallHttp } from './HttpCall';
 import { HttpConnection } from './HttpConnection';
 
-export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<HttpServerOptions<ServiceType>, ServiceType>{
-
-    protected _poolApiCall: Pool<ApiCallHttp>;
-    protected _poolMsgCall: Pool<MsgCallHttp>;
-    protected _poolConn: Pool<HttpConnection<any>>;
+export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<ServiceType>{
 
     get dataFlow(): ((data: Buffer, conn: HttpConnection<any>) => (boolean | Promise<boolean>))[] {
         return this._dataFlow;
