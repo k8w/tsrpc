@@ -1,3 +1,4 @@
+import { Logger } from "tsrpc-proto";
 import { MsgService } from "../../models/ServiceMapUtil";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { BaseCall, BaseCallOptions } from "./BaseCall";
@@ -12,8 +13,8 @@ export abstract class MsgCall<Msg = any> extends BaseCall {
     readonly service!: MsgService;
     readonly msg: Msg;
 
-    constructor(options: MsgCallOptions<Msg>) {
-        super(options, new PrefixLogger({
+    constructor(options: MsgCallOptions<Msg>, logger?: Logger) {
+        super(options, logger ?? new PrefixLogger({
             logger: options.conn.logger,
             prefixs: [`Msg:${options.service.name}`]
         }));

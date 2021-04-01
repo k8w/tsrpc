@@ -9,15 +9,14 @@ import { nodeUtf8 } from '../../models/nodeUtf8';
 import { MsgService, ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
 import { ParsedServerInput, TransportDataUtil } from '../../models/TransportDataUtil';
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
-import { ApiCall, ApiCallOptions } from './ApiCall';
-import { BaseConnection, BaseConnectionOptions } from './BaseConnection';
-import { Call } from './Call';
-import { MsgCall, MsgCallOptions } from './MsgCall';
+import { ApiCall } from './ApiCall';
+import { BaseConnection } from './BaseConnection';
+import { MsgCall } from './MsgCall';
 
 export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServiceType>{
 
-    abstract readonly ApiCallClass: { new(options: ApiCallOptions<any>): ApiCall };
-    abstract readonly MsgCallClass: { new(options: MsgCallOptions<any>): MsgCall };
+    abstract readonly ApiCallClass: { new(options: any): ApiCall };
+    abstract readonly MsgCallClass: { new(options: any): MsgCall };
 
     /**
      * Start server
@@ -33,25 +32,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     // 配置及其衍生项
     readonly proto: ServiceProto<ServiceType>;
     readonly options: BaseServerOptions = {
-        strictNullChecks: true,
-        logger: new TerminalColorLogger,
-        logReqBody: true,
-        logResBody: true,
-        onParseCallError: (e, conn, buf) => {
-            conn.logger.error(`[${conn.ip}] [Invalid input buffer] length=${buf.length}`, buf.subarray(0, 16))
-            conn.close('INVALID_INPUT_BUFFER');
-        },
-        onApiInnerError: (err, call) => {
-            call.error('Internal Server Error', {
-                code: 'INTERNAL_ERR',
-                type: TsrpcErrorType.ServerError,
-                innerError: call.conn.server.options.returnInnerError ? {
-                    message: err.message,
-                    stack: err.stack
-                } : undefined
-            });
-        },
-        returnInnerError: process.env['NODE_ENV'] !== 'production'
+        ...defaultBaseServerOptions
     };
     readonly tsbuffer: TSBuffer;
     readonly serviceMap: ServiceMap;
@@ -66,13 +47,16 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // Buffer Flows
         postRecvBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array }>(),
-        preSendBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array, call?: Call }>(),
-        postSendBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array, call?: Call }>(),
+        preSendBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array, call?: ApiCall }>(),
+        /** 不会中断后续流程 */
+        postSendBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array, call?: ApiCall }>(),
 
         // ApiCall Flows
         preApiCallFlow: new Flow<ApiCall>(),
         preApiReturnFlow: new Flow<{ call: ApiCall, return: ApiReturn<any> }>(),
+        /** 不会中断后续流程 */
         postApiReturnFlow: new Flow<{ call: ApiCall, return: ApiReturn<any> }>(),
+        /** 不会中断后续流程 */
         postApiCallFlow: new Flow<ApiCall>(),
 
         // MsgCall Flows
@@ -105,10 +89,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
     constructor(proto: ServiceProto<ServiceType>, options?: Partial<BaseServerOptions>) {
         this.proto = proto;
-        this.options = {
-            ...this.options,
-            ...options
-        };
+        Object.assign(this.options, options);
 
         this.tsbuffer = new TSBuffer(proto.types, {
             strictNullChecks: this.options.strictNullChecks,
@@ -145,7 +126,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
     }
 
-    protected _makeCall(conn: BaseConnection, input: ParsedServerInput): Call {
+    protected _makeCall(conn: BaseConnection, input: ParsedServerInput): ApiCall | MsgCall {
         if (input.type === 'api') {
             return new this.ApiCallClass({
                 conn: conn,
@@ -193,11 +174,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
 
         // Post Flow
-        let postFlow = await this.flows.postApiCallFlow.exec(call);
-        if (!postFlow) {
-            return;
-        }
-        call = postFlow;
+        await this.flows.postApiCallFlow.exec(call);
 
         // Destroy call
         if (!call.return) {
@@ -378,6 +355,28 @@ export interface BaseServerOptions {
      * It depends on `NODE_ENV` by default. (be `false` when `NODE_ENV` is `production`, otherwise be `true`)
      */
     returnInnerError: boolean;
+}
+
+export const defaultBaseServerOptions: BaseServerOptions = {
+    strictNullChecks: true,
+    logger: new TerminalColorLogger,
+    logReqBody: true,
+    logResBody: true,
+    onParseCallError: (e, conn, buf) => {
+        conn.logger.error(`[${conn.ip}] [Invalid input buffer] length=${buf.length}`, buf.subarray(0, 16))
+        conn.close('INVALID_INPUT_BUFFER');
+    },
+    onApiInnerError: (err, call) => {
+        call.error('Internal Server Error', {
+            code: 'INTERNAL_ERR',
+            type: TsrpcErrorType.ServerError,
+            innerError: call.conn.server.options.returnInnerError ? {
+                message: err.message,
+                stack: err.stack
+            } : undefined
+        });
+    },
+    returnInnerError: process.env['NODE_ENV'] !== 'production'
 }
 
 export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res>) => void | Promise<void>;

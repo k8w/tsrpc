@@ -28,6 +28,8 @@ export abstract class BaseConnection {
     abstract get status(): ConnectionStatus;
     abstract close(reason?: string): void;
 
+    abstract sendBuf(buf: Uint8Array): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
+
     destroy() {
         for (let key in this) {
             this[key] = undefined as any;

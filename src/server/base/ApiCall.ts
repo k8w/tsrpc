@@ -1,6 +1,8 @@
-import { TsrpcError, TsrpcErrorData } from "tsrpc-proto";
+import { EncodeOutput } from "tsbuffer";
+import { Logger, TsrpcError, TsrpcErrorData } from "tsrpc-proto";
 import { ApiReturn } from "../../models/ApiReturn";
 import { ApiService } from "../../models/ServiceMapUtil";
+import { TransportDataUtil } from "../../models/TransportDataUtil";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { BaseCall, BaseCallOptions } from "./BaseCall";
 import { BaseServer } from "./BaseServer";
@@ -20,8 +22,8 @@ export abstract class ApiCall<Req = any, Res = any> extends BaseCall {
     readonly sn?: number;
     readonly req: Req;
 
-    constructor(options: ApiCallOptions<Req>) {
-        super(options, new PrefixLogger({
+    constructor(options: ApiCallOptions<Req>, logger?: Logger) {
+        super(options, logger ?? new PrefixLogger({
             logger: options.conn.logger,
             prefixs: [`Api:${options.service.name}${options.sn !== undefined ? ` SN=${options.sn}` : ''}`]
         }));
@@ -62,7 +64,8 @@ export abstract class ApiCall<Req = any, Res = any> extends BaseCall {
         })
     };
 
-    protected async _prepareReturn(ret: ApiReturn<Res>): Promise<void> {
+
+    protected async _prepareReturn(ret: ApiReturn<Res>, sendReturn?: SendReturnMethod<Res>): Promise<void> {
         if (this.return) {
             this.logger.debug('API return duplicately.')
             return;
@@ -76,7 +79,14 @@ export abstract class ApiCall<Req = any, Res = any> extends BaseCall {
         }
         ret = preFlow.return;
 
-        // Do send!
+        // Do send!        
+        let opSend = await (sendReturn ?? this._sendReturn)(ret);
+        if (!opSend.isSucc) {
+            this.server.options.onApiInnerError(new Error(opSend.errMsg), this);
+            return;
+        }
+
+        // record & log ret
         this._return = ret;
         this._usedTime = Date.now() - this.startTime;
         if (ret.isSucc) {
@@ -90,11 +100,12 @@ export abstract class ApiCall<Req = any, Res = any> extends BaseCall {
                 this.logger.error(`[${ret.err.type}]`, `${this.usedTime}ms`, ret.err, 'req=', this.req)
             }
         }
-        await this._sendReturn(ret);
 
         // Post Flow
         await this.server.flows.postApiReturnFlow.exec(preFlow);
     }
 
-    protected abstract _sendReturn(ret: ApiReturn<Res>): Promise<void>;
+    protected abstract _sendReturn: SendReturnMethod<Res>;
 }
+
+export type SendReturnMethod<Res> = (ret: ApiReturn<Res>) => Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;

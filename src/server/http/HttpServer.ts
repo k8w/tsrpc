@@ -1,48 +1,50 @@
 import * as http from "http";
-import { BaseServiceType } from 'tsrpc-proto';
-import { tsrpcVersion } from '../../../tsrpcVersion';
+import { BaseServiceType, ServiceProto } from 'tsrpc-proto';
+import { TSRPC_VERSION } from "../..";
 import { Counter } from '../../models/Counter';
 import { HttpUtil } from '../../models/HttpUtil';
 import { Pool } from '../../models/Pool';
 import { ParsedServerInput } from '../../models/TransportDataUtil';
-import { BaseServer, BaseServerOptions } from '../base/BaseServer';
-import { ApiCallHttp, HttpCall, MsgCallHttp } from './HttpCall';
+import { ApiCallOptions, ApiCall } from "../base/ApiCall";
+import { BaseServer, BaseServerOptions, defaultBaseServerOptions } from '../base/BaseServer';
+import { MsgCallOptions, MsgCall } from "../base/MsgCall";
+import { ApiCallHttp } from './ApiCallHttp';
 import { HttpConnection } from './HttpConnection';
+import { MsgCallHttp } from "./MsgCallHttp";
 
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<ServiceType>{
+    readonly ApiCallClass = ApiCallHttp;
+    readonly MsgCallClass = MsgCallHttp;
 
-    get dataFlow(): ((data: Buffer, conn: HttpConnection<any>) => (boolean | Promise<boolean>))[] {
-        return this._dataFlow;
-    };
+    private _connCounter = new Counter(1);
 
-    private _apiSnCounter = new Counter(1);
-
-    constructor(options?: Partial<HttpServerOptions<ServiceType>>) {
-        super(Object.assign({}, defaultHttpServerOptions, options));
-        this._poolApiCall = new Pool<ApiCallHttp>(ApiCallHttp, this.options.enablePool);
-        this._poolMsgCall = new Pool<MsgCallHttp>(MsgCallHttp, this.options.enablePool);
-        this._poolConn = new Pool<HttpConnection<any>>(HttpConnection, this.options.enablePool);
+    readonly options: HttpServerOptions = {
+        ...defaultHttpServerOptions
     }
 
-    private _status: HttpServerStatus = 'closed';
+    constructor(proto: ServiceProto<ServiceType>, options?: Partial<HttpServerOptions>) {
+        super(proto, options);
+    }
+
+    private _status: HttpServerStatus = HttpServerStatus.Closed;
     public get status(): HttpServerStatus {
         return this._status;
     }
 
-    private _server?: http.Server;
+    private _httpServer?: http.Server;
     start(): Promise<void> {
-        if (this._server) {
+        if (this._httpServer) {
             throw new Error('Server already started');
         }
 
         return new Promise(rs => {
-            this._status = 'opening';
+            this._status = HttpServerStatus.Opening;
             this.logger.log(`Starting HTTP server ...`);
-            this._server = http.createServer((httpReq, httpRes) => {
+            this._httpServer = http.createServer((httpReq, httpRes) => {
                 let ip = HttpUtil.getClientIp(httpReq);
 
                 httpRes.statusCode = 200;
-                httpRes.setHeader('X-Powered-By', `TSRPC ${tsrpcVersion}`);
+                httpRes.setHeader('X-Powered-By', `TSRPC ${TSRPC_VERSION}`);
                 if (this.options.cors) {
                     httpRes.setHeader('Access-Control-Allow-Origin', this.options.cors)
                 };
@@ -52,17 +54,18 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     chunks.push(data);
                 });
 
-                let conn: HttpConnection<any> | undefined;
+                let conn: HttpConnection | undefined;
                 httpReq.on('end', () => {
-                    conn = this._poolConn.get({
+                    conn = new HttpConnection({
                         server: this,
+                        id: this._connCounter.getNext().toString(36),
                         ip: ip,
                         httpReq: httpReq,
                         httpRes: httpRes
                     });
 
                     let buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
-                    this.onData(conn, buf);
+                    this._onRecvBuffer(conn, buf);
                 });
 
                 // 处理连接异常关闭的情况
@@ -70,15 +73,15 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     // 客户端Abort
                     if (httpReq.aborted) {
                         if (conn) {
-                            if (conn.options.call) {
-                                conn.options.call.logger.log('[Aborted]');
+                            if (conn.call) {
+                                conn.call.logger.log('[ReqAborted]');
                             }
                             else {
-                                conn.logger.log('[Aborted]');
+                                conn.logger.log('[ReqAborted]');
                             }
                         }
                         else {
-                            this.logger.log('[RequestAborted]', {
+                            this.logger.log('[ReqAborted]', {
                                 url: httpReq.url,
                                 method: httpReq.method,
                                 ip: ip,
@@ -107,18 +110,18 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
                     // 有Conn，但连接非正常end：直到连接关闭，也未调用过 httpRes.end 方法
                     if (!httpRes.writableEnded) {
-                        (conn.options.call?.logger || conn.logger).warn('Socket closed without response')
+                        (conn.call?.logger || conn.logger).warn('Socket closed without response')
                     }
                 });
             });
 
             if (this.options.socketTimeout) {
-                this._server.timeout = this.options.socketTimeout;
+                this._httpServer.timeout = this.options.socketTimeout;
             }
 
-            this._server.listen(this.options.port, () => {
-                this._status = 'open';
-                this.logger.log(`Server started at ${this.options.port}`);
+            this._httpServer.listen(this.options.port, () => {
+                this._status = HttpServerStatus.Opened;
+                this.logger.log(`Server started at ${this.options.port}.`);
                 rs();
             })
         });
@@ -126,15 +129,15 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
     stop(): Promise<void> {
         return new Promise((rs, rj) => {
-            if (!this._server) {
+            if (!this._httpServer) {
                 rs();
                 return;
             }
-            this._status = 'closing';
+            this._status = HttpServerStatus.Closing;
 
             // 立即close，不再接受新请求
             // 等所有连接都断开后rs
-            this._server.close(err => {
+            this._httpServer.close(err => {
                 if (err) {
                     rj(err)
                 }
@@ -144,42 +147,27 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 }
             });
 
-            this._server = undefined;
+            this._httpServer = undefined;
         })
     }
 
-    protected _parseBuffer(conn: HttpConnection<ServiceType>, buf: Uint8Array): ParsedServerInput {
-        let parsed: ParsedServerInput = super._parseBuffer(conn, buf);
-
-        if (parsed.type === 'api') {
-            parsed.sn = this._apiSnCounter.getNext();
-        }
-        else if (parsed.type === 'msg') {
-            conn.close();
-        }
-        return parsed;
-    }
-
     // HTTP Server 一个conn只有一个call，对应关联之
-    protected _makeCall(conn: HttpConnection<any>, input: ParsedServerInput): HttpCall {
-        let call = super._makeCall(conn, input) as HttpCall;
-        conn.options.call = call;
+    protected _makeCall(conn: HttpConnection, input: ParsedServerInput): ApiCallHttp | MsgCallHttp {
+        let call = super._makeCall(conn, input) as ApiCallHttp | MsgCallHttp;
+        conn.call = call;
         return call;
     }
-
-    // Override function type
-    implementApi!: <T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandlerHttp<ServiceType['req'][T], ServiceType['res'][T], ServiceType>) => void;
-    listenMsg!: <T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandlerHttp<ServiceType['msg'][T], ServiceType>) => void;
 }
 
-export const defaultHttpServerOptions: HttpServerOptions<any> = {
-    ...defualtBaseServerOptions,
-    port: 3000
-}
-
-export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions {
+export interface HttpServerOptions extends BaseServerOptions {
+    /** 服务端口 */
     port: number,
+    /** Socket 超时时间（毫秒） */
     socketTimeout?: number,
+    /** 
+     * Access-Control-Allow-Origin
+     * 默认：当 `NODE_ENV` 不为 `production` 时为 `*`
+     */
     cors?: string,
 
     /**
@@ -193,9 +181,11 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
      */
     jsonEnabled: boolean,
     /**
+     * JSON 服务根目录
+     * 如配置为 `'/api/'`，则请求 URL `/api/a/b/c/Test` 将被映射到 API `a/b/c/Test`
      * 默认为 `'/'`
      */
-    jsonUrlPath: string,
+    jsonRootPath: string,
     /**
      * 是否剔除协议中未定义的多余字段
      * 默认为 `true`
@@ -203,7 +193,19 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
     jsonPrune: boolean
 }
 
-type HttpServerStatus = 'opening' | 'open' | 'closing' | 'closed';
+export const defaultHttpServerOptions: HttpServerOptions = {
+    ...defaultBaseServerOptions,
+    port: 3000,
+    cors: process.env['NODE_ENV'] === 'production' ? undefined : '*',
+    jsonEnabled: true,
+    jsonRootPath: '/',
+    jsonPrune: true
+}
 
-export type ApiHandlerHttp<Req, Res, ServiceType extends BaseServiceType = any> = (call: ApiCallHttp<Req, Res, ServiceType>) => void | Promise<void>;
-export type MsgHandlerHttp<Msg, ServiceType extends BaseServiceType = any> = (msg: MsgCallHttp<Msg, ServiceType>) => void | Promise<void>;
+
+export enum HttpServerStatus {
+    Opening = 'OPENING',
+    Opened = 'OPENED',
+    Closing = 'CLOSING',
+    Closed = 'CLOSED',
+}
