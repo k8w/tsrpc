@@ -3,10 +3,10 @@ import * as http from "http";
 import { HttpServer } from './HttpServer';
 import { PrefixLogger } from '../models/PrefixLogger';
 import { BaseServiceType } from 'tsrpc-proto';
-import { ConnectionCloseReason, BaseConnection } from '../base/BaseServer';
 import { HttpCall } from './HttpCall';
+import { BaseConnection, BaseConnectionOptions } from '../base/BaseConnection';
 
-export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
+export interface HttpConnectionOptions<ServiceType extends BaseServiceType> extends BaseConnectionOptions<HttpServer> {
     server: HttpServer<ServiceType>,
     ip: string;
     httpReq: http.IncomingMessage,
@@ -14,16 +14,7 @@ export interface HttpConnectionOptions<ServiceType extends BaseServiceType> {
     call?: HttpCall;
 }
 
-export class HttpConnection<ServiceType extends BaseServiceType> extends PoolItem<HttpConnectionOptions<ServiceType>> implements BaseConnection {
-    logger!: PrefixLogger;
-
-    get ip(): string {
-        return this.options.ip;
-    }
-
-    get server(): HttpServer<ServiceType> {
-        return this.options.server;
-    }
+export class HttpConnection<ServiceType extends BaseServiceType> extends BaseConnection<HttpServer, HttpConnectionOptions<ServiceType>> {
 
     reset(options: this['options']) {
         super.reset(options);

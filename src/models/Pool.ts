@@ -1,4 +1,4 @@
-export class Pool<ItemClass extends PoolItem<any>> {
+export class Pool<ItemClass extends PoolItem> {
 
     private _pools: ItemClass[] = [];
     private _itemClass: { new(): ItemClass };
@@ -9,12 +9,12 @@ export class Pool<ItemClass extends PoolItem<any>> {
         this.enabled = enabled;
     }
 
-    get(options: ItemClass['options']) {
+    get() {
         let item = this.enabled && this._pools.pop();
         if (!item) {
             item = new this._itemClass();
         }
-        item.reset(options);
+        item.reuse?.();
         return item;
     }
 
@@ -23,29 +23,13 @@ export class Pool<ItemClass extends PoolItem<any>> {
             return;
         }
 
-        item.clean();
+        item.unuse?.();
         this._pools.push(item);
     }
 
 }
 
-export class PoolItem<Options> {
-    protected _options?: Options;
-    public get options(): Options {
-        if (!this._options) {
-            throw new Error('Cannot use a recycled pool item');
-        }
-        return this._options;
-    }
-    public set options(v: Options) {
-        this._options = v;
-    }
-
-    reset(options: Options) {
-        this._options = options;
-    }
-
-    clean() {
-        this._options = undefined as any;
-    }
+export interface PoolItem {
+    reuse: () => void;
+    unuse: () => void;
 }

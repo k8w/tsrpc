@@ -2,23 +2,22 @@ import 'colors';
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
 import { ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
+import { ApiReturn } from '../../models/ApiReturn';
 import { Flow } from '../../models/Flow';
 import { MsgHandlerManager } from '../../models/MsgHandlerManager';
 import { nodeUtf8 } from '../../models/nodeUtf8';
-import { Pool } from '../../models/Pool';
 import { MsgService, ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
 import { ParsedServerInput, TransportDataUtil } from '../../models/TransportDataUtil';
-import { PrefixLogger } from '../models/PrefixLogger';
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
-import { ApiCall, ApiCallOptions, ApiReturn, MsgCall, MsgCallOptions } from './BaseCall';
-import { BaseConnection } from './BaseConnection';
+import { ApiCall, ApiCallOptions } from './ApiCall';
+import { BaseConnection, BaseConnectionOptions } from './BaseConnection';
+import { Call } from './Call';
+import { MsgCall, MsgCallOptions } from './MsgCall';
 
-export abstract class BaseServer<
-    ConnType extends BaseConnection,
-    ApiCallType extends ApiCall,
-    MsgCallType extends MsgCall,
-    ServerOptions extends BaseServerOptions<ConnType>,
-    ServiceType extends BaseServiceType>{
+export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServiceType>{
+
+    abstract readonly ApiCallClass: { new(options: ApiCallOptions<any>): ApiCall };
+    abstract readonly MsgCallClass: { new(options: MsgCallOptions<any>): MsgCall };
 
     /**
      * Start server
@@ -31,43 +30,62 @@ export abstract class BaseServer<
      */
     abstract stop(immediately?: boolean): Promise<void>;
 
-    protected abstract _poolApiCall: Pool<ApiCallType>;
-    protected abstract _poolMsgCall: Pool<MsgCallType>;
-
     // 配置及其衍生项
     readonly proto: ServiceProto<ServiceType>;
-    readonly options: ServerOptions;
+    readonly options: BaseServerOptions = {
+        strictNullChecks: true,
+        logger: new TerminalColorLogger,
+        logReqBody: true,
+        logResBody: true,
+        onParseCallError: (e, conn, buf) => {
+            conn.logger.error(`[${conn.ip}] [Invalid input buffer] length=${buf.length}`, buf.subarray(0, 16))
+            conn.close('INVALID_INPUT_BUFFER');
+        },
+        onApiInnerError: (err, call) => {
+            call.error('Internal Server Error', {
+                code: 'INTERNAL_ERR',
+                type: TsrpcErrorType.ServerError,
+                innerError: call.conn.server.options.returnInnerError ? {
+                    message: err.message,
+                    stack: err.stack
+                } : undefined
+            });
+        },
+        returnInnerError: process.env['NODE_ENV'] !== 'production'
+    };
     readonly tsbuffer: TSBuffer;
     readonly serviceMap: ServiceMap;
+    readonly logger: Logger;
 
-    // Conn Flows
-    readonly postConnectFlow = new Flow<ConnType>();
-    readonly preDisconnectFlow = new Flow<ConnType>();
-    readonly postDisconnectFlow = new Flow<ConnType>();
+    /** Flows */
+    readonly flows = {
+        // Conn Flows
+        postConnectFlow: new Flow<BaseConnection>(),
+        preDisconnectFlow: new Flow<BaseConnection>(),
+        postDisconnectFlow: new Flow<BaseConnection>(),
 
-    // Buffer Flows
-    readonly postRecvBufferFlow = new Flow<{ conn: ConnType, buf: Uint8Array }>();
-    readonly preSendBufferFlow = new Flow<{ conn: ConnType, buf: Uint8Array, call?: ApiCallType | MsgCallType }>();
-    readonly postSendBufferFlow = new Flow<{ conn: ConnType, buf: Uint8Array, call?: ApiCallType | MsgCallType }>();
+        // Buffer Flows
+        postRecvBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array }>(),
+        preSendBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array, call?: Call }>(),
+        postSendBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array, call?: Call }>(),
 
-    // ApiCall Flows
-    readonly preApiCallFlow = new Flow<ApiCallType>();
-    readonly preApiReturnFlow = new Flow<{ call: ApiCallType, return: ApiReturn<any> }>();
-    readonly postApiReturnFlow = new Flow<{ call: ApiCallType, return: ApiReturn<any> }>();
-    readonly postApiCallFlow = new Flow<ApiCallType>();
+        // ApiCall Flows
+        preApiCallFlow: new Flow<ApiCall>(),
+        preApiReturnFlow: new Flow<{ call: ApiCall, return: ApiReturn<any> }>(),
+        postApiReturnFlow: new Flow<{ call: ApiCall, return: ApiReturn<any> }>(),
+        postApiCallFlow: new Flow<ApiCall>(),
 
-    // MsgCall Flows
-    readonly preMsgCallFlow = new Flow<MsgCallType>();
-    readonly postMsgCallFlow = new Flow<MsgCallType>();
-    readonly preSendMsgFlow = new Flow<{ service: MsgService, msg: any }>();
-    readonly postSendMsgFlow = new Flow<{ service: MsgService, msg: any }>();
+        // MsgCall Flows
+        preMsgCallFlow: new Flow<MsgCall>(),
+        postMsgCallFlow: new Flow<MsgCall>(),
+        preSendMsgFlow: new Flow<{ service: MsgService, msg: any }>(),
+        postSendMsgFlow: new Flow<{ service: MsgService, msg: any }>(),
+    } as const;
 
     // Handlers
     private _apiHandlers: { [apiName: string]: ((call: ApiCall) => any) | undefined } = {};
     // 多个Handler将异步并行执行
-    private _msgHandlers: MsgHandlerManager;
-
-    readonly logger: Logger;
+    private _msgHandlers: MsgHandlerManager = new MsgHandlerManager();
 
     private static _isUncaughtExceptionProcessed = false;
     static processUncaughtException(logger: Logger) {
@@ -85,30 +103,28 @@ export abstract class BaseServer<
         });
     }
 
-    constructor(proto: ServiceProto<ServiceType>, options: ServerOptions) {
+    constructor(proto: ServiceProto<ServiceType>, options?: Partial<BaseServerOptions>) {
         this.proto = proto;
-        this.options = options;
+        this.options = {
+            ...this.options,
+            ...options
+        };
 
         this.tsbuffer = new TSBuffer(proto.types, {
             strictNullChecks: this.options.strictNullChecks,
             utf8Coder: nodeUtf8
         });
-
         this.serviceMap = ServiceMapUtil.getServiceMap(proto);
-
-        this.logger = options.logger;
-
-        this._msgHandlers = new MsgHandlerManager();
-        PrefixLogger.pool.enabled = this.options.enablePool;
+        this.logger = this.options.logger;
 
         // Process uncaught exception, so that Node.js process would not exit easily
         BaseServer.processUncaughtException(this.logger);
     }
 
     // #region receive buffer process flow
-    protected async _onRecvBuffer(conn: ConnType, buf: Buffer) {
+    protected async _onRecvBuffer(conn: BaseConnection, buf: Buffer) {
         // postRecvBufferFlow
-        let opPostRecvBuffer = await this.postRecvBufferFlow.exec({ conn: conn, buf: buf });
+        let opPostRecvBuffer = await this.flows.postRecvBufferFlow.exec({ conn: conn, buf: buf });
         if (!opPostRecvBuffer) {
             return;
         }
@@ -129,36 +145,27 @@ export abstract class BaseServer<
         }
     }
 
-    protected _makeCall(conn: ConnType, input: ParsedServerInput): ApiCallType | MsgCallType {
+    protected _makeCall(conn: BaseConnection, input: ParsedServerInput): Call {
         if (input.type === 'api') {
-            return this._poolApiCall.get({
+            return new this.ApiCallClass({
                 conn: conn,
-                sn: input.sn,
-                logger: PrefixLogger.pool.get({
-                    logger: conn.logger,
-                    prefixs: [`Api:${input.service.name}${input.sn !== undefined ? ` SN=${input.sn}` : ''}`]
-                }),
                 service: input.service,
                 req: input.req,
-                startTime: Date.now()
+                sn: input.sn,
             })
         }
         else {
-            return this._poolMsgCall.get({
+            return new this.MsgCallClass({
                 conn: conn,
-                logger: PrefixLogger.pool.get({
-                    logger: conn.logger,
-                    prefixs: [`Msg:${input.service.name}`]
-                }),
                 service: input.service,
                 msg: input.msg
             })
         }
     }
 
-    protected async _onApiCall(call: ApiCallType) {
+    protected async _onApiCall(call: ApiCall) {
         // Pre Flow
-        let preFlow = await this.preApiCallFlow.exec(call);
+        let preFlow = await this.flows.preApiCallFlow.exec(call);
         if (!preFlow) {
             return;
         }
@@ -186,7 +193,7 @@ export abstract class BaseServer<
         }
 
         // Post Flow
-        let postFlow = await this.postApiCallFlow.exec(call);
+        let postFlow = await this.flows.postApiCallFlow.exec(call);
         if (!postFlow) {
             return;
         }
@@ -202,9 +209,9 @@ export abstract class BaseServer<
         call.destroy();
     }
 
-    protected async _onMsgCall(call: MsgCallType) {
+    protected async _onMsgCall(call: MsgCall) {
         // Pre Flow
-        let preFlow = await this.preMsgCallFlow.exec(call);
+        let preFlow = await this.flows.preMsgCallFlow.exec(call);
         if (!preFlow) {
             return;
         }
@@ -221,7 +228,7 @@ export abstract class BaseServer<
         }
 
         // Post Flow
-        await this.postMsgCallFlow.exec(call);
+        await this.flows.postMsgCallFlow.exec(call);
         call.destroy();
     }
     // #endregion    
@@ -323,31 +330,8 @@ export abstract class BaseServer<
 
 }
 
-export const defualtBaseServerOptions: BaseServerOptions<any> = {
-    strictNullChecks: true,
-    logger: new TerminalColorLogger,
-    logReqBody: true,
-    logResBody: true,
-    enablePool: false,
-    onParseCallError: (e, conn, buf) => {
-        conn.logger.error(`[${conn.ip}] [Invalid input buffer] length=${buf.length}`, buf.subarray(0, 16))
-        conn.close('INVALID_INPUT_BUFFER');
-    },
-    onApiInnerError: (err, call) => {
-        call.error('Internal Server Error', {
-            code: 'INTERNAL_ERR',
-            type: TsrpcErrorType.ServerError,
-            innerError: call.conn.server.options.returnInnerError ? {
-                message: err.message,
-                stack: err.stack
-            } : undefined
-        });
-    },
-    returnInnerError: process.env['NODE_ENV'] !== 'production'
-}
-
 /** @public */
-export interface BaseServerOptions<ConnType extends BaseConnection> {
+export interface BaseServerOptions {
     // TSBuffer相关
     /**
      * `undefined` 和 `null` 是否可以混合编码
@@ -381,7 +365,7 @@ export interface BaseServerOptions<ConnType extends BaseConnection> {
      * When the server cannot parse input buffer to api/msg call
      * By default, it will return "INVALID_INPUT_BUFFER" .
      */
-    onParseCallError: (errMsg: string, conn: ConnType, buf: Uint8Array) => void;
+    onParseCallError: (errMsg: string, conn: BaseConnection, buf: Uint8Array) => void;
     /**
      * On error throwed inside (not TsrpcError)
      * By default, it will return a "Internal server error".
@@ -394,13 +378,7 @@ export interface BaseServerOptions<ConnType extends BaseConnection> {
      * It depends on `NODE_ENV` by default. (be `false` when `NODE_ENV` is `production`, otherwise be `true`)
      */
     returnInnerError: boolean;
-
-    /** 是否对Conn和Call启用Pool，开启将极大优化内存
-     * 但要自己额外确保每个Api/Msg Handler返回后，不会再引用到call
-     * @defaultValue false
-     */
-    enablePool: boolean;
 }
 
-export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res, ApiCallOptions>) => void | Promise<void>;
-export type MsgHandler<Msg = any> = (msg: MsgCall<Msg, MsgCallOptions>) => void | Promise<void>;
+export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res>) => void | Promise<void>;
+export type MsgHandler<Msg = any> = (msg: MsgCall<Msg>) => void | Promise<void>;
