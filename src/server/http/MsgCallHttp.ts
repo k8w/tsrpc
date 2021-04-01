@@ -1,5 +1,4 @@
 import { MsgCall, MsgCallOptions } from "../base/MsgCall";
-import { ApiCallHttp } from "./ApiCallHttp";
 import { HttpConnection } from "./HttpConnection";
 
 export interface MsgCallHttpOptions<Msg> extends MsgCallOptions<Msg> {
@@ -12,5 +11,3 @@ export class MsgCallHttp<Msg = any> extends MsgCall<Msg> {
     }
 
 }
-
-export type HttpCall = ApiCallHttp | MsgCallHttp;

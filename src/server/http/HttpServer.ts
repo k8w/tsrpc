@@ -55,7 +55,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 });
 
                 let conn: HttpConnection | undefined;
-                httpReq.on('end', () => {
+                httpReq.on('end', async () => {
                     conn = new HttpConnection({
                         server: this,
                         id: this._connCounter.getNext().toString(36),
@@ -63,6 +63,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                         httpReq: httpReq,
                         httpRes: httpRes
                     });
+                    await this.flows.postConnectFlow.exec(conn);
 
                     let buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
                     this._onRecvBuffer(conn, buf);

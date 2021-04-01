@@ -42,8 +42,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     readonly flows = {
         // Conn Flows
         postConnectFlow: new Flow<BaseConnection>(),
-        preDisconnectFlow: new Flow<BaseConnection>(),
-        postDisconnectFlow: new Flow<BaseConnection>(),
+        preDisconnectFlow: new Flow<{conn: BaseConnection, reason?: string}>(),
+        postDisconnectFlow: new Flow<{conn: BaseConnection, reason?: string}>(),
 
         // Buffer Flows
         postRecvBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array }>(),

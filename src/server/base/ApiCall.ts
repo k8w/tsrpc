@@ -105,7 +105,14 @@ export abstract class ApiCall<Req = any, Res = any> extends BaseCall {
         await this.server.flows.postApiReturnFlow.exec(preFlow);
     }
 
-    protected abstract _sendReturn: SendReturnMethod<Res>;
+    protected async _sendReturn(ret: ApiReturn<Res>): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>{
+        // Encode
+        let opServerOutput = TransportDataUtil.encodeApiReturn(this.server.tsbuffer, this.service, ret, this.sn);;
+        if (!opServerOutput.isSucc) {
+            return opServerOutput;
+        }
+        return this.conn.sendBuf(opServerOutput.buf);
+    }
 }
 
 export type SendReturnMethod<Res> = (ret: ApiReturn<Res>) => Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;

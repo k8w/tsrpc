@@ -4,104 +4,78 @@ import * as WebSocket from "ws";
 import { HttpUtil } from "../../models/HttpUtil";
 import { PoolItem } from '../../models/Pool';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
-import { BaseConnection, ConnectionCloseReason } from '../base/BaseServer';
+import { BaseConnection, BaseConnectionOptions } from "../base/BaseConnection";
 import { PrefixLogger } from '../models/PrefixLogger';
 import { WsServer } from "./WsServer";
 
-export interface WsConnectionOptions<ServiceType extends BaseServiceType, SessionType> {
-    /** Server端自增 */
-    id: string,
-    server: WsServer<ServiceType, SessionType>,
+export interface WsConnectionOptions extends BaseConnectionOptions {
+    server: WsServer,
     ws: WebSocket,
-    httpReq: http.IncomingMessage,
-    defaultSession: SessionType,
-    onClose: (conn: WsConnection<ServiceType, SessionType>, code: number, reason: string) => void,
-    onRecvData: (data: Buffer) => void;
+    httpReq: http.IncomingMessage
 }
 
 /**
  * 当前活跃的连接
  */
-export class WsConnection<ServiceType extends BaseServiceType, SessionType> extends PoolItem<WsConnectionOptions<ServiceType, SessionType>> implements BaseConnection {
+export class WsConnection extends BaseConnection {
 
-    ip!: string;
-    session!: SessionType;
-    logger!: PrefixLogger;
+    readonly ws: WebSocket;
+    readonly httpReq: http.IncomingMessage;
 
-    get connId() {
-        return this.options.connId;
-    }
-
-    get server() {
-        return this.options.server;
-    }
-
-    get ws() {
-        return this.options.ws;
-    }
-
-    reset(options: this['options']) {
-        super.reset(options);
-
-        this.ip = HttpUtil.getClientIp(this.options.httpReq);
-        this.session = Object.merge({}, options.defaultSession);
-        this.logger = PrefixLogger.pool.get({
-            logger: this.options.server.logger,
-            prefixs: [`[Conn#${options.connId}] [${this.ip}]`]
-        });
+    constructor(options: WsConnectionOptions) {
+        super(options);
+        this.ws = options.ws;
+        this.httpReq = options.httpReq;
 
         // Init WS
-        options.ws.onclose = e => { this.options.onClose(this, e.code, e.reason); };
-        options.ws.onerror = e => { this.logger.warn('[CLIENT_ERR]', e.error); };
-        options.ws.onmessage = e => {
-            if (Buffer.isBuffer(e.data)) {
-                this.options.onRecvData(e.data)
+        this.ws.onclose = e => {
+            this.logger.log('Closed');
+            this.server.flows.postDisconnectFlow.exec({ conn: this, reason: e.reason })
+        };
+        this.ws.onerror = e => { this.logger.warn('[ClientErr]', e.error) };
+        this.ws.onmessage = e => {
+            let data = e.data;
+            if (typeof data === 'string') {
+                this.logger.log('[Recv]', this.server.options.logReqBody ? data : (data.length > 100 ? `${data.substr(0, 100)}... (length=${data.length})` : data))
+                return;
             }
-            else {
-                this.logger.log('[RECV]', e.data)
+            if (data instanceof ArrayBuffer) {
+                data = Buffer.from(data);
+            }
+            if (Array.isArray(data)) {
+                data = Buffer.concat(data)
+            }            
+            if (Buffer.isBuffer(data)) {
+                this.server._onRecvBuffer(this, data)
             }
         };
     }
 
-    clean() {
-        if (this.options.ws && this.options.ws.readyState === WebSocket.OPEN) {
-            this.options.ws.close()
-        }
-        this.options.ws.onopen = this.options.ws.onclose = this.options.ws.onmessage = this.options.ws.onerror = undefined as any;
-
-        super.clean();
-        this.logger.destroy();
-        this.ip = this.session = this.logger = undefined as any;
-    }
-
-    destroy() {
-        this.server['_poolConn'].put(this);
-    }
-
     // Send Msg
-    sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]) {
-        let service = this.options.server.serviceMap.msgName2Service[msgName as string];
-        if (!service) {
-            throw new Error('Invalid msg name: ' + msgName);
-        }
+    // sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]) {
+    //     let service = this.server.serviceMap.msgName2Service[msgName as string];
+    //     if (!service) {
+    //         throw new Error('Invalid msg name: ' + msgName);
+    //     }
 
-        let buf = TransportDataUtil.encodeMsg(this.options.server.tsbuffer, service, msg);
-        if (this.server.options.encrypter) {
-            buf = this.server.options.encrypter(buf);
-        }
-        return new Promise<void>((rs, rj) => {
-            this.options.ws.send(buf, e => {
-                e ? rj(e) : rs();
-            })
-        })
-    };
+    //     let buf = TransportDataUtil.encodeMsg(this.server.tsbuffer, service, msg);
+    //     if (this.server.options.encrypter) {
+    //         buf = this.server.options.encrypter(buf);
+    //     }
+    //     return new Promise<void>((rs, rj) => {
+    //         this.ws.send(buf, e => {
+    //             e ? rj(e) : rs();
+    //         })
+    //     })
+    // };
 
-    close(reason?: ConnectionCloseReason) {
+    close(reason?: string) {
+        // TODO pre flow
         // 已连接 Close之
-        this.options.ws.close(1000, reason || 'Server Closed');
+        this.ws.close(1000, reason);
     }
 
-    get isClosed(): boolean {
-        return this.options.ws.readyState !== WebSocket.OPEN;
-    }
+    // get isClosed(): boolean {
+    //     return this.ws.readyState !== WebSocket.OPEN;
+    // }
 }

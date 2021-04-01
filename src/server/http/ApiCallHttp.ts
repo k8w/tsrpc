@@ -12,13 +12,4 @@ export class ApiCallHttp<Req = any, Res = any> extends ApiCall<Req, Res> {
         super(options);
     }
 
-    protected _sendReturn = async (ret: ApiReturn<Res>) => {
-        // Encode
-        let opServerOutput = TransportDataUtil.encodeApiReturn(this.server.tsbuffer, this.service, ret, this.sn);;
-        if (!opServerOutput.isSucc) {
-            return opServerOutput;
-        }
-        return this.conn.sendBuf(opServerOutput.buf);
-    }
-
 }

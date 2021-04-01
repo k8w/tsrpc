@@ -1,5 +1,5 @@
 import { Logger } from "tsrpc-proto";
-import { PoolItem } from "../../models/Pool";
+import { PrefixLogger } from "../models/PrefixLogger";
 import { BaseServer } from "./BaseServer";
 
 export interface BaseConnectionOptions {
@@ -18,11 +18,14 @@ export abstract class BaseConnection {
     readonly server: BaseServer;
     readonly logger: Logger;
 
-    constructor(options: BaseConnectionOptions, logger: Logger) {
+    constructor(options: BaseConnectionOptions, logger?: Logger) {
         this.id = options.id;
         this.ip = options.ip;
         this.server = options.server;
-        this.logger = logger;
+        this.logger = logger ?? new PrefixLogger({
+            logger: options.server.logger,
+            prefixs: [`Conn#${options.id} ${options.ip}`]
+        });
     }
 
     abstract get status(): ConnectionStatus;
@@ -31,6 +34,10 @@ export abstract class BaseConnection {
     abstract sendBuf(buf: Uint8Array): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
 
     destroy() {
+        if (this.status === ConnectionStatus.Opened) {
+            this.close('DESTROY');
+        }
+
         for (let key in this) {
             this[key] = undefined as any;
         }

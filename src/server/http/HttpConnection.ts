@@ -21,10 +21,7 @@ export class HttpConnection extends BaseConnection {
     call?: ApiCallHttp | MsgCallHttp;
 
     constructor(options: HttpConnectionOptions) {
-        super(options, new PrefixLogger({
-            logger: options.server.logger,
-            prefixs: [`[${options.ip}]`]
-        }));
+        super(options);
 
         this.httpReq = options.httpReq;
         this.httpRes = options.httpRes;

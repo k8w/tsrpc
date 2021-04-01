@@ -9,7 +9,7 @@ export { ApiCallHttp } from './server/http/ApiCallHttp';
 export { HttpServer,  } from './server/http/HttpServer';
 export { PrefixLogger } from './server/models/PrefixLogger';
 export { TerminalColorLogger, TerminalColorLoggerOptions } from './server/models/TerminalColorLogger';
-export { ApiCallWs, MsgCallWs } from './server/ws/WsCall';
+export { ApiCallWs, MsgCallWs } from './server/ws/ApiCallWs';
 export { ApiHandlerWs, MsgHandlerWs, WsServer } from './server/ws/WsServer';
 
 export const TSRPC_VERSION = '__TSRPC_VERSION__';
