@@ -58,13 +58,15 @@ export class HttpConnection extends BaseConnection {
         return { isSucc: true }
     }
 
-    close(reason?: string): void {
-        if (!this.httpRes.writableEnded) {
-            // 有Reason代表是异常关闭
-            if (reason) {
-                this.logger.warn(`Conn closed unexpectly. method=${this.httpReq.method}, url=${this.httpReq.url}, reason=${reason}`);
-            }
-            this.httpRes.end(reason);
+    close(reason?: string) {
+        if (this.status !== ConnectionStatus.Opened) {
+            return;
         }
+
+        // 有Reason代表是异常关闭
+        if (reason) {
+            this.logger.warn(`Conn closed unexpectly. method=${this.httpReq.method}, url=${this.httpReq.url}, reason=${reason}`);
+        }
+        this.httpRes.end(reason);
     }
 }

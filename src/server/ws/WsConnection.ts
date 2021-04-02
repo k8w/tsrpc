@@ -1,11 +1,7 @@
 import * as http from "http";
-import { BaseServiceType } from "tsrpc-proto";
 import * as WebSocket from "ws";
-import { HttpUtil } from "../../models/HttpUtil";
-import { PoolItem } from '../../models/Pool';
-import { TransportDataUtil } from '../../models/TransportDataUtil';
-import { BaseConnection, BaseConnectionOptions } from "../base/BaseConnection";
-import { PrefixLogger } from '../models/PrefixLogger';
+import { BaseConnection, BaseConnectionOptions, ConnectionStatus } from "../base/BaseConnection";
+import { ApiCallWs } from "./ApiCallWs";
 import { WsServer } from "./WsServer";
 
 export interface WsConnectionOptions extends BaseConnectionOptions {
@@ -18,6 +14,7 @@ export interface WsConnectionOptions extends BaseConnectionOptions {
  * 当前活跃的连接
  */
 export class WsConnection extends BaseConnection {
+    readonly type = "LONG";
 
     readonly ws: WebSocket;
     readonly httpReq: http.IncomingMessage;
@@ -36,7 +33,7 @@ export class WsConnection extends BaseConnection {
         this.ws.onmessage = e => {
             let data = e.data;
             if (typeof data === 'string') {
-                this.logger.log('[Recv]', this.server.options.logReqBody ? data : (data.length > 100 ? `${data.substr(0, 100)}... (length=${data.length})` : data))
+                this.logger.log('[RecvStr]', this.server.options.logReqBody ? data : (data.length > 100 ? `${data.substr(0, 100)}... (length=${data.length})` : data))
                 return;
             }
             if (data instanceof ArrayBuffer) {
@@ -44,11 +41,42 @@ export class WsConnection extends BaseConnection {
             }
             if (Array.isArray(data)) {
                 data = Buffer.concat(data)
-            }            
+            }
             if (Buffer.isBuffer(data)) {
                 this.server._onRecvBuffer(this, data)
             }
         };
+    }
+
+    get status(): ConnectionStatus {
+        return {
+            [WebSocket.CLOSED]: ConnectionStatus.Closed,
+            [WebSocket.CLOSING]: ConnectionStatus.Closing
+        }[this.ws.readyState] || ConnectionStatus.Opened;
+    }
+
+    async sendBuf(buf: Uint8Array, call?: ApiCallWs): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+        // Pre Flow
+        let pre = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: buf, call: call });
+        if (!pre) {
+            return { isSucc: false, errMsg: 'preSendBufferFlow Error' };
+        }
+        buf = pre.buf;
+
+        this.server.options.debugBuf && this.logger.debug('[SendBuf]', buf);
+        let opSend = await new Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>((rs) => {
+            this.ws.send(buf, e => {
+                e ? rs({ isSucc: false, errMsg: e.message || 'Send buffer error' }) : rs({ isSucc: true });
+            })
+        });
+        if (!opSend.isSucc) {
+            return opSend;
+        }
+
+        // Post Flow
+        await this.server.flows.postSendBufferFlow.exec(pre);
+
+        return { isSucc: true }
     }
 
     // Send Msg
@@ -70,12 +98,7 @@ export class WsConnection extends BaseConnection {
     // };
 
     close(reason?: string) {
-        // TODO pre flow
         // 已连接 Close之
         this.ws.close(1000, reason);
     }
-
-    // get isClosed(): boolean {
-    //     return this.ws.readyState !== WebSocket.OPEN;
-    // }
 }

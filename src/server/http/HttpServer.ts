@@ -3,11 +3,8 @@ import { BaseServiceType, ServiceProto } from 'tsrpc-proto';
 import { TSRPC_VERSION } from "../..";
 import { Counter } from '../../models/Counter';
 import { HttpUtil } from '../../models/HttpUtil';
-import { Pool } from '../../models/Pool';
 import { ParsedServerInput } from '../../models/TransportDataUtil';
-import { ApiCallOptions, ApiCall } from "../base/ApiCall";
-import { BaseServer, BaseServerOptions, defaultBaseServerOptions } from '../base/BaseServer';
-import { MsgCallOptions, MsgCall } from "../base/MsgCall";
+import { BaseServer, BaseServerOptions, defaultBaseServerOptions, ServerStatus } from '../base/BaseServer';
 import { ApiCallHttp } from './ApiCallHttp';
 import { HttpConnection } from './HttpConnection';
 import { MsgCallHttp } from "./MsgCallHttp";
@@ -26,8 +23,8 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
         super(proto, options);
     }
 
-    private _status: HttpServerStatus = HttpServerStatus.Closed;
-    public get status(): HttpServerStatus {
+    private _status: ServerStatus = ServerStatus.Closed;
+    public get status(): ServerStatus {
         return this._status;
     }
 
@@ -38,7 +35,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
         }
 
         return new Promise(rs => {
-            this._status = HttpServerStatus.Opening;
+            this._status = ServerStatus.Opening;
             this.logger.log(`Starting HTTP server ...`);
             this._httpServer = http.createServer((httpReq, httpRes) => {
                 let ip = HttpUtil.getClientIp(httpReq);
@@ -92,11 +89,9 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                                 headers: httpReq.rawHeaders
                             });
                         }
-                        return;
                     }
-
                     // 非Abort，异常中断：直到连接关闭，Client也未end（Conn未生成）
-                    if (!conn) {
+                    else if (!conn) {
                         this.logger.warn('Socket closed before request end', {
                             url: httpReq.url,
                             method: httpReq.method,
@@ -106,12 +101,15 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                             reqComplete: httpReq.complete,
                             headers: httpReq.rawHeaders
                         });
-                        return;
+                    }
+                    // 有Conn，但连接非正常end：直到连接关闭，也未调用过 httpRes.end 方法
+                    else if (!httpRes.writableEnded) {
+                        (conn.call?.logger || conn.logger).warn('Socket closed without response')
                     }
 
-                    // 有Conn，但连接非正常end：直到连接关闭，也未调用过 httpRes.end 方法
-                    if (!httpRes.writableEnded) {
-                        (conn.call?.logger || conn.logger).warn('Socket closed without response')
+                    // Post Flow
+                    if (conn) {
+                        this.flows.postDisconnectFlow.exec({ conn: conn })
                     }
                 });
             });
@@ -121,7 +119,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
             }
 
             this._httpServer.listen(this.options.port, () => {
-                this._status = HttpServerStatus.Opened;
+                this._status = ServerStatus.Opened;
                 this.logger.log(`Server started at ${this.options.port}.`);
                 rs();
             })
@@ -134,7 +132,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 rs();
                 return;
             }
-            this._status = HttpServerStatus.Closing;
+            this._status = ServerStatus.Closing;
 
             // 立即close，不再接受新请求
             // 等所有连接都断开后rs
@@ -201,12 +199,4 @@ export const defaultHttpServerOptions: HttpServerOptions = {
     jsonEnabled: true,
     jsonRootPath: '/',
     jsonPrune: true
-}
-
-
-export enum HttpServerStatus {
-    Opening = 'OPENING',
-    Opened = 'OPENED',
-    Closing = 'CLOSING',
-    Closed = 'CLOSED',
 }

@@ -1,5 +1,6 @@
 import { Logger } from "tsrpc-proto";
 import { PrefixLogger } from "../models/PrefixLogger";
+import { ApiCall } from "./ApiCall";
 import { BaseServer } from "./BaseServer";
 
 export interface BaseConnectionOptions {
@@ -31,7 +32,7 @@ export abstract class BaseConnection {
     abstract get status(): ConnectionStatus;
     abstract close(reason?: string): void;
 
-    abstract sendBuf(buf: Uint8Array): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
+    abstract sendBuf(buf: Uint8Array, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
 
     destroy() {
         if (this.status === ConnectionStatus.Opened) {

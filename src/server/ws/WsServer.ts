@@ -1,38 +1,33 @@
+import * as http from "http";
+import { BaseServiceType, ServiceProto } from 'tsrpc-proto';
 import * as WebSocket from 'ws';
 import { Server as WebSocketServer } from 'ws';
-import * as http from "http";
-import { WsConnection } from './WsConnection';
+import { MsgCallWs } from '../..';
 import { Counter } from '../../models/Counter';
-import { BaseServer, BaseServerOptions, defualtBaseServerOptions } from '../base/BaseServer';
-import { ApiCallWs, MsgCallWs } from './ApiCallWs';
+import { HttpUtil } from '../../models/HttpUtil';
 import { TransportDataUtil } from '../../models/TransportDataUtil';
-import { Pool } from '../../models/Pool';
-import { BaseServiceType } from 'tsrpc-proto';
+import { BaseServer, BaseServerOptions, defaultBaseServerOptions, ServerStatus } from '../base/BaseServer';
+import { ApiCallWs } from './ApiCallWs';
+import { WsConnection } from './WsConnection';
 
-export class WsServer<ServiceType extends BaseServiceType = any, SessionType = { [key: string]: any | undefined }> extends BaseServer<WsServerOptions<ServiceType, SessionType>, ServiceType> {
+export class WsServer<ServiceType extends BaseServiceType = any> extends BaseServer<ServiceType> {
+    readonly ApiCallClass = ApiCallWs;
+    readonly MsgCallClass = MsgCallWs;
 
-    protected _poolApiCall: Pool<ApiCallWs>;
-    protected _poolMsgCall: Pool<MsgCallWs>;
-    protected _poolConn: Pool<WsConnection<any, any>>;
-
-    private readonly _conns: WsConnection<ServiceType, SessionType>[] = [];
-    private readonly _id2Conn: { [connId: string]: WsConnection<ServiceType, SessionType> | undefined } = {};
-
-    private _connIdCounter = new Counter(1);
-
-    get dataFlow(): ((data: Buffer, conn: WsConnection<ServiceType, SessionType>) => (boolean | Promise<boolean>))[] {
-        return this._dataFlow;
-    };
-
-    constructor(options?: Partial<WsServerOptions<ServiceType, SessionType>>) {
-        super(Object.assign({}, defaultWsServerOptions, options));
-        this._poolApiCall = new Pool<ApiCallWs>(ApiCallWs, this.options.enablePool);
-        this._poolMsgCall = new Pool<MsgCallWs>(MsgCallWs, this.options.enablePool);
-        this._poolConn = new Pool<WsConnection<any, any>>(WsConnection, this.options.enablePool);
+    readonly options: WsServerOptions = {
+        ...defaultWsServerOptions
     }
 
-    private _status: WsServerStatus = 'closed';
-    public get status(): WsServerStatus {
+    private readonly _conns: WsConnection[] = [];
+    private readonly _id2Conn: { [connId: string]: WsConnection | undefined } = {};
+    private _connIdCounter = new Counter(1);
+
+    constructor(proto: ServiceProto<ServiceType>, options?: Partial<WsServerOptions>) {
+        super(proto, options);
+    }
+
+    private _status: ServerStatus = ServerStatus.Closed;
+    public get status(): ServerStatus {
         return this._status;
     }
 
@@ -42,14 +37,14 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
             throw new Error('Server already started');
         }
 
-        this._status = 'opening';
+        this._status = ServerStatus.Opening;
         return new Promise((rs, rj) => {
             this.logger.log('Starting WebSocket server...');
             this._wsServer = new WebSocketServer({
                 port: this.options.port
             }, () => {
                 this.logger.log(`Server started at ${this.options.port}...`);
-                this._status = 'open';
+                this._status = ServerStatus.Opened;
                 rs();
             });
 
@@ -66,11 +61,11 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
         rj: (e: any) => void;
     }
     async stop(immediately: boolean = false): Promise<void> {
-        if (!this._wsServer || this._status === 'closed') {
+        if (!this._wsServer || this._status === ServerStatus.Closed) {
             return;
         }
 
-        this._status = 'closing';
+        this._status = ServerStatus.Closing;
         let output = new Promise<void>(async (rs, rj) => {
             if (!this._wsServer) {
                 throw new Error('Server has not been started')
@@ -93,7 +88,7 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
                 else {
                     this._wsServer && this._wsServer.close(e => {
                         this._stopping = undefined;
-                        this._status = 'closed';
+                        this._status = ServerStatus.Closed;
                         e ? rj(e) : rs();
                     });
                 }
@@ -102,25 +97,11 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
 
         output.then(() => {
             this.logger.log('[SRV_STOP] Server stopped');
-            this._status = 'closed';
+            this._status = ServerStatus.Closed;
             this._wsServer = undefined;
         })
 
         return output;
-    }
-
-    // ConnID 1 ~ Number.MAX_SAFE_INTEGER
-    getNextConnId(): number {
-        // 最多尝试1万次
-        for (let i = 0; i < 10000; ++i) {
-            let connId = this._connIdCounter.getNext();
-            if (!this._id2Conn[connId]) {
-                return connId;
-            }
-        }
-
-        this.logger.error('No available connId till ' + this._connIdCounter.last);
-        return NaN;
     }
 
     private _onClientConnect = (ws: WebSocket, httpReq: http.IncomingMessage) => {
@@ -130,39 +111,31 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
             return;
         }
 
-        let connId = this.getNextConnId()
-        if (isNaN(connId)) {
-            ws.close();
-            return;
-        }
-
         // Create Active Connection
-        let conn = this._poolConn.get({
-            connId: connId,
+        let conn = new WsConnection({
+            id: this._connIdCounter.getNext().toString(36),
+            ip: HttpUtil.getClientIp(httpReq),
             server: this,
             ws: ws,
             httpReq: httpReq,
-            defaultSession: this.options.defaultSession,
-            onClose: this._onClientClose,
-            onRecvData: v => { this.onData(conn, v) }
         });
         this._conns.push(conn);
-        this._id2Conn[conn.connId] = conn;
+        this._id2Conn[conn.id] = conn;
 
         conn.logger.log('[Connected]', `ActiveConn=${this._conns.length}`)
     };
 
 
 
-    private _onClientClose = (conn: WsConnection<ServiceType, SessionType>, code: number, reason: string) => {
+    private _onClientClose = (conn: WsConnection, code: number, reason: string) => {
         conn.logger.log('[Disconnected]', `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this._conns.length}`)
-        this._conns.removeOne(v => v.connId === conn.connId);
-        this._id2Conn[conn.connId] = undefined;
+        this._conns.removeOne(v => v.id === conn.id);
+        this._id2Conn[conn.id] = undefined;
 
         // 优雅地停止
         if (this._stopping && this._conns.length === 0) {
             this._wsServer && this._wsServer.close(e => {
-                this._status = 'closed';
+                this._status = ServerStatus.Closed;
                 if (this._stopping) {
                     e ? this._stopping.rj(e) : this._stopping!.rs();
                     this._stopping = undefined;
@@ -173,7 +146,7 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
 
     // Send Msg
     async sendMsg<T extends keyof ServiceType['msg']>(connIds: string[], msgName: T, msg: ServiceType['msg'][T]): Promise<void> {
-        if (this.status !== 'open') {
+        if (this.status !== ServerStatus.Opened) {
             this.logger.error('Server not open, sendMsg failed');
             return;
         }
@@ -191,39 +164,20 @@ export class WsServer<ServiceType extends BaseServiceType = any, SessionType = {
         await Promise.all(connIds.map(v => {
             let conn = this._id2Conn[v];
             if (conn) {
-                conn.options.ws.send(transportData)
+                conn.ws.send(transportData)
             }
             else {
                 this.logger.error('SendMsg failed, invalid connId: ' + v)
             }
         }))
     };
-
-    // Override function type
-    implementApi!: <T extends keyof ServiceType['req']>(apiName: T, handler: ApiHandlerWs<ServiceType['req'][T], ServiceType['res'][T], ServiceType, SessionType>) => void;
-    listenMsg!: <T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandlerWs<ServiceType['msg'][T], ServiceType, SessionType>) => void;
-
 }
 
-export type WsServerStatus = 'opening' | 'open' | 'closing' | 'closed';
-
-const defaultWsServerOptions: WsServerOptions<any, any> = {
-    ...defualtBaseServerOptions,
-    port: 3000,
-    defaultSession: {}
-}
-
-// event => event data
-export interface ServerEventData {
-    sendMsg: any,
-    resSucc: any,
-    resError: any
-}
-
-export interface WsServerOptions<ServiceType extends BaseServiceType, SessionType> extends BaseServerOptions {
+export interface WsServerOptions extends BaseServerOptions {
     port: number;
-    defaultSession: SessionType;
 };
 
-export type ApiHandlerWs<Req, Res, ServiceType extends BaseServiceType = any, SessionType = any> = (call: ApiCallWs<Req, Res, ServiceType, SessionType>) => void | Promise<void>;
-export type MsgHandlerWs<Msg, ServiceType extends BaseServiceType = any, SessionType = any> = (msg: MsgCallWs<Msg, ServiceType, SessionType>) => void | Promise<void>;
+const defaultWsServerOptions: WsServerOptions = {
+    ...defaultBaseServerOptions,
+    port: 3000
+}

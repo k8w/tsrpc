@@ -29,6 +29,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      */
     abstract stop(immediately?: boolean): Promise<void>;
 
+    abstract get status(): ServerStatus;
+
     // 配置及其衍生项
     readonly proto: ServiceProto<ServiceType>;
     readonly options: BaseServerOptions = {
@@ -42,7 +44,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     readonly flows = {
         // Conn Flows
         postConnectFlow: new Flow<BaseConnection>(),
-        preDisconnectFlow: new Flow<{conn: BaseConnection, reason?: string}>(),
+        // /** 仅长连接，主动断开连接的情况下执行 */
+        // preDisconnectFlow: new Flow<{conn: BaseConnection, reason?: string}>(),
         postDisconnectFlow: new Flow<{conn: BaseConnection, reason?: string}>(),
 
         // Buffer Flows
@@ -103,7 +106,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     }
 
     // #region receive buffer process flow
-    protected async _onRecvBuffer(conn: BaseConnection, buf: Buffer) {
+    async _onRecvBuffer(conn: BaseConnection, buf: Buffer) {
         // postRecvBufferFlow
         let opPostRecvBuffer = await this.flows.postRecvBufferFlow.exec({ conn: conn, buf: buf });
         if (!opPostRecvBuffer) {
@@ -381,3 +384,10 @@ export const defaultBaseServerOptions: BaseServerOptions = {
 
 export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res>) => void | Promise<void>;
 export type MsgHandler<Msg = any> = (msg: MsgCall<Msg>) => void | Promise<void>;
+
+export enum ServerStatus {
+    Opening = 'OPENING',
+    Opened = 'OPENED',
+    Closing = 'CLOSING',
+    Closed = 'CLOSED',
+}
