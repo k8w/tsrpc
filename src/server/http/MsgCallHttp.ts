@@ -1,12 +1,13 @@
+import { BaseServiceType } from "tsrpc-proto";
 import { MsgCall, MsgCallOptions } from "../base/MsgCall";
 import { HttpConnection } from "./HttpConnection";
 
-export interface MsgCallHttpOptions<Msg> extends MsgCallOptions<Msg> {
-    conn: HttpConnection;
+export interface MsgCallHttpOptions<Msg, ServiceType extends BaseServiceType> extends MsgCallOptions<Msg, ServiceType> {
+    conn: HttpConnection<ServiceType>;
 }
-export class MsgCallHttp<Msg = any> extends MsgCall<Msg> {
+export class MsgCallHttp<Msg = any, ServiceType extends BaseServiceType = any> extends MsgCall<Msg, ServiceType> {
 
-    constructor(options: MsgCallHttpOptions<Msg>) {
+    constructor(options: MsgCallHttpOptions<Msg, ServiceType>) {
         super(options);
     }
 

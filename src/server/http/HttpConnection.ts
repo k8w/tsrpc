@@ -1,18 +1,18 @@
 import * as http from "http";
+import { BaseServiceType } from "tsrpc-proto";
 import { ApiCall } from "../base/ApiCall";
 import { BaseConnection, BaseConnectionOptions, ConnectionStatus } from '../base/BaseConnection';
-import { PrefixLogger } from '../models/PrefixLogger';
 import { ApiCallHttp } from "./ApiCallHttp";
 import { HttpServer } from './HttpServer';
 import { MsgCallHttp } from "./MsgCallHttp";
 
-export interface HttpConnectionOptions extends BaseConnectionOptions {
-    server: HttpServer,
+export interface HttpConnectionOptions<ServiceType extends BaseServiceType> extends BaseConnectionOptions<ServiceType> {
+    server: HttpServer<ServiceType>,
     httpReq: http.IncomingMessage,
     httpRes: http.ServerResponse
 }
 
-export class HttpConnection extends BaseConnection {
+export class HttpConnection<ServiceType extends BaseServiceType> extends BaseConnection<ServiceType> {
     readonly type = 'SHORT';
 
     readonly httpReq: http.IncomingMessage;
@@ -20,7 +20,7 @@ export class HttpConnection extends BaseConnection {
 
     call?: ApiCallHttp | MsgCallHttp;
 
-    constructor(options: HttpConnectionOptions) {
+    constructor(options: HttpConnectionOptions<ServiceType>) {
         super(options);
 
         this.httpReq = options.httpReq;

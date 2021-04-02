@@ -1,11 +1,10 @@
-import { BaseServiceType, ServiceProto, TsrpcError } from "tsrpc-proto";
+import { BaseServiceType, Logger, ServiceProto, TsrpcError } from "tsrpc-proto";
 import { ServiceMapUtil, ServiceMap } from '../../models/ServiceMapUtil';
 import { TSBuffer } from "tsbuffer";
 import { TransportDataUtil, ParsedServerOutput } from '../../models/TransportDataUtil';
 import * as http from "http";
 import * as https from "https";
 import { Counter } from '../../models/Counter';
-import { Logger } from '../../server/models/PrefixLogger';
 import { TransportOptions } from "../models/TransportOptions";
 import SuperPromise from 'k8w-super-promise';
 import { nodeUtf8 } from '../../models/nodeUtf8';

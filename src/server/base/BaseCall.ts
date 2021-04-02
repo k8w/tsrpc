@@ -1,23 +1,21 @@
-import { Logger } from 'tsrpc-proto';
-import { PoolItem } from '../../models/Pool';
+import { BaseServiceType, Logger } from 'tsrpc-proto';
 import { ApiService, MsgService } from '../../models/ServiceMapUtil';
-import { PrefixLogger } from '../models/PrefixLogger';
 import { BaseConnection } from './BaseConnection';
 
-export interface BaseCallOptions {
+export interface BaseCallOptions<ServiceType extends BaseServiceType> {
     /** Connection */
-    conn: BaseConnection,
+    conn: BaseConnection<ServiceType>,
     service: ApiService | MsgService
 }
 
-export abstract class BaseCall {
-    readonly conn: BaseConnection;
+export abstract class BaseCall<ServiceType extends BaseServiceType> {
+    readonly conn: BaseConnection<ServiceType>;
     readonly service: ApiService | MsgService;
     /** Time that server received the call */
     readonly startTime: number;
     readonly logger: Logger;
 
-    constructor(options: BaseCallOptions, logger: Logger) {
+    constructor(options: BaseCallOptions<ServiceType>, logger: Logger) {
         this.conn = options.conn;
         this.service = options.service;
         this.startTime = Date.now();

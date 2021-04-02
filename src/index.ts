@@ -1,15 +1,20 @@
 import 'k8w-extend-native';
-export { ApiCall } from './server/base/ApiCall';
-export { MsgCall } from './server/base/MsgCall';
-export { MsgCallHttp } from './server/http/MsgCallHttp';
 export { Logger, TsrpcError } from 'tsrpc-proto';
 export { HttpClient } from './client/http/HttpClient';
-export { ApiHandler, MsgHandler } from './server/base/BaseServer';
+export { ApiCall } from './server/base/ApiCall';
+export { BaseCall } from './server/base/BaseCall';
+export { BaseConnection, BaseConnectionOptions } from './server/base/BaseConnection';
+export { ApiHandler, BaseServer, MsgHandler } from './server/base/BaseServer';
+export { MsgCall } from './server/base/MsgCall';
 export { ApiCallHttp } from './server/http/ApiCallHttp';
-export { HttpServer,  } from './server/http/HttpServer';
+export { HttpConnection, HttpConnectionOptions } from './server/http/HttpConnection';
+export { HttpServer, HttpServerOptions } from './server/http/HttpServer';
+export { MsgCallHttp } from './server/http/MsgCallHttp';
 export { PrefixLogger } from './server/models/PrefixLogger';
 export { TerminalColorLogger, TerminalColorLoggerOptions } from './server/models/TerminalColorLogger';
-export { ApiCallWs, MsgCallWs } from './server/ws/ApiCallWs';
-export { ApiHandlerWs, MsgHandlerWs, WsServer } from './server/ws/WsServer';
+export { ApiCallWs } from './server/ws/ApiCallWs';
+export { MsgCallWs } from './server/ws/MsgCallWs';
+export { WsConnection, WsConnectionOptions } from './server/ws/WsConnection';
+export { WsServer, WsServerOptions } from './server/ws/WsServer';
 
 export const TSRPC_VERSION = '__TSRPC_VERSION__';

@@ -1,6 +1,6 @@
 import { EncodeOutput, TSBuffer } from "tsbuffer";
 import { ServerInputData, ServerOutputData, TransportDataProto, TsrpcError } from 'tsrpc-proto';
-import { ApiReturn } from "../server/base/BaseCall";
+import { ApiReturn } from "./ApiReturn";
 import { nodeUtf8 } from "./nodeUtf8";
 import { ApiService, MsgService, ServiceMap } from "./ServiceMapUtil";
 

@@ -9,17 +9,17 @@ import { ApiCallHttp } from './ApiCallHttp';
 import { HttpConnection } from './HttpConnection';
 import { MsgCallHttp } from "./MsgCallHttp";
 
-export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<ServiceType>{
+export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<ServiceType>{
     readonly ApiCallClass = ApiCallHttp;
     readonly MsgCallClass = MsgCallHttp;
 
     private _connCounter = new Counter(1);
 
-    readonly options: HttpServerOptions = {
+    readonly options: HttpServerOptions<ServiceType> = {
         ...defaultHttpServerOptions
     }
 
-    constructor(proto: ServiceProto<ServiceType>, options?: Partial<HttpServerOptions>) {
+    constructor(proto: ServiceProto<ServiceType>, options?: Partial<HttpServerOptions<ServiceType>>) {
         super(proto, options);
     }
 
@@ -51,7 +51,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     chunks.push(data);
                 });
 
-                let conn: HttpConnection | undefined;
+                let conn: HttpConnection<ServiceType> | undefined;
                 httpReq.on('end', async () => {
                     conn = new HttpConnection({
                         server: this,
@@ -151,14 +151,14 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     }
 
     // HTTP Server 一个conn只有一个call，对应关联之
-    protected _makeCall(conn: HttpConnection, input: ParsedServerInput): ApiCallHttp | MsgCallHttp {
+    protected _makeCall(conn: HttpConnection<ServiceType>, input: ParsedServerInput): ApiCallHttp | MsgCallHttp {
         let call = super._makeCall(conn, input) as ApiCallHttp | MsgCallHttp;
         conn.call = call;
         return call;
     }
 }
 
-export interface HttpServerOptions extends BaseServerOptions {
+export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
     /** 服务端口 */
     port: number,
     /** Socket 超时时间（毫秒） */
@@ -192,7 +192,7 @@ export interface HttpServerOptions extends BaseServerOptions {
     jsonPrune: boolean
 }
 
-export const defaultHttpServerOptions: HttpServerOptions = {
+export const defaultHttpServerOptions: HttpServerOptions<any> = {
     ...defaultBaseServerOptions,
     port: 3000,
     cors: process.env['NODE_ENV'] === 'production' ? undefined : '*',

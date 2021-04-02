@@ -14,15 +14,15 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
     readonly ApiCallClass = ApiCallWs;
     readonly MsgCallClass = MsgCallWs;
 
-    readonly options: WsServerOptions = {
+    readonly options: WsServerOptions<ServiceType> = {
         ...defaultWsServerOptions
     }
 
-    private readonly _conns: WsConnection[] = [];
-    private readonly _id2Conn: { [connId: string]: WsConnection | undefined } = {};
+    private readonly _conns: WsConnection<ServiceType>[] = [];
+    private readonly _id2Conn: { [connId: string]: WsConnection<ServiceType> | undefined } = {};
     private _connIdCounter = new Counter(1);
 
-    constructor(proto: ServiceProto<ServiceType>, options?: Partial<WsServerOptions>) {
+    constructor(proto: ServiceProto<ServiceType>, options?: Partial<WsServerOptions<ServiceType>>) {
         super(proto, options);
     }
 
@@ -122,12 +122,13 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         this._conns.push(conn);
         this._id2Conn[conn.id] = conn;
 
-        conn.logger.log('[Connected]', `ActiveConn=${this._conns.length}`)
+        conn.logger.log('[Connected]', `ActiveConn=${this._conns.length}`);
+        this.flows.postConnectFlow.exec(conn);
     };
 
 
 
-    private _onClientClose = (conn: WsConnection, code: number, reason: string) => {
+    private _onClientClose = (conn: WsConnection<ServiceType>, code: number, reason: string) => {
         conn.logger.log('[Disconnected]', `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this._conns.length}`)
         this._conns.removeOne(v => v.id === conn.id);
         this._id2Conn[conn.id] = undefined;
@@ -173,11 +174,11 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
     };
 }
 
-export interface WsServerOptions extends BaseServerOptions {
+export interface WsServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
     port: number;
 };
 
-const defaultWsServerOptions: WsServerOptions = {
+const defaultWsServerOptions: WsServerOptions<any> = {
     ...defaultBaseServerOptions,
     port: 3000
 }

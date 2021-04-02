@@ -1,13 +1,11 @@
-import { EncodeOutput } from "tsbuffer";
-import { Logger, TsrpcError, TsrpcErrorData } from "tsrpc-proto";
+import { BaseServiceType, Logger, TsrpcError, TsrpcErrorData } from "tsrpc-proto";
 import { ApiReturn } from "../../models/ApiReturn";
 import { ApiService } from "../../models/ServiceMapUtil";
 import { TransportDataUtil } from "../../models/TransportDataUtil";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { BaseCall, BaseCallOptions } from "./BaseCall";
-import { BaseServer } from "./BaseServer";
 
-export interface ApiCallOptions<Req> extends BaseCallOptions {
+export interface ApiCallOptions<Req, ServiceType extends BaseServiceType> extends BaseCallOptions<ServiceType> {
     service: ApiService,
     /** 仅长连接才有，服务器透传 */
     sn?: number,
@@ -15,14 +13,14 @@ export interface ApiCallOptions<Req> extends BaseCallOptions {
     req: Req
 }
 
-export abstract class ApiCall<Req = any, Res = any> extends BaseCall {
+export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServiceType = any> extends BaseCall<ServiceType> {
     readonly type = 'api' as const;
 
     readonly service!: ApiService;
     readonly sn?: number;
     readonly req: Req;
 
-    constructor(options: ApiCallOptions<Req>, logger?: Logger) {
+    constructor(options: ApiCallOptions<Req, ServiceType>, logger?: Logger) {
         super(options, logger ?? new PrefixLogger({
             logger: options.conn.logger,
             prefixs: [`Api:${options.service.name}${options.sn !== undefined ? ` SN=${options.sn}` : ''}`]
@@ -105,7 +103,7 @@ export abstract class ApiCall<Req = any, Res = any> extends BaseCall {
         await this.server.flows.postApiReturnFlow.exec(preFlow);
     }
 
-    protected async _sendReturn(ret: ApiReturn<Res>): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>{
+    protected async _sendReturn(ret: ApiReturn<Res>): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
         // Encode
         let opServerOutput = TransportDataUtil.encodeApiReturn(this.server.tsbuffer, this.service, ret, this.sn);;
         if (!opServerOutput.isSucc) {

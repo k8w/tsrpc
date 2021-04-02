@@ -1,11 +1,12 @@
 import * as http from "http";
+import { BaseServiceType } from "tsrpc-proto";
 import * as WebSocket from "ws";
 import { BaseConnection, BaseConnectionOptions, ConnectionStatus } from "../base/BaseConnection";
 import { ApiCallWs } from "./ApiCallWs";
 import { WsServer } from "./WsServer";
 
-export interface WsConnectionOptions extends BaseConnectionOptions {
-    server: WsServer,
+export interface WsConnectionOptions<ServiceType extends BaseServiceType> extends BaseConnectionOptions<ServiceType> {
+    server: WsServer<ServiceType>,
     ws: WebSocket,
     httpReq: http.IncomingMessage
 }
@@ -13,13 +14,13 @@ export interface WsConnectionOptions extends BaseConnectionOptions {
 /**
  * 当前活跃的连接
  */
-export class WsConnection extends BaseConnection {
+export class WsConnection<ServiceType extends BaseServiceType> extends BaseConnection<ServiceType> {
     readonly type = "LONG";
 
     readonly ws: WebSocket;
     readonly httpReq: http.IncomingMessage;
 
-    constructor(options: WsConnectionOptions) {
+    constructor(options: WsConnectionOptions<ServiceType>) {
         super(options);
         this.ws = options.ws;
         this.httpReq = options.httpReq;
@@ -78,24 +79,6 @@ export class WsConnection extends BaseConnection {
 
         return { isSucc: true }
     }
-
-    // Send Msg
-    // sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]) {
-    //     let service = this.server.serviceMap.msgName2Service[msgName as string];
-    //     if (!service) {
-    //         throw new Error('Invalid msg name: ' + msgName);
-    //     }
-
-    //     let buf = TransportDataUtil.encodeMsg(this.server.tsbuffer, service, msg);
-    //     if (this.server.options.encrypter) {
-    //         buf = this.server.options.encrypter(buf);
-    //     }
-    //     return new Promise<void>((rs, rj) => {
-    //         this.ws.send(buf, e => {
-    //             e ? rj(e) : rs();
-    //         })
-    //     })
-    // };
 
     close(reason?: string) {
         // 已连接 Close之

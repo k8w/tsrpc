@@ -33,7 +33,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
     // 配置及其衍生项
     readonly proto: ServiceProto<ServiceType>;
-    readonly options: BaseServerOptions = {
+    readonly options: BaseServerOptions<ServiceType> = {
         ...defaultBaseServerOptions
     };
     readonly tsbuffer: TSBuffer;
@@ -43,16 +43,16 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     /** Flows */
     readonly flows = {
         // Conn Flows
-        postConnectFlow: new Flow<BaseConnection>(),
+        postConnectFlow: new Flow<BaseConnection<ServiceType>>(),
         // /** 仅长连接，主动断开连接的情况下执行 */
         // preDisconnectFlow: new Flow<{conn: BaseConnection, reason?: string}>(),
-        postDisconnectFlow: new Flow<{conn: BaseConnection, reason?: string}>(),
+        postDisconnectFlow: new Flow<{ conn: BaseConnection<ServiceType>, reason?: string }>(),
 
         // Buffer Flows
-        postRecvBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array }>(),
-        preSendBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array, call?: ApiCall }>(),
+        postRecvBufferFlow: new Flow<{ conn: BaseConnection<ServiceType>, buf: Uint8Array }>(),
+        preSendBufferFlow: new Flow<{ conn: BaseConnection<ServiceType>, buf: Uint8Array, call?: ApiCall }>(),
         /** 不会中断后续流程 */
-        postSendBufferFlow: new Flow<{ conn: BaseConnection, buf: Uint8Array, call?: ApiCall }>(),
+        postSendBufferFlow: new Flow<{ conn: BaseConnection<ServiceType>, buf: Uint8Array, call?: ApiCall }>(),
 
         // ApiCall Flows
         preApiCallFlow: new Flow<ApiCall>(),
@@ -65,8 +65,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         // MsgCall Flows
         preMsgCallFlow: new Flow<MsgCall>(),
         postMsgCallFlow: new Flow<MsgCall>(),
-        preSendMsgFlow: new Flow<{ service: MsgService, msg: any }>(),
-        postSendMsgFlow: new Flow<{ service: MsgService, msg: any }>(),
+        preSendMsgFlow: new Flow<{ conn: BaseConnection<ServiceType>, service: MsgService, msg: any }>(),
+        postSendMsgFlow: new Flow<{ conn: BaseConnection<ServiceType>, service: MsgService, msg: any }>(),
     } as const;
 
     // Handlers
@@ -90,7 +90,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         });
     }
 
-    constructor(proto: ServiceProto<ServiceType>, options?: Partial<BaseServerOptions>) {
+    constructor(proto: ServiceProto<ServiceType>, options?: Partial<BaseServerOptions<ServiceType>>) {
         this.proto = proto;
         Object.assign(this.options, options);
 
@@ -106,7 +106,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     }
 
     // #region receive buffer process flow
-    async _onRecvBuffer(conn: BaseConnection, buf: Buffer) {
+    async _onRecvBuffer(conn: BaseConnection<ServiceType>, buf: Buffer) {
         // postRecvBufferFlow
         let opPostRecvBuffer = await this.flows.postRecvBufferFlow.exec({ conn: conn, buf: buf });
         if (!opPostRecvBuffer) {
@@ -129,7 +129,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
     }
 
-    protected _makeCall(conn: BaseConnection, input: ParsedServerInput): ApiCall | MsgCall {
+    protected _makeCall(conn: BaseConnection<ServiceType>, input: ParsedServerInput): ApiCall | MsgCall {
         if (input.type === 'api') {
             return new this.ApiCallClass({
                 conn: conn,
@@ -311,7 +311,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 }
 
 /** @public */
-export interface BaseServerOptions {
+export interface BaseServerOptions<ServiceType extends BaseServiceType> {
     // TSBuffer相关
     /**
      * `undefined` 和 `null` 是否可以混合编码
@@ -345,7 +345,7 @@ export interface BaseServerOptions {
      * When the server cannot parse input buffer to api/msg call
      * By default, it will return "INVALID_INPUT_BUFFER" .
      */
-    onParseCallError: (errMsg: string, conn: BaseConnection, buf: Uint8Array) => void;
+    onParseCallError: (errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) => void;
     /**
      * On error throwed inside (not TsrpcError)
      * By default, it will return a "Internal server error".
@@ -360,7 +360,7 @@ export interface BaseServerOptions {
     returnInnerError: boolean;
 }
 
-export const defaultBaseServerOptions: BaseServerOptions = {
+export const defaultBaseServerOptions: BaseServerOptions<any> = {
     strictNullChecks: true,
     logger: new TerminalColorLogger,
     logReqBody: true,
