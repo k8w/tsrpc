@@ -37,6 +37,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
     abstract sendBuf(buf: Uint8Array, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
 
     async sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
+        if (this.type === 'SHORT') {
+            return {isSucc: false, errMsg: 'Short connection cannot sendMsg'}
+        }
+        
         let service = this.server.serviceMap.msgName2Service[msgName as string];
         if (!service) {
             return { isSucc: false, errMsg: `Invalid msg name: ${msgName}` }
