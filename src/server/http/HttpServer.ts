@@ -55,19 +55,19 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
                 httpReq.on('end', async () => {
                     conn = new HttpConnection({
                         server: this,
-                        id: this._connCounter.getNext().toString(36),
+                        id: '' + this._connCounter.getNext(),
                         ip: ip,
                         httpReq: httpReq,
                         httpRes: httpRes
                     });
-                    await this.flows.postConnectFlow.exec(conn);
+                    await this.flows.postConnectFlow.exec(conn, conn.logger);
 
                     let buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
                     this._onRecvBuffer(conn, buf);
                 });
 
                 // 处理连接异常关闭的情况
-                httpRes.on('close', () => {
+                httpRes.on('close', async () => {
                     // 客户端Abort
                     if (httpReq.aborted) {
                         if (conn) {
@@ -109,7 +109,8 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
 
                     // Post Flow
                     if (conn) {
-                        this.flows.postDisconnectFlow.exec({ conn: conn })
+                        await this.flows.postDisconnectFlow.exec({ conn: conn }, conn.logger)
+                        conn.destroy();
                     }
                 });
             });
@@ -199,4 +200,6 @@ export const defaultHttpServerOptions: HttpServerOptions<any> = {
     jsonEnabled: true,
     jsonRootPath: '/',
     jsonPrune: true
+
+    // TODO: keep-alive time (to SLB)
 }

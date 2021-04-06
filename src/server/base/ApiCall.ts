@@ -1,5 +1,4 @@
-import { BaseServiceType, Logger, TsrpcError, TsrpcErrorData } from "tsrpc-proto";
-import { ApiReturn } from "../../models/ApiReturn";
+import { ApiReturn, BaseServiceType, Logger, TsrpcError, TsrpcErrorData, TsrpcErrorType } from "tsrpc-proto";
 import { ApiService } from "../../models/ServiceMapUtil";
 import { TransportDataUtil } from "../../models/TransportDataUtil";
 import { PrefixLogger } from "../models/PrefixLogger";
@@ -23,7 +22,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
     constructor(options: ApiCallOptions<Req, ServiceType>, logger?: Logger) {
         super(options, logger ?? new PrefixLogger({
             logger: options.conn.logger,
-            prefixs: [`Api:${options.service.name}${options.sn !== undefined ? ` SN=${options.sn}` : ''}`]
+            prefixs: [`API${options.sn !== undefined ? `#${options.sn}` : ''} ${options.service.name}`]
         }));
 
         this.sn = options.sn;
@@ -70,7 +69,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         }
 
         // Pre Flow
-        let preFlow = await this.server.flows.preApiReturnFlow.exec({ call: this, return: ret });
+        let preFlow = await this.server.flows.preApiReturnFlow.exec({ call: this, return: ret }, this.logger);
         // Stopped!
         if (!preFlow) {
             return;
@@ -80,7 +79,6 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         // Do send!        
         let opSend = await (sendReturn ?? this._sendReturn)(ret);
         if (!opSend.isSucc) {
-            this.server.options.onApiInnerError(new Error(opSend.errMsg), this);
             return;
         }
 
@@ -91,25 +89,31 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
             this.logger.log('[Res]', `${this.usedTime}ms`, this.server.options.logResBody ? ret.res : '');
         }
         else {
-            if (ret.err.type === 'ApiError') {
-                this.logger.log('[ApiError]', `${this.usedTime}ms`, ret.err, 'req=', this.req);
+            if (ret.err.type === TsrpcErrorType.ApiError) {
+                this.logger.log('[ResErr]', `${this.usedTime}ms`, ret.err, 'req=', this.req);
             }
             else {
-                this.logger.error(`[${ret.err.type}]`, `${this.usedTime}ms`, ret.err, 'req=', this.req)
+                this.logger.error(`[ResErr]`, `${this.usedTime}ms`, ret.err, 'req=', this.req)
             }
         }
 
         // Post Flow
-        await this.server.flows.postApiReturnFlow.exec(preFlow);
+        await this.server.flows.postApiReturnFlow.exec(preFlow, this.logger);
     }
 
     protected async _sendReturn(ret: ApiReturn<Res>): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
         // Encode
         let opServerOutput = TransportDataUtil.encodeApiReturn(this.server.tsbuffer, this.service, ret, this.sn);;
         if (!opServerOutput.isSucc) {
+            this.server.options.onApiInnerError({ message: opServerOutput.errMsg }, this);
             return opServerOutput;
         }
-        return this.conn.sendBuf(opServerOutput.buf);
+
+        let opSend = await this.conn.sendBuf(opServerOutput.buf);
+        if (!opSend.isSucc) {
+            this.error('sendBuf Error: ' + opSend.errMsg);
+        }
+        return opSend;
     }
 }
 

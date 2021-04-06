@@ -1,11 +1,10 @@
 import { EncodeOutput, TSBuffer } from "tsbuffer";
-import { ServerInputData, ServerOutputData, TransportDataProto, TsrpcError } from 'tsrpc-proto';
-import { ApiReturn } from "./ApiReturn";
+import { ApiReturn, ServerInputData, ServerOutputData, TransportDataProto, TsrpcError } from 'tsrpc-proto';
 import { nodeUtf8 } from "./nodeUtf8";
 import { ApiService, MsgService, ServiceMap } from "./ServiceMapUtil";
 
 export type ParsedServerInput = { type: 'api', service: ApiService, req: any, sn?: number } | { type: 'msg', service: MsgService, msg: any };
-export type ParsedServerOutput = { type: 'api', service: ApiService, sn?: number } & ({ isSucc: true, res: any } | { isSucc: false, error: TsrpcError }) | { type: 'msg', service: MsgService, msg: any };
+export type ParsedServerOutput = { type: 'api', service: ApiService, sn?: number, ret: ApiReturn<any> } | { type: 'msg', service: MsgService, msg: any };
 
 export class TransportDataUtil {
 
@@ -112,17 +111,17 @@ export class TransportDataUtil {
         let serverOutputData = opServerOutputData.value;
         serviceId = serviceId ?? serverOutputData.serviceId;
         if (serviceId === undefined) {
-            return { isSucc: false, errMsg: `Missing 'serviceId'` };
+            return { isSucc: false, errMsg: `Missing 'serviceId' in ServerOutput` };
         }
 
         let service = serviceMap.id2Service[serviceId];
         if (!service) {
-            return { isSucc: false, errMsg: `Cannot find service ID: ${serviceId}` };
+            return { isSucc: false, errMsg: `Invalid service ID: ${serviceId} (from ServerOutput)` };
         }
 
         if (service.type === 'msg') {
             if (!serverOutputData.buffer) {
-                return { isSucc: false, errMsg: 'Empty msg buffer' };
+                return { isSucc: false, errMsg: 'Empty msg buffer (from ServerOutput)' };
             }
             let opMsg = tsbuffer.decode(serverOutputData.buffer, service.msgSchemaId);
             if (!opMsg.isSucc) {
@@ -145,15 +144,17 @@ export class TransportDataUtil {
                     result: {
                         type: 'api',
                         service: service,
-                        isSucc: false,
-                        error: serverOutputData.error,
-                        sn: serverOutputData.sn
+                        sn: serverOutputData.sn,
+                        ret: {
+                            isSucc: false,
+                            err: serverOutputData.error
+                        }
                     }
                 }
             }
             else {
                 if (!serverOutputData.buffer) {
-                    return { isSucc: false, errMsg: 'Empty API res buffer' };
+                    return { isSucc: false, errMsg: 'Empty API res buffer (from ServerOutput)' };
                 }
 
                 let opRes = tsbuffer.decode(serverOutputData.buffer, service.resSchemaId);
@@ -166,9 +167,11 @@ export class TransportDataUtil {
                     result: {
                         type: 'api',
                         service: service,
-                        isSucc: true,
-                        res: opRes.value,
-                        sn: serverOutputData.sn
+                        sn: serverOutputData.sn,
+                        ret: {
+                            isSucc: true,
+                            res: opRes.value,
+                        }
                     }
                 }
             }

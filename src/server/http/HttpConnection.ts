@@ -43,7 +43,7 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
 
     async sendBuf(buf: Uint8Array, call?: ApiCall): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         // Pre Flow
-        let pre = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: buf, call: call });
+        let pre = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: buf, call: call }, call?.logger || this.logger);
         if (!pre) {
             return { isSucc: false, errMsg: 'preSendBufferFlow Error' };
         }
@@ -51,9 +51,6 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
 
         this.server.options.debugBuf && this.logger.debug('[SendBuf]', buf);
         this.httpRes.end(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
-
-        // Post Flow
-        await this.server.flows.postSendBufferFlow.exec(pre);
 
         return { isSucc: true }
     }

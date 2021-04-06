@@ -1,8 +1,7 @@
 import 'colors';
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
-import { ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
-import { ApiReturn } from '../../models/ApiReturn';
+import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { Flow } from '../../models/Flow';
 import { MsgHandlerManager } from '../../models/MsgHandlerManager';
 import { nodeUtf8 } from '../../models/nodeUtf8';
@@ -40,7 +39,11 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     readonly serviceMap: ServiceMap;
     readonly logger: Logger;
 
-    /** Flows */
+    /** 
+     * Flows
+     * 所有 Pre Flows 可以中断后续流程
+     * 所有 Post Flows 不中断后续流程
+     */
     readonly flows = {
         // Conn Flows
         postConnectFlow: new Flow<BaseConnection<ServiceType>>(),
@@ -49,10 +52,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         postDisconnectFlow: new Flow<{ conn: BaseConnection<ServiceType>, reason?: string }>(),
 
         // Buffer Flows
-        postRecvBufferFlow: new Flow<{ conn: BaseConnection<ServiceType>, buf: Uint8Array }>(),
+        preRecvBufferFlow: new Flow<{ conn: BaseConnection<ServiceType>, buf: Uint8Array }>(),
         preSendBufferFlow: new Flow<{ conn: BaseConnection<ServiceType>, buf: Uint8Array, call?: ApiCall }>(),
-        /** 不会中断后续流程 */
-        postSendBufferFlow: new Flow<{ conn: BaseConnection<ServiceType>, buf: Uint8Array, call?: ApiCall }>(),
 
         // ApiCall Flows
         preApiCallFlow: new Flow<ApiCall>(),
@@ -108,8 +109,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     // #region receive buffer process flow
     async _onRecvBuffer(conn: BaseConnection<ServiceType>, buf: Buffer) {
         // postRecvBufferFlow
-        let opPostRecvBuffer = await this.flows.postRecvBufferFlow.exec({ conn: conn, buf: buf });
-        if (!opPostRecvBuffer) {
+        let opPreRecvBuffer = await this.flows.preRecvBufferFlow.exec({ conn: conn, buf: buf }, conn.logger);
+        if (!opPreRecvBuffer) {
             return;
         }
 
@@ -149,7 +150,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
     protected async _onApiCall(call: ApiCall) {
         // Pre Flow
-        let preFlow = await this.flows.preApiCallFlow.exec(call);
+        let preFlow = await this.flows.preApiCallFlow.exec(call, call.logger);
         if (!preFlow) {
             return;
         }
@@ -177,11 +178,11 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
 
         // Post Flow
-        await this.flows.postApiCallFlow.exec(call);
+        await this.flows.postApiCallFlow.exec(call, call.logger);
 
         // Destroy call
         if (!call.return) {
-            await call.error('Api no response', {
+            await call.error('API no response', {
                 code: 'API_NO_RES',
                 type: TsrpcErrorType.ServerError
             });
@@ -191,7 +192,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
     protected async _onMsgCall(call: MsgCall) {
         // Pre Flow
-        let preFlow = await this.flows.preMsgCallFlow.exec(call);
+        let preFlow = await this.flows.preMsgCallFlow.exec(call, call.logger);
         if (!preFlow) {
             return;
         }
@@ -208,7 +209,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
 
         // Post Flow
-        await this.flows.postMsgCallFlow.exec(call);
+        await this.flows.postMsgCallFlow.exec(call, call.logger);
         call.destroy();
     }
     // #endregion    
@@ -351,7 +352,7 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
      * By default, it will return a "Internal server error".
      * If `returnInnerError` is `true`, an `innerError` field would be returned.
      */
-    onApiInnerError: (e: Error, call: ApiCall) => void;
+    onApiInnerError: (e: { message: string, stack?: string, name?: string }, call: ApiCall) => void;
     /**
      * When "Internal server error" occured,
      * whether to return `innerError` to client. 

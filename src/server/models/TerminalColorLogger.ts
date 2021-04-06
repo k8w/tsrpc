@@ -18,7 +18,7 @@ export interface TerminalColorLoggerOptions {
 export class TerminalColorLogger implements Logger {
 
     options: TerminalColorLoggerOptions = {
-        pid: process.pid.toString(36),
+        pid: process.pid.toString(),
         timeFormat: 'yyyy-MM-dd hh:mm:ss'
     }
 

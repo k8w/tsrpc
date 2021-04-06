@@ -113,7 +113,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 
         // Create Active Connection
         let conn = new WsConnection({
-            id: this._connIdCounter.getNext().toString(36),
+            id: '' + this._connIdCounter.getNext(),
             ip: HttpUtil.getClientIp(httpReq),
             server: this,
             ws: ws,
@@ -123,7 +123,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         this._id2Conn[conn.id] = conn;
 
         conn.logger.log('[Connected]', `ActiveConn=${this._conns.length}`);
-        this.flows.postConnectFlow.exec(conn);
+        this.flows.postConnectFlow.exec(conn, conn.logger);
     };
 
 

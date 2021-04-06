@@ -1,4 +1,4 @@
-import { TsrpcError } from "tsrpc-proto";
+import { Logger, TsrpcError } from "tsrpc-proto";
 
 /**
  * @returns `T` represents succ & continue, `null | undefined` represents break.
@@ -9,9 +9,11 @@ export type FlowItem<T> = (item: T) => FlowItemReturn<T> | Promise<FlowItemRetur
 
 export class Flow<T> extends Array<FlowItem<T>> {
 
-    onError?: (e: Error | TsrpcError, lastRes: T, input: T) => void;
+    onError: (e: Error | TsrpcError, last: T, input: T, logger: Logger | undefined) => void = (e, last, input, logger) => {
+        logger?.error('Uncaught FlowError:', e);
+    };
 
-    async exec(input: T): Promise<FlowItemReturn<T>> {
+    async exec(input: T, logger: Logger | undefined): Promise<FlowItemReturn<T>> {
         let res: ReturnType<FlowItem<T>> = input;
 
         for (let i = 0; i < this.length; ++i) {
@@ -19,7 +21,7 @@ export class Flow<T> extends Array<FlowItem<T>> {
                 res = await this[i](res);
             }
             catch (e) {
-                this.onError?.(e, res!, input);
+                this.onError(e, res!, input, logger);
                 return undefined;
             }
 

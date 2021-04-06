@@ -26,9 +26,10 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
         this.httpReq = options.httpReq;
 
         // Init WS
-        this.ws.onclose = e => {
+        this.ws.onclose = async e => {
             this.logger.log('Closed');
-            this.server.flows.postDisconnectFlow.exec({ conn: this, reason: e.reason })
+            await this.server.flows.postDisconnectFlow.exec({ conn: this, reason: e.reason }, this.logger);
+            this.destroy();
         };
         this.ws.onerror = e => { this.logger.warn('[ClientErr]', e.error) };
         this.ws.onmessage = e => {
@@ -58,7 +59,7 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
 
     async sendBuf(buf: Uint8Array, call?: ApiCallWs): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         // Pre Flow
-        let pre = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: buf, call: call });
+        let pre = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: buf, call: call }, call?.logger || this.logger);
         if (!pre) {
             return { isSucc: false, errMsg: 'preSendBufferFlow Error' };
         }
@@ -73,9 +74,6 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
         if (!opSend.isSucc) {
             return opSend;
         }
-
-        // Post Flow
-        await this.server.flows.postSendBufferFlow.exec(pre);
 
         return { isSucc: true }
     }

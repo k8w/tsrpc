@@ -27,7 +27,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
         this.server = options.server;
         this.logger = options.logger ?? new PrefixLogger({
             logger: options.server.logger,
-            prefixs: [`Conn#${options.id} ${options.ip}`]
+            prefixs: [`${options.ip} Conn#${options.id}`]
         });
     }
 
@@ -38,16 +38,16 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
 
     async sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
         if (this.type === 'SHORT') {
-            return {isSucc: false, errMsg: 'Short connection cannot sendMsg'}
+            return { isSucc: false, errMsg: 'Short connection cannot sendMsg' }
         }
-        
+
         let service = this.server.serviceMap.msgName2Service[msgName as string];
         if (!service) {
             return { isSucc: false, errMsg: `Invalid msg name: ${msgName}` }
         }
 
         // Pre Flow
-        let pre = await this.server.flows.preSendMsgFlow.exec({ conn: this, service: service, msg: msg });
+        let pre = await this.server.flows.preSendMsgFlow.exec({ conn: this, service: service, msg: msg }, this.logger);
         if (!pre) {
             return { isSucc: false, errMsg: 'sendMsg prevent by preSendMsgFlow' };
         }
@@ -66,7 +66,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
         }
 
         // Post Flow
-        await this.server.flows.postSendMsgFlow.exec(pre);
+        await this.server.flows.postSendMsgFlow.exec(pre, this.logger);
 
         return { isSucc: true };
     }
