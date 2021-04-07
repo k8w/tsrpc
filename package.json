@@ -2,11 +2,22 @@
   "name": "tsrpc",
   "version": "3.0.0-alpha.0",
   "description": "TSRPC 3.x (both support HTTP and WebSocket)",
-  "main": "index.js",
+  "main": "index.cjs",
+  "exports": {
+    "require": "./index.cjs",
+    "import": "./index.mjs"
+  },
+  "typings": "./index.d.ts",
+  "directories": {
+    "doc": "docs"
+  },
   "scripts": {
-    "test": "mocha test\\**\\*.test.ts",
-    "build": "rm -rf dist && npx rollup -c && cp package.json LICENSE README.md dist/",
-    "build:debug": "rm -rf dist && tsc -d && cp package.json LICENSE README.md dist/"
+    "test": "npx mocha",
+    "coverage": "nyc mocha test/**/*.test.ts && start coverage\\index.html",
+    "build": "npm run build:js && npm run build:dts && npm run build:doc && cp package.json LICENSE README.md dist/",
+    "build:js": "rm -rf dist && npx rollup -c",
+    "build:dts": "rm -rf lib && npx tsc && npx api-extractor run --local --verbose && node scripts/removePrivate.js && rm -rf lib",
+    "build:doc": "rm -rf docs/references && npx api-documenter markdown --input temp --output docs/references"
   },
   "repository": {
     "type": "git",
@@ -26,7 +37,9 @@
   "author": "k8w",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@types/chai": "^4.2.15",
+    "@microsoft/api-documenter": "^7.12.17",
+    "@microsoft/api-extractor": "^7.13.3",
+    "@types/chai": "^4.2.16",
     "@types/colors": "^1.2.1",
     "@types/mocha": "^5.2.7",
     "@types/node": "^14.14.37",
@@ -34,12 +47,11 @@
     "@types/ws": "^6.0.4",
     "chai": "^4.3.4",
     "mocha": "^6.2.3",
-    "rollup": "^1.32.1",
-    "rollup-plugin-terser": "^5.3.1",
+    "rollup": "^2.44.0",
     "rollup-plugin-typescript2": "^0.22.0",
     "ts-node": "^8.10.2",
-    "tslib": "^2.1.0",
-    "typescript": "^3.9.9"
+    "tslib": "^2.2.0",
+    "typescript": "^4.2.3"
   },
   "typings": "index.d.ts",
   "dependencies": {
@@ -49,5 +61,17 @@
     "tsrpc-proto": "^1.3.1",
     "uuid": "^3.4.0",
     "ws": "^7.4.4"
+  },
+  "nyc": {
+    "extension": [
+      ".ts"
+    ],
+    "include": [
+      "src/**/*.ts"
+    ],
+    "reporter": [
+      "html"
+    ],
+    "all": true
   }
 }

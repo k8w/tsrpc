@@ -1,26 +1,44 @@
 import typescript from 'rollup-plugin-typescript2';
-import { terser } from "rollup-plugin-terser";
 
-export default {
-    input: './src/index.ts',
-    output: {
-        format: 'cjs',
-        file: './dist/index.js'
-    },
-    plugins: [
-        typescript({
-            tsconfigOverride: {
-                compilerOptions: {
-                    declaration: true,
-                    module: 'esnext'
+export default [
+    {
+        input: './src/index.ts',
+        output: [{
+            format: 'cjs',
+            file: './dist/index.cjs',
+            banner: require('./scripts/copyright')
+        }],
+        plugins: [
+            typescript({
+                tsconfigOverride: {
+                    compilerOptions: {
+                        target: 'es5',
+                        declaration: false,
+                        declarationMap: false,
+                        module: "esnext"
+                    }
                 }
-            }
-        }),
-        terser({
-            module: true,
-            toplevel: true
-        })
-
-    ],
-    external: ['tslib']
-}
+            })
+        ]
+    },
+    {
+        input: './src/index.ts',
+        output: [{
+            format: 'es',
+            file: './dist/index.mjs',
+            banner: require('./scripts/copyright')
+        }],
+        plugins: [
+            typescript({
+                tsconfigOverride: {
+                    compilerOptions: {
+                        target: 'es6',
+                        declaration: false,
+                        declarationMap: false,
+                        module: "esnext"
+                    }
+                }
+            })
+        ]
+    }
+]
