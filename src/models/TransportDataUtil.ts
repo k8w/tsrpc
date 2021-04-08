@@ -1,5 +1,5 @@
 import { EncodeOutput, TSBuffer } from "tsbuffer";
-import { ApiReturn, ServerInputData, ServerOutputData, TransportDataProto, TsrpcError } from 'tsrpc-proto';
+import { ApiReturn, ServerInputData, ServerOutputData, TransportDataProto } from 'tsrpc-proto';
 import { nodeUtf8 } from "./nodeUtf8";
 import { ApiService, MsgService, ServiceMap } from "./ServiceMapUtil";
 
@@ -25,7 +25,7 @@ export class TransportDataUtil {
             serviceId: sn !== undefined ? service.id : undefined
         };
         if (apiReturn.isSucc) {
-            let op = tsbuffer.encode(apiReturn.res, service.reqSchemaId);
+            let op = tsbuffer.encode(apiReturn.res, service.resSchemaId);
             if (!op.isSucc) {
                 return op;
             }

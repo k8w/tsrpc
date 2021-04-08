@@ -26,9 +26,9 @@ export abstract class BaseCall<ServiceType extends BaseServiceType> {
         return this.conn.server;
     }
 
-    destroy() {
-        for (let key in this) {
-            this[key] = undefined as any;
-        }
-    };
+    // destroy() {
+        // for (let key in this) {
+        //     this[key] = undefined as any;
+        // }
+    // };
 }

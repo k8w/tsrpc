@@ -63,8 +63,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
 
 
     protected async _prepareReturn(ret: ApiReturn<Res>, sendReturn?: SendReturnMethod<Res>): Promise<void> {
-        if (this.return) {
-            this.logger.debug('API return duplicately.')
+        if (this._return) {
             return;
         }
 
@@ -76,14 +75,14 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         }
         ret = preFlow.return;
 
-        // Do send!        
-        let opSend = await (sendReturn ?? this._sendReturn)(ret);
+        // Do send!
+        this._return = ret;
+        let opSend = await (sendReturn ? sendReturn(ret) : this._sendReturn(ret));
         if (!opSend.isSucc) {
             return;
         }
 
         // record & log ret
-        this._return = ret;
         this._usedTime = Date.now() - this.startTime;
         if (ret.isSucc) {
             this.logger.log('[Res]', `${this.usedTime}ms`, this.server.options.logResBody ? ret.res : '');

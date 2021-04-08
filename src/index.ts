@@ -1,6 +1,6 @@
 import 'k8w-extend-native';
 export { Logger, TsrpcError } from 'tsrpc-proto';
-export { HttpClient } from './client/http/OldHttpClient';
+export { HttpClient } from './client/http/HttpClient';
 export { ApiCall } from './server/base/ApiCall';
 export { BaseCall } from './server/base/BaseCall';
 export { BaseConnection, BaseConnectionOptions } from './server/base/BaseConnection';

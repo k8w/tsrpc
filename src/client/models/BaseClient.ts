@@ -211,7 +211,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
                     isSucc: false,
                     err: new TsrpcError(opEncode.errMsg, {
                         type: TsrpcErrorType.ClientError,
-                        code: 'ENCODE_REQ_ERR'
+                        code: 'ENCODE_MSG_ERR'
                     })
                 });
                 return;

@@ -1,4 +1,4 @@
-import { ServiceProto, ServiceDef, ApiServiceDef, MsgServiceDef } from "tsrpc-proto";
+import { ApiServiceDef, MsgServiceDef, ServiceProto } from "tsrpc-proto";
 
 export class ServiceMapUtil {
     static getServiceMap(proto: ServiceProto): ServiceMap {
@@ -15,8 +15,8 @@ export class ServiceMapUtil {
             if (v.type === 'api') {
                 let svc: ApiService = {
                     ...v,
-                    reqSchemaId: path + 'Req' + name,
-                    resSchemaId: path + 'Res' + name
+                    reqSchemaId: `${path}Ptl${name}/Req${name}`,
+                    resSchemaId: `${path}Ptl${name}/Res${name}`,
                 }
                 map.apiName2Service[v.name] = svc;
                 map.id2Service[v.id] = svc;
@@ -24,7 +24,7 @@ export class ServiceMapUtil {
             else {
                 let svc: MsgService = {
                     ...v,
-                    msgSchemaId: path + 'Msg' + name
+                    msgSchemaId: `${path}Msg${name}/Msg${name}`,
                 };
                 map.msgName2Service[v.name] = svc;
                 map.id2Service[v.id] = svc;

@@ -187,7 +187,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                 type: TsrpcErrorType.ServerError
             });
         }
-        call.destroy();
+        // call.destroy();
     }
 
     protected async _onMsgCall(call: MsgCall) {
@@ -210,7 +210,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // Post Flow
         await this.flows.postMsgCallFlow.exec(call, call.logger);
-        call.destroy();
+        // call.destroy();
     }
     // #endregion    
 
@@ -374,9 +374,9 @@ export const defaultBaseServerOptions: BaseServerOptions<any> = {
         call.error('Internal Server Error', {
             code: 'INTERNAL_ERR',
             type: TsrpcErrorType.ServerError,
-            innerError: call.conn.server.options.returnInnerError ? {
+            innerErr: call.conn.server.options.returnInnerError ? {
                 message: err.message,
-                stack: err.stack
+                ...(err.stack ? { stack: err.stack } : undefined)
             } : undefined
         });
     },

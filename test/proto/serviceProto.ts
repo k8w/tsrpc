@@ -4,13 +4,15 @@ import { MsgChat } from './MsgChat'
 import { ReqTest as ReqTest_1, ResTest as ResTest_1 } from './PtlTest'
 
 export interface ServiceType {
-    req: {
-        "a/b/c/Test": ReqTest,
-        "Test": ReqTest_1
-    },
-    res: {
-        "a/b/c/Test": ResTest,
-        "Test": ResTest_1
+    api: {
+        "a/b/c/Test": {
+            req: ReqTest,
+            res: ResTest
+        },
+        "Test": {
+            req: ReqTest_1,
+            res: ResTest_1
+        }
     },
     msg: {
         "Chat": MsgChat
@@ -22,22 +24,17 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 0,
             "name": "a/b/c/Test",
-            "type": "api",
-            "req": "a/b/c/PtlTest/ReqTest",
-            "res": "a/b/c/PtlTest/ResTest"
+            "type": "api"
         },
         {
             "id": 1,
             "name": "Chat",
-            "type": "msg",
-            "msg": "MsgChat/MsgChat"
+            "type": "msg"
         },
         {
             "id": 2,
             "name": "Test",
-            "type": "api",
-            "req": "PtlTest/ReqTest",
-            "res": "PtlTest/ResTest"
+            "type": "api"
         }
     ],
     "types": {

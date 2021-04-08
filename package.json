@@ -7,7 +7,7 @@
     "require": "./index.cjs",
     "import": "./index.mjs"
   },
-  "typings": "./index.d.ts",
+  "typings": "index.d.ts",
   "directories": {
     "doc": "docs"
   },
@@ -37,8 +37,8 @@
   "author": "k8w",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@microsoft/api-documenter": "^7.12.17",
-    "@microsoft/api-extractor": "^7.13.3",
+    "@microsoft/api-documenter": "^7.12.19",
+    "@microsoft/api-extractor": "^7.13.4",
     "@types/chai": "^4.2.16",
     "@types/colors": "^1.2.1",
     "@types/mocha": "^5.2.7",
@@ -46,19 +46,18 @@
     "@types/uuid": "^3.4.9",
     "@types/ws": "^6.0.4",
     "chai": "^4.3.4",
-    "mocha": "^6.2.3",
+    "mocha": "^8.3.2",
     "rollup": "^2.44.0",
     "rollup-plugin-typescript2": "^0.22.0",
     "ts-node": "^8.10.2",
     "tslib": "^2.2.0",
-    "typescript": "^4.2.3"
+    "typescript": "^4.2.4"
   },
-  "typings": "index.d.ts",
   "dependencies": {
     "colors": "^1.3.3",
     "k8w-super-promise": "^1.0.0",
     "tsbuffer": "^2.0.0",
-    "tsrpc-proto": "^1.3.1",
+    "tsrpc-proto": "^1.3.2",
     "uuid": "^3.4.0",
     "ws": "^7.4.4"
   },

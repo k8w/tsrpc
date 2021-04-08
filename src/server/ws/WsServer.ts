@@ -118,6 +118,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             server: this,
             ws: ws,
             httpReq: httpReq,
+            onClose: this._onClientClose
         });
         this._conns.push(conn);
         this._id2Conn[conn.id] = conn;

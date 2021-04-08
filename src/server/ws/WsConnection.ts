@@ -8,7 +8,8 @@ import { WsServer } from "./WsServer";
 export interface WsConnectionOptions<ServiceType extends BaseServiceType> extends BaseConnectionOptions<ServiceType> {
     server: WsServer<ServiceType>,
     ws: WebSocket,
-    httpReq: http.IncomingMessage
+    httpReq: http.IncomingMessage,
+    onClose: (conn: WsConnection<ServiceType>, code: number, reason: string) => void
 }
 
 /**
@@ -27,7 +28,7 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
 
         // Init WS
         this.ws.onclose = async e => {
-            this.logger.log('Closed');
+            options.onClose(this, e.code, e.reason);
             await this.server.flows.postDisconnectFlow.exec({ conn: this, reason: e.reason }, this.logger);
             this.destroy();
         };

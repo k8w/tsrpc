@@ -1,10 +1,9 @@
+import http from "http";
+import https from "https";
 import { SuperPromise } from "k8w-super-promise";
 import { BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions } from "../models/BaseClient";
 import { TransportOptions } from "../models/TransportOptions";
-import http from "http";
-import https from "https";
-import { TerminalColorLogger } from "../../server/models/TerminalColorLogger";
 
 export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
 
@@ -62,7 +61,9 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
             });
 
             httpReq.write(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
-            httpReq.end(rs);
+            httpReq.end(() => {
+                rs({});
+            });
 
             promise.onAbort = () => {
                 httpReq.abort();
