@@ -261,6 +261,11 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
         // onAbort
         pendingItem.onAbort?.();
     }
+    abortAll() {
+        for (let i = this._pendingApis.length - 1; i > -1; --i) {
+            this.abort(this._pendingApis[i].sn);
+        }
+    }
 
     /**
      * Send buffer
