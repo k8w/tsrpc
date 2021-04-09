@@ -38,17 +38,16 @@ export class TransportDataUtil {
         return this.tsbuffer.encode(serverOutputData, 'ServerOutputData');
     }
 
-    static encodeMsg(tsbuffer: TSBuffer, service: MsgService, msg: any): EncodeOutput {
+    static encodeClientMsg(tsbuffer: TSBuffer, service: MsgService, msg: any): EncodeOutput {
         let op = tsbuffer.encode(msg, service.msgSchemaId);
         if (!op.isSucc) {
             return op;
         }
-
-        let serverOutputData: ServerOutputData = {
+        let serverInputData: ServerOutputData = {
             serviceId: service.id,
             buffer: op.buf
         }
-        return this.tsbuffer.encode(serverOutputData, 'ServerOutputData');
+        return this.tsbuffer.encode(serverInputData, 'ServerInputData');
     }
 
     static encodeApiReq(tsbuffer: TSBuffer, service: ApiService, req: any, sn?: number): EncodeOutput {
@@ -64,8 +63,21 @@ export class TransportDataUtil {
         return this.tsbuffer.encode(serverInputData, 'ServerInputData');
     }
 
+    static encodeServerMsg(tsbuffer: TSBuffer, service: MsgService, msg: any): EncodeOutput {
+        let op = tsbuffer.encode(msg, service.msgSchemaId);
+        if (!op.isSucc) {
+            return op;
+        }
+        let serverOutputData: ServerOutputData = {
+            serviceId: service.id,
+            buffer: op.buf
+        }
+        return this.tsbuffer.encode(serverOutputData, 'ServerOutputData');
+    }
+
     static parseServerInput(tsbuffer: TSBuffer, serviceMap: ServiceMap, buf: Uint8Array): { isSucc: true, result: ParsedServerInput } | { isSucc: false, errMsg: string } {
         let opServerInputData = this.tsbuffer.decode(buf, 'ServerInputData');
+
         if (!opServerInputData.isSucc) {
             return opServerInputData;
         }

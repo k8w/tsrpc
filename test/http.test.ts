@@ -53,9 +53,7 @@ async function testApi(server: HttpServer<ServiceType>, client: HttpClient<Servi
                 ...new TsrpcError('Internal Server Error', {
                     code: 'INTERNAL_ERR',
                     type: TsrpcErrorType.ServerError,
-                    innerErr: {
-                        message: `${v} InnerError`,
-                    }
+                    innerErr: `${v} InnerError`
                 })
             }
         });
@@ -115,54 +113,57 @@ describe('HttpClient', function () {
         await server.stop();
     })
 
-    // it('autoImplementApi', async function () {
-    //     let server = new HttpServer(getProto(), {
-    //         logger: serverLogger
-    //     });
-    //     await server.start();
+    it('autoImplementApi', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+        await server.start();
 
-    //     server.autoImplementApi(path.resolve(__dirname, 'api'))
+        server.autoImplementApi(path.resolve(__dirname, 'api'))
 
-    //     let client = new HttpClient(getProto(), {
-    //         logger: clientLogger
-    //     })
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        })
 
-    //     await testApi(server, client);
+        await testApi(server, client);
 
-    //     await server.stop();
-    // });
+        await server.stop();
+    });
 
-    // it('sendMsg', async function () {
-    //     let server = new HttpServer(getProto(), {
-    //         port: 3001,
-    //         logger: serverLogger
-    //     });
-    //     await server.start();
+    it('sendMsg', async function () {
+        let server = new HttpServer(getProto(), {
+            port: 3001,
+            logger: serverLogger,
+            // debugBuf: true
+        });
 
-    //     let client = new HttpClient(getProto(), {
-    //         server: 'http://127.0.0.1:3001',
-    //         logger: clientLogger
-    //     });
+        await server.start();
 
-    //     return new Promise(rs => {
-    //         let msg: MsgChat = {
-    //             channel: 123,
-    //             userName: 'fff',
-    //             content: '666',
-    //             time: Date.now()
-    //         };
+        let client = new HttpClient(getProto(), {
+            server: 'http://127.0.0.1:3001',
+            logger: clientLogger,
+            // debugBuf: true
+        });
 
-    //         server.listenMsg('Chat', async v => {
-    //             assert.deepStrictEqual(v.msg, msg);
-    //             await server.stop();
-    //             rs();
-    //         });
+        return new Promise(rs => {
+            let msg: MsgChat = {
+                channel: 123,
+                userName: 'fff',
+                content: '666',
+                time: Date.now()
+            };
 
-    //         client.sendMsg('Chat', msg);
-    //     })
-    // })
+            server.listenMsg('Chat', async v => {
+                assert.deepStrictEqual(v.msg, msg);
+                await server.stop();
+                rs();
+            });
 
-    // it('cancel', async function () {
+            client.sendMsg('Chat', msg);
+        })
+    })
+
+    // it('abort', async function () {
     //     let server = new HttpServer(getProto(), {
     //         logger: serverLogger
     //     });
@@ -177,9 +178,11 @@ describe('HttpClient', function () {
     //     let result: any | undefined;
     //     let promise = client.callApi('Test', { name: 'aaaaaaaa' });
     //     setTimeout(() => {
+    //         console.log('ready abort', promise.isAborted, promise.isCompleted)
     //         promise.abort();
-    //     }, 0);
+    //     }, 10);
     //     promise.then(v => {
+    //         console.log('result')
     //         result = v;
     //     });
 
@@ -187,7 +190,7 @@ describe('HttpClient', function () {
     //         setTimeout(() => {
     //             assert.strictEqual(result, undefined);
     //             rs();
-    //         }, 100)
+    //         }, 150)
     //     })
 
     //     await server.stop();

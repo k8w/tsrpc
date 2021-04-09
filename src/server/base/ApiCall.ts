@@ -51,8 +51,8 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         })
     }
 
-    error(err: TsrpcError): Promise<void>;
     error(message: string, info?: Partial<TsrpcErrorData>): Promise<void>;
+    error(err: TsrpcError): Promise<void>;
     error(errOrMsg: string | TsrpcError, data?: Partial<TsrpcErrorData>): Promise<void> {
         let error: TsrpcError = typeof errOrMsg === 'string' ? new TsrpcError(errOrMsg, data) : errOrMsg;
         return this._prepareReturn({
@@ -66,11 +66,13 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         if (this._return) {
             return;
         }
+        this._return = ret;
 
         // Pre Flow
         let preFlow = await this.server.flows.preApiReturnFlow.exec({ call: this, return: ret }, this.logger);
         // Stopped!
         if (!preFlow) {
+            this._return = undefined;
             return;
         }
         ret = preFlow.return;

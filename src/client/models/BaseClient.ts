@@ -11,9 +11,7 @@ import { ApiReturnFlowData, CallApiFlowData, SendMsgFlowData } from "./ClientFlo
 
 export abstract class BaseClient<ServiceType extends BaseServiceType> {
 
-    readonly options: BaseClientOptions = {
-        ...defaultBaseClientOptions
-    };
+    readonly options: BaseClientOptions;
 
     readonly serviceMap: ServiceMap;
     readonly tsbuffer: TSBuffer;
@@ -36,8 +34,8 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
 
     private _callApiSnCounter = new Counter(1);
 
-    constructor(proto: ServiceProto<ServiceType>, options?: Partial<BaseClientOptions>) {
-        Object.assign(this.options, options);
+    constructor(proto: ServiceProto<ServiceType>, options: BaseClientOptions) {
+        this.options = options;
         this.serviceMap = ServiceMapUtil.getServiceMap(proto);
         this.tsbuffer = new TSBuffer(proto.types, {
             utf8Coder: nodeUtf8
@@ -205,7 +203,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             }
 
             // Encode
-            let opEncode = TransportDataUtil.encodeMsg(this.tsbuffer, service, msg);
+            let opEncode = TransportDataUtil.encodeClientMsg(this.tsbuffer, service, msg);
             if (!opEncode.isSucc) {
                 rs({
                     isSucc: false,
@@ -270,7 +268,8 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             }
         }
         else {
-            this.logger?.warn('Cannot parse server output buffer: ' + opParsed.errMsg);
+            this.logger?.error('ParseServerOutputError: ' + opParsed.errMsg);
+            this.logger?.warn('Please check if the server proto is compatible with the client.');
         }
     }
 

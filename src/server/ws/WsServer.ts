@@ -14,16 +14,17 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
     readonly ApiCallClass = ApiCallWs;
     readonly MsgCallClass = MsgCallWs;
 
-    readonly options: WsServerOptions<ServiceType> = {
-        ...defaultWsServerOptions
-    }
+    readonly options!: WsServerOptions<ServiceType>;
 
     private readonly _conns: WsConnection<ServiceType>[] = [];
     private readonly _id2Conn: { [connId: string]: WsConnection<ServiceType> | undefined } = {};
     private _connIdCounter = new Counter(1);
 
     constructor(proto: ServiceProto<ServiceType>, options?: Partial<WsServerOptions<ServiceType>>) {
-        super(proto, options);
+        super(proto, {
+            ...defaultWsServerOptions,
+            ...options
+        });
     }
 
     private _status: ServerStatus = ServerStatus.Closed;
@@ -160,7 +161,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         }
 
         // Encode
-        let transportData = TransportDataUtil.encodeMsg(this.tsbuffer, service, msg);
+        let transportData = TransportDataUtil.encodeServerMsg(this.tsbuffer, service, msg);
 
         // Batch send
         await Promise.all(connIds.map(v => {

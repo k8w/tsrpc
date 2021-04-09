@@ -9,12 +9,12 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
 
     private _http: typeof http | typeof https;
 
-    readonly options: HttpClientOptions = {
-        ...defaultHttpClientOptions
-    }
-
+    readonly options!: HttpClientOptions;
     constructor(proto: ServiceProto<ServiceType>, options?: Partial<HttpClientOptions>) {
-        super(proto, options);
+        super(proto, {
+            ...defaultHttpClientOptions,
+            ...options
+        });
         this._http = this.options.server.startsWith('https://') ? https : http;
         this.logger?.log('TSRPC HTTP Client :', this.options.server);
     }
@@ -31,7 +31,7 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
             buf = pre;
 
             // Do Send
-            this.options.debugBuf && this.logger?.debug('[SendBuf]', '#' + sn, buf);
+            this.options.debugBuf && this.logger?.debug('[SendBuf]' + (sn ? (' #' + sn) : ''), `length=${buf.byteLength}`, buf);
 
             let httpReq: http.ClientRequest;
             httpReq = this._http.request(this.options.server, {
@@ -46,12 +46,13 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
                     let buf: Uint8Array = Buffer.concat(data)
                     this.lastReceivedBuf = buf;
 
-                    this.options.debugBuf && this.logger?.debug('[RecvBuf]', '#' + sn, buf);
+                    this.options.debugBuf && this.logger?.debug('[RecvBuf]' + (sn ? (' #' + sn) : ''), 'length=' + buf.byteLength, buf);
                     this._onRecvBuf(buf, serviceId, sn)
                 })
             });
 
             httpReq.on('error', e => {
+                this.logger?.error('HTTP Req Error:', e);
                 rs({
                     err: new TsrpcError(e.message, {
                         type: TsrpcErrorType.NetworkError,

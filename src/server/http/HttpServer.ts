@@ -15,12 +15,13 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
 
     private _connCounter = new Counter(1);
 
-    readonly options: HttpServerOptions<ServiceType> = {
-        ...defaultHttpServerOptions
-    }
+    readonly options!: HttpServerOptions<ServiceType>;
 
     constructor(proto: ServiceProto<ServiceType>, options?: Partial<HttpServerOptions<ServiceType>>) {
-        super(proto, options);
+        super(proto, {
+            ...defaultHttpServerOptions,
+            ...options
+        });
     }
 
     private _status: ServerStatus = ServerStatus.Closed;
@@ -128,6 +129,7 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
     }
 
     stop(): Promise<void> {
+        console.log('Stopping server...');
         return new Promise((rs, rj) => {
             if (!this._httpServer) {
                 rs();
@@ -138,6 +140,7 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
             // 立即close，不再接受新请求
             // 等所有连接都断开后rs
             this._httpServer.close(err => {
+                console.log('done', err)
                 if (err) {
                     rj(err)
                 }

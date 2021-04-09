@@ -32,9 +32,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
     // 配置及其衍生项
     readonly proto: ServiceProto<ServiceType>;
-    readonly options: BaseServerOptions<ServiceType> = {
-        ...defaultBaseServerOptions
-    };
+    readonly options: BaseServerOptions<ServiceType>;
     readonly tsbuffer: TSBuffer;
     readonly serviceMap: ServiceMap;
     readonly logger: Logger;
@@ -91,9 +89,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         });
     }
 
-    constructor(proto: ServiceProto<ServiceType>, options?: Partial<BaseServerOptions<ServiceType>>) {
+    constructor(proto: ServiceProto<ServiceType>, options: BaseServerOptions<ServiceType>) {
         this.proto = proto;
-        Object.assign(this.options, options);
+        this.options = options;
 
         this.tsbuffer = new TSBuffer(proto.types, {
             strictNullChecks: this.options.strictNullChecks,
@@ -149,9 +147,23 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     }
 
     protected async _onApiCall(call: ApiCall) {
+        let timeoutTimer = this.options.apiTimeout ? setTimeout(() => {
+            if (!call.return) {
+                call.error('Server Timeout', {
+                    code: 'SERVER_TIMEOUT',
+                    type: TsrpcErrorType.ServerError
+                })
+            }
+            timeoutTimer = undefined;
+        }, this.options.apiTimeout) : undefined;
+
         // Pre Flow
         let preFlow = await this.flows.preApiCallFlow.exec(call, call.logger);
         if (!preFlow) {
+            if (timeoutTimer) {
+                clearTimeout(timeoutTimer);
+                timeoutTimer = undefined;
+            }
             return;
         }
         call = preFlow;
@@ -159,26 +171,33 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         // exec ApiCall
         call.logger.log('[Req]', this.options.logReqBody ? call.req : '');
         let handler = this._apiHandlers[call.service.name];
+        // exec API handler
+        if (handler) {
+            try {
+                await handler(call);
+            }
+            catch (e) {
+                if (e instanceof TsrpcError) {
+                    call.error(e);
+                }
+                else {
+                    this.options.onApiInnerError(e, call);
+                }
+            }
+        }
         // 未找到ApiHandler，且未进行任何输出
-        if (!handler) {
-            call.error(`Unhandled API: ${call.service.name}`, { code: 'UNHANDLED_API', type: TsrpcErrorType.ServerError })
-            return;
-        }
-        // exec
-        try {
-            await handler(call);
-        }
-        catch (e) {
-            if (e instanceof TsrpcError) {
-                call.error(e);
-            }
-            else {
-                this.options.onApiInnerError(e, call);
-            }
+        else {
+            call.error(`Unhandled API: ${call.service.name}`, { code: 'UNHANDLED_API', type: TsrpcErrorType.ServerError });
+
         }
 
         // Post Flow
         await this.flows.postApiCallFlow.exec(call, call.logger);
+
+        if (timeoutTimer) {
+            clearTimeout(timeoutTimer);
+            timeoutTimer = undefined;
+        }
 
         // Destroy call
         if (!call.return) {
@@ -187,10 +206,14 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                 type: TsrpcErrorType.ServerError
             });
         }
-        // call.destroy();
     }
 
     protected async _onMsgCall(call: MsgCall) {
+        // 收到Msg即可断开连接（短连接）
+        if (call.conn.type === 'SHORT') {
+            call.conn.close();
+        }
+
         // Pre Flow
         let preFlow = await this.flows.preMsgCallFlow.exec(call, call.logger);
         if (!preFlow) {
@@ -200,7 +223,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // MsgHandler
         call.logger.log('[Msg]', call.msg);
-        let promises = this._msgHandlers.forEachHandler(call.service.name, call.logger);
+        let promises = this._msgHandlers.forEachHandler(call.service.name, call.logger, call);
         if (!promises.length) {
             this.logger.debug('[UNHANDLED_MSG]', call.service.name);
         }
@@ -210,7 +233,6 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // Post Flow
         await this.flows.postMsgCallFlow.exec(call, call.logger);
-        // call.destroy();
     }
     // #endregion    
 
@@ -320,6 +342,13 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
      */
     strictNullChecks: boolean,
 
+    /**
+     * API 超时时间（毫秒）
+     * 0 或 `undefined` 代表不限时
+     * 默认：`30000`
+     */
+    apiTimeout: number | undefined,
+
     // LOG相关
     /**
      * Where the log is output to
@@ -363,21 +392,22 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
 
 export const defaultBaseServerOptions: BaseServerOptions<any> = {
     strictNullChecks: true,
+    apiTimeout: 30000,
     logger: new TerminalColorLogger,
     logReqBody: true,
     logResBody: true,
-    onParseCallError: (e, conn, buf) => {
-        conn.logger.error(`[${conn.ip}] [Invalid input buffer] length=${buf.length}`, buf.subarray(0, 16))
+    onParseCallError: (errMsg, conn, buf) => {
+        conn.logger.error(`[${conn.ip}] [Invalid input buffer] ${errMsg} length=${buf.length}`, buf.subarray(0, 16))
         conn.close('INVALID_INPUT_BUFFER');
     },
     onApiInnerError: (err, call) => {
+        if (!call.conn.server.options.returnInnerError) {
+            call.logger.error(err);
+        }
         call.error('Internal Server Error', {
             code: 'INTERNAL_ERR',
             type: TsrpcErrorType.ServerError,
-            innerErr: call.conn.server.options.returnInnerError ? {
-                message: err.message,
-                ...(err.stack ? { stack: err.stack } : undefined)
-            } : undefined
+            innerErr: call.conn.server.options.returnInnerError ? err.message : undefined
         });
     },
     returnInnerError: process.env['NODE_ENV'] !== 'production'

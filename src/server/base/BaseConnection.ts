@@ -54,7 +54,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
         msg = pre.msg;
 
         // Encode
-        let opServerOutput = TransportDataUtil.encodeMsg(this.server.tsbuffer, service, msg);
+        let opServerOutput = TransportDataUtil.encodeServerMsg(this.server.tsbuffer, service, msg);
         if (!opServerOutput.isSucc) {
             return opServerOutput;
         }

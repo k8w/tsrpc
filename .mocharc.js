@@ -6,8 +6,8 @@ module.exports = {
     exit: true,
     timeout: 999999,
     'preserve-symlinks': true,
-    // spec: [
-    //     './test/http.test.ts',
-    // ],
+    spec: [
+        './test/http.test.ts',
+    ],
     parallel: false
 }
