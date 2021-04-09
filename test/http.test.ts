@@ -163,38 +163,90 @@ describe('HttpClient', function () {
         })
     })
 
-    // it('abort', async function () {
-    //     let server = new HttpServer(getProto(), {
-    //         logger: serverLogger
-    //     });
-    //     await server.start();
+    it('abort', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+        await server.start();
 
-    //     server.autoImplementApi(path.resolve(__dirname, 'api'))
+        server.autoImplementApi(path.resolve(__dirname, 'api'))
 
-    //     let client = new HttpClient(getProto(), {
-    //         logger: clientLogger
-    //     })
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        })
 
-    //     let result: any | undefined;
-    //     let promise = client.callApi('Test', { name: 'aaaaaaaa' });
-    //     setTimeout(() => {
-    //         console.log('ready abort', promise.isAborted, promise.isCompleted)
-    //         promise.abort();
-    //     }, 10);
-    //     promise.then(v => {
-    //         console.log('result')
-    //         result = v;
-    //     });
+        let result: any | undefined;
+        let promise = client.callApi('Test', { name: 'aaaaaaaa' });
+        let sn = client.lastSN;
+        setTimeout(() => {
+            client.abort(sn)
+        }, 10);
+        promise.then(v => {
+            result = v;
+        });
 
-    //     await new Promise<void>(rs => {
-    //         setTimeout(() => {
-    //             assert.strictEqual(result, undefined);
-    //             rs();
-    //         }, 150)
-    //     })
+        await new Promise<void>(rs => {
+            setTimeout(() => {
+                assert.strictEqual(result, undefined);
+                rs();
+            }, 150)
+        })
 
-    //     await server.stop();
-    // });
+        await server.stop();
+    });
+
+    it('pendingApis泄露', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+        await server.start();
+
+        server.autoImplementApi(path.resolve(__dirname, 'api'))
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        })
+
+        for (let i = 0; i < 10; ++i) {
+            let promise= Promise.all(Array.from({ length: 10 }, () => new Promise<void>(rs => {
+                let name = ['Req', 'InnerError', 'TsrpcError', 'error'][Math.random() * 4 | 0];
+                let ret: any | undefined;
+                let promise = client.callApi('Test', { name: name });
+                let sn = client.lastSN;
+                let abort = Math.random() > 0.5;
+                if (abort) {
+                    setTimeout(() => {
+                        client.abort(sn)
+                    }, 10);
+                }
+                promise.then(v => {
+                    ret = v;
+                });
+
+                setTimeout(() => {
+                    client.logger?.log('sn', sn, name, abort, ret)
+                    if (abort) {
+                        assert.strictEqual(ret, undefined);
+                    }
+                    else {
+                        assert.notEqual(ret, undefined);
+                        if (name === 'Req') {
+                            assert.strictEqual(ret.isSucc, true);
+                        }
+                        else {
+                            assert.strictEqual(ret.isSucc, false)
+                        }
+                    }
+                    rs();
+                }, 300)
+            })));
+            assert.strictEqual(client['_pendingApis'].length, 10);
+            await promise;
+            assert.strictEqual(client['_pendingApis'].length, 0);
+        }
+
+        await server.stop();
+    })
 
     // it('error', async function () {
     //     let server = new HttpServer(getProto(), {

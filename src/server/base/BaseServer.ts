@@ -401,9 +401,7 @@ export const defaultBaseServerOptions: BaseServerOptions<any> = {
         conn.close('INVALID_INPUT_BUFFER');
     },
     onApiInnerError: (err, call) => {
-        if (!call.conn.server.options.returnInnerError) {
-            call.logger.error(err);
-        }
+        call.logger.error(err);
         call.error('Internal Server Error', {
             code: 'INTERNAL_ERR',
             type: TsrpcErrorType.ServerError,

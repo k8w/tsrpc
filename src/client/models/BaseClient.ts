@@ -1,4 +1,3 @@
-import { SuperPromise } from "k8w-super-promise";
 import { TSBuffer } from "tsbuffer";
 import { ApiReturn, BaseServiceType, Logger, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
 import { Counter } from '../../models/Counter';
@@ -32,7 +31,19 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
         preRecvBufferFlow: new Flow<Uint8Array>(),
     } as const;
 
-    private _callApiSnCounter = new Counter(1);
+    private _apiSnCounter = new Counter(1);
+    /**
+     * 最后一次 callAPI 的SN
+     * 可用于中断请求
+     */
+    get lastSN() {
+        return this._apiSnCounter.last;
+    }
+
+    /**
+     * 请求中的API
+     */
+    protected _pendingApis: PendingApiItem[] = [];
 
     constructor(proto: ServiceProto<ServiceType>, options: BaseClientOptions) {
         this.options = options;
@@ -43,17 +54,24 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
         this.logger = this.options.logger;
     }
 
-    async callApi<T extends keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], options: TransportOptions = {}): SuperPromise<ApiReturn<ServiceType['api'][T]['res']>> {
-        let promiseDoCall: SuperPromise<ApiReturn<ServiceType['api'][T]['res']>> | undefined;
-        let promise = new SuperPromise<ApiReturn<ServiceType['api'][T]['res']>>(async rs => {
+    async callApi<T extends keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], options: TransportOptions = {}): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
+        // Add pendings
+        let sn = this._apiSnCounter.getNext();
+        let pendingItem: PendingApiItem = {
+            sn: sn,
+            service: this.serviceMap.apiName2Service[apiName as string]!
+        };
+        this._pendingApis.push(pendingItem);
+
+        let promise = new Promise<ApiReturn<ServiceType['api'][T]['res']>>(async rs => {
             // Pre Call Flow
             let pre = await this.flows.preCallApiFlow.exec({
                 apiName: apiName,
                 req: req,
                 options: options
             }, this.logger);
-            if (!pre || promise.isAborted) {
-                promise.abort();
+            if (!pre || pendingItem.isAborted) {
+                this.abort(pendingItem.sn);
                 return;
             }
 
@@ -65,11 +83,9 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             }
             else {
                 // do call means it will send buffer via network
-                promiseDoCall = this._doCallApi(pre.apiName, pre.req, pre.options);
-                ret = await promiseDoCall;
+                ret = await this._doCallApi(pre.apiName, pre.req, pre.options, pendingItem);
             }
-            promise.onAbort = undefined;
-            if (promise.isAborted) {
+            if (pendingItem.isAborted) {
                 return;
             }
 
@@ -79,7 +95,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
                 return: ret
             }, this.logger);
             if (!preReturn) {
-                promise.abort();
+                this.abort(pendingItem.sn);
                 return;
             }
 
@@ -89,19 +105,18 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             this.flows.postApiReturnFlow.exec(preReturn, this.logger);
         });
 
-        promise.onAbort = () => {
-            promiseDoCall?.abort();
-        }
+        // Finally clear pendings
+        promise.finally(() => {
+            this._pendingApis.removeOne(v => v.sn === pendingItem.sn);
+        })
 
         return promise;
     }
 
-    protected async _doCallApi<T extends keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], options: TransportOptions = {}): SuperPromise<ApiReturn<ServiceType['api'][T]['res']>> {
-        let promiseSend: SuperPromise<{ err?: TsrpcError }> | undefined;
-        let sn = this._callApiSnCounter.getNext();
-        this.logger?.log(`[ApiReq] #${sn}`, apiName, req);
+    protected async _doCallApi<T extends keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], options: TransportOptions = {}, pendingItem: PendingApiItem): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
+        this.logger?.log(`[ApiReq] #${pendingItem.sn}`, apiName, req);
 
-        let promise = new SuperPromise<ApiReturn<ServiceType['api'][T]['res']>>(async rs => {
+        let promise = new Promise<ApiReturn<ServiceType['api'][T]['res']>>(async rs => {
             // GetService
             let service = this.serviceMap.apiName2Service[apiName as string];
             if (!service) {
@@ -114,6 +129,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
                 });
                 return;
             }
+            pendingItem.service = service;
 
             // Encode
             let opEncode = TransportDataUtil.encodeApiReq(this.tsbuffer, service, req);
@@ -128,8 +144,8 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             }
 
             // Send Buf...
-            let promiseReturn = this._waitApiReturn(sn, service, options.timeout);
-            let promiseSend = this._sendBuf(opEncode.buf, options, service.id, sn);
+            let promiseReturn = this._waitApiReturn(pendingItem, service, options.timeout);
+            let promiseSend = this._sendBuf(opEncode.buf, options, service.id, pendingItem);
             let opSend = await promiseSend;
             if (opSend.err) {
                 rs({
@@ -141,25 +157,19 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
 
             // And wait Return...
             let ret = await promiseReturn;
-            if (promise.isAborted) {
+            if (pendingItem.isAborted) {
                 return;
             }
 
             if (ret.isSucc) {
-                this.logger?.log(`[ApiRes] #${sn} ${apiName}`, ret.res);
+                this.logger?.log(`[ApiRes] #${pendingItem.sn} ${apiName}`, ret.res);
             }
             else {
-                this.logger?.log(`[ApiErr] #${sn} ${apiName}`, ret.err);
+                this.logger?.log(`[ApiErr] #${pendingItem.sn} ${apiName}`, ret.err);
             }
 
             rs(ret);
         });
-
-        promise.onAbort = () => {
-            this.logger?.log(`[ApiAbort] #${sn} ${apiName}`)
-            this._apiReturnListeners.removeOne(v => v.sn === sn);
-            promiseSend?.abort();
-        }
 
         return promise;
     }
@@ -171,9 +181,8 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
      * @returns 异步返回的结果仅代表服务器收到了Msg或主动关闭了链接
      * 不代表服务器正确的处理了请求
      */
-    sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options: TransportOptions = {}): SuperPromise<{ isSucc: true } | { isSucc: false, err: TsrpcError }> {
-        let promiseSendBuf: SuperPromise<{ err?: TsrpcError }> | undefined;
-        let promise = new SuperPromise<{ isSucc: true } | { isSucc: false, err: TsrpcError }>(async rs => {
+    sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options: TransportOptions = {}): Promise<{ isSucc: true } | { isSucc: false, err: TsrpcError }> {
+        let promise = new Promise<{ isSucc: true } | { isSucc: false, err: TsrpcError }>(async rs => {
             // Pre Flow
             let pre = await this.flows.preSendMsgFlow.exec({
                 msgName: msgName,
@@ -181,7 +190,6 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
                 options: options
             }, this.logger);
             if (!pre) {
-                promise.abort();
                 return;
             }
 
@@ -231,12 +239,27 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             // Post Flow
             this.flows.postSendMsgFlow.exec(pre, this.logger)
         });
-        promise.onAbort = () => {
-            this.logger?.log(`[MsgAbort] ${msgName}`, msg);
-            promiseSendBuf?.abort();
-        }
 
         return promise;
+    }
+
+    /** 中断请求 */
+    abort(sn: number): void {
+        // Find
+        let index = this._pendingApis.findIndex(v => v.sn === sn);
+        if (index === -1) {
+            return;
+        }
+        let pendingItem = this._pendingApis[index];
+        // Clear
+        this._pendingApis.splice(index, 1);
+        pendingItem.onReturn = undefined;
+        pendingItem.isAborted = true;
+
+        // Log
+        this.logger?.log(`[ApiAbort] #${pendingItem.sn} ${pendingItem.service.name}`)
+        // onAbort
+        pendingItem.onAbort?.();
     }
 
     /**
@@ -247,7 +270,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
      * @param options 
      * @param sn 
      */
-    protected abstract _sendBuf(buf: Uint8Array, options: TransportOptions, serviceId?: number, sn?: number): SuperPromise<{ err?: TsrpcError }>;
+    protected abstract _sendBuf(buf: Uint8Array, options: TransportOptions, serviceId?: number, pendingApiItem?: PendingApiItem): Promise<{ err?: TsrpcError }>;
 
     protected async _onRecvBuf(buf: Uint8Array, serviceId?: number, sn?: number) {
         // Pre Flow
@@ -264,7 +287,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             if (parsed.type === 'api') {
                 sn = sn ?? parsed.sn;
                 // call ApiReturn listeners
-                this._apiReturnListeners.find(v => v.sn === sn)?.listener(parsed.ret);
+                this._pendingApis.find(v => v.sn === sn)?.onReturn?.(parsed.ret);
             }
         }
         else {
@@ -274,25 +297,19 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
     }
 
     /**
-     * ApiReturn事件监听
-     * buf发出后创建，ret收回或取消后移除
-     * 对于一个SN，是唯一的
-     */
-    protected _apiReturnListeners: { sn: number, service: ApiService, listener: (ret: ApiReturn<any>) => void }[] = [];
-    /**
      * 
      * @param sn 
      * @param timeout 
      * @returns `undefined` 代表 canceled
      */
-    protected async _waitApiReturn(sn: number, service: ApiService, timeout?: number): Promise<ApiReturn<any>> {
+    protected async _waitApiReturn(pendingItem: PendingApiItem, service: ApiService, timeout?: number): Promise<ApiReturn<any>> {
         return new Promise<ApiReturn<any>>(rs => {
             // Timeout
             let timer: ReturnType<typeof setTimeout> | undefined;
             if (timeout) {
                 timer = setTimeout(() => {
                     timer = undefined;
-                    this._apiReturnListeners.removeOne(v => v.sn === sn);
+                    this._pendingApis.removeOne(v => v.sn === pendingItem.sn);
                     rs({
                         isSucc: false,
                         err: new TsrpcError('Request Timeout', {
@@ -304,18 +321,14 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             }
 
             // Listener (trigger by `this._onRecvBuf`)
-            this._apiReturnListeners.push({
-                sn: sn,
-                service: service,
-                listener: ret => {
-                    if (timer) {
-                        clearTimeout(timer);
-                        timer = undefined;
-                    }
-                    this._apiReturnListeners.removeOne(v => v.sn === sn);
-                    rs(ret);
+            pendingItem.onReturn = ret => {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = undefined;
                 }
-            });
+                this._pendingApis.removeOne(v => v.sn === pendingItem.sn);
+                rs(ret);
+            }
         });
     }
 
@@ -342,4 +355,10 @@ export interface BaseClientOptions {
     debugBuf?: boolean
 }
 
-
+export interface PendingApiItem {
+    sn: number,
+    service: ApiService,
+    isAborted?: boolean,
+    onAbort?: () => void,
+    onReturn?: (ret: ApiReturn<any>) => void
+}

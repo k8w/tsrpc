@@ -55,7 +55,6 @@
   },
   "dependencies": {
     "colors": "^1.3.3",
-    "k8w-super-promise": "^1.0.0",
     "tsbuffer": "^2.0.0",
     "tsrpc-proto": "^1.3.2",
     "uuid": "^3.4.0",
