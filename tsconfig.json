@@ -59,7 +59,7 @@
   },
   "include": [
     "src",
-    "test"
+    // "test"
   ],
   "exclude": [
     "src/client/ws"

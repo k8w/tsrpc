@@ -3,3 +3,5 @@ node_modules
 yarn.lock
 logs
 .rpt2_cache
+.nyc_output
+coverage
