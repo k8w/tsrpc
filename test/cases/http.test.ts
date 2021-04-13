@@ -3,6 +3,7 @@ import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { BaseServer, TerminalColorLogger } from '../../src';
 import { HttpClient } from '../../src/client/http/HttpClient';
+import { BaseClient } from '../../src/client/models/BaseClient';
 import { HttpServer } from '../../src/server/http/HttpServer';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
@@ -335,7 +336,7 @@ describe('HttpClient', function () {
 
         let reqNum = 0;
         server.implementApi('Test', async call => {
-            if (++reqNum===10) {
+            if (++reqNum === 10) {
                 server.stop();
             }
             await new Promise(rs => setTimeout(rs, parseInt(call.req.name)));
@@ -361,42 +362,230 @@ describe('HttpClient', function () {
     })
 })
 
-// describe('HTTP Flow', function () {
-//     it('Server conn flow', async function () {
-//         let server = new HttpServer(getProto(), {
-//             logger: serverLogger
-//         });
+describe('HTTP Flow', function () {
+    it('Server conn flow', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
 
-//         const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+        const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
 
-//         server.implementApi('Test', async call => {
-//             assert.strictEqual(flowExecResult.postConnectFlow, true);
-//             assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
-//             call.succ({ reply: 'ok' });
-//             assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
-//         });
+        server.implementApi('Test', async call => {
+            assert.strictEqual((call.conn as any).xxxx, 'asdfasdf')
+            assert.strictEqual(flowExecResult.postConnectFlow, true);
+            assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
+            call.succ({ reply: 'ok' });
+            assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
+        });
 
-//         server.flows.postConnectFlow.push(v => {
-//             flowExecResult.postConnectFlow = true;
-//             return v;
-//         });
-//         server.flows.postDisconnectFlow.push(v => {
-//             flowExecResult.postDisconnectFlow = true;
-//             return v;
-//         })
+        server.flows.postConnectFlow.push(v => {
+            flowExecResult.postConnectFlow = true;
+            (v as any).xxxx = 'asdfasdf';
+            return v;
+        });
+        server.flows.postDisconnectFlow.push(v => {
+            flowExecResult.postDisconnectFlow = true;
+            return v;
+        })
 
-//         await server.start();
+        await server.start();
 
-//         assert.strictEqual(flowExecResult.postConnectFlow, undefined);
-//         assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
+        assert.strictEqual(flowExecResult.postConnectFlow, undefined);
+        assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
 
-//         let client = new HttpClient(getProto(), {
-//             logger: clientLogger
-//         });
-//         await client.callApi('Test', { name: 'xxx' });
-//         assert.strictEqual(flowExecResult.postConnectFlow, true);
-//         assert.strictEqual(flowExecResult.postDisconnectFlow, true);
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        });
+        await client.callApi('Test', { name: 'xxx' });
+        assert.strictEqual(flowExecResult.postConnectFlow, true);
+        assert.strictEqual(flowExecResult.postDisconnectFlow, true);
 
-//         await server.stop();
-//     })
-// })
+        await server.stop();
+    })
+
+    it('Buffer enc/dec flow', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+
+        const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+
+        server.implementApi('Test', async call => {
+            call.succ({ reply: 'Enc&Dec' });
+        });
+
+        server.flows.preRecvBufferFlow.push(v => {
+            flowExecResult.preRecvBufferFlow = true;
+            for (let i = 0; i < v.buf.length; ++i) {
+                v.buf[i] ^= 128;
+            }
+            return v;
+        });
+        server.flows.preSendBufferFlow.push(v => {
+            flowExecResult.preSendBufferFlow = true;
+            for (let i = 0; i < v.buf.length; ++i) {
+                v.buf[i] ^= 128;
+            }
+            return v;
+        })
+
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        });
+
+        client.flows.preSendBufferFlow.push(buf => {
+            for (let i = 0; i < buf.length; ++i) {
+                buf[i] ^= 128;
+            }
+            return buf;
+        });
+
+        client.flows.preRecvBufferFlow.push(buf => {
+            for (let i = 0; i < buf.length; ++i) {
+                buf[i] ^= 128;
+            }
+            return buf;
+        });
+
+        let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.strictEqual(flowExecResult.preRecvBufferFlow, true);
+        assert.strictEqual(flowExecResult.preSendBufferFlow, true);
+        assert.deepStrictEqual(ret, {
+            isSucc: true,
+            res: {
+                reply: 'Enc&Dec'
+            }
+        })
+
+        await server.stop();
+    });
+
+    it('ApiCall flow', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+
+        const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+
+        server.implementApi('Test', async call => {
+            call.succ({ reply: 'asdgasdgasdgasdg' });
+        });
+
+        server.flows.preApiCallFlow.push(call => {
+            assert.strictEqual(call.req.name, 'Changed')
+            call.error('You need login');
+            return call;
+        });
+        server.flows.postApiCallFlow.push(v => {
+            flowExecResult.postApiCallFlow = true;
+            return v;
+        })
+
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        });
+
+        client.flows.preCallApiFlow.push(v => {
+            v.req.name = 'Changed'
+            return v;
+        });
+
+        let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.strictEqual(flowExecResult.postApiCallFlow, true);
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError('You need login')
+        })
+
+        await server.stop();
+    });
+
+    it('server ApiReturn flow', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+
+        const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+
+        server.implementApi('Test', async call => {
+            call.succ({ reply: 'xxxxxxxxxxxxxxxxxxxx' });
+        });
+
+        server.flows.preApiReturnFlow.push(v => {
+            flowExecResult.preApiReturnFlow = true;
+            v.return = {
+                isSucc: false,
+                err: new TsrpcError('Ret changed')
+            }
+            return v;
+        });
+        server.flows.postApiReturnFlow.push(v => {
+            flowExecResult.postApiReturnFlow = true;
+            v.call.logger.log('RETTT', v.return);
+            return v;
+        })
+
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        });
+
+
+        let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.strictEqual(flowExecResult.preApiReturnFlow, true);
+        assert.strictEqual(flowExecResult.postApiReturnFlow, true);
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError('Ret changed')
+        })
+
+        await server.stop();
+    });
+
+    it('client ApiReturn flow', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+
+        const flowExecResult: { [K in (keyof BaseClient<any>['flows'])]?: boolean } = {};
+
+        server.implementApi('Test', async call => {
+            call.succ({ reply: 'xxxxxxxxxxxxxxxxxxxx' });
+        });
+
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        });
+
+        client.flows.preApiReturnFlow.push(v => {
+            flowExecResult.preApiReturnFlow = true;
+            v.return = {
+                isSucc: false,
+                err: new TsrpcError('Ret changed')
+            }
+            return v;
+        });
+        client.flows.postApiReturnFlow.push(v => {
+            flowExecResult.postApiReturnFlow = true;
+            client.logger?.log('RETTT', v.return);
+            return v;
+        })
+
+        let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.strictEqual(flowExecResult.preApiReturnFlow, true);
+        assert.strictEqual(flowExecResult.postApiReturnFlow, true);
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError('Ret changed')
+        })
+
+        await server.stop();
+    });
+})

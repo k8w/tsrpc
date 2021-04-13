@@ -115,7 +115,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         // Parse Call
         let opInput = TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
         if (!opInput.isSucc) {
-            this._onParseCallError(opInput.errMsg, conn, buf);
+            this._onInputBufferError(opInput.errMsg, conn, buf);
             return;
         }
         let call = this._makeCall(conn, opInput.result);
@@ -181,7 +181,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                     call.error(e);
                 }
                 else {
-                    this._onApiInnerError(e, call);
+                    this._onInternalServerError(e, call);
                 }
             }
         }
@@ -201,7 +201,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // Destroy call
         if (!call.return) {
-            this._onApiInnerError({ message: 'API not return anything' }, call);
+            this._onInternalServerError({ message: 'API not return anything' }, call);
         }
     }
 
@@ -332,9 +332,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * When the server cannot parse input buffer to api/msg call
      * By default, it will return "INVALID_INPUT_BUFFER" .
      */
-    protected _onParseCallError(errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) {
-        conn.logger.error(`[${conn.ip}][Invalid input buffer] ${errMsg} length = ${buf.length}`, buf.subarray(0, 16))
-        conn.close('INVALID_INPUT_BUFFER');
+    protected _onInputBufferError(errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) {
+        conn.logger.error(`[${conn.ip}][InputBufferError] ${errMsg} length = ${buf.length}`, buf.subarray(0, 16))
+        conn.close('INPUT_BUFFER_ERROR');
     }
 
     /**
@@ -342,7 +342,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * By default, it will return a "Internal server error".
      * If `returnInnerError` is `true`, an `innerError` field would be returned.
      */
-    _onApiInnerError(err: { message: string, stack?: string, name?: string }, call: ApiCall) {
+    _onInternalServerError(err: { message: string, stack?: string, name?: string }, call: ApiCall) {
         call.logger.error(err);
         call.error('Internal Server Error', {
             code: 'INTERNAL_ERR',
