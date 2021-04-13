@@ -72,7 +72,6 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         let preFlow = await this.server.flows.preApiReturnFlow.exec({ call: this, return: ret }, this.logger);
         // Stopped!
         if (!preFlow) {
-            this._return = undefined;
             return;
         }
         ret = preFlow.return;

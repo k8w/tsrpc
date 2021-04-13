@@ -15,8 +15,6 @@ export class Flow<T> {
         logger?.error('Uncaught FlowError:', e);
     };
 
-    get length() { return this.nodes.length };
-
     async exec(input: T, logger: Logger | undefined): Promise<FlowNodeReturn<T>> {
         let res: ReturnType<FlowNode<T>> = input;
 
@@ -31,14 +29,14 @@ export class Flow<T> {
 
             // Return 非true 表示不继续后续流程 立即中止
             if (res === null || res === undefined) {
-                break;
+                return res;
             }
         }
 
         return res;
     }
 
-    push(node: FlowNode<T>): number{
+    push(node: FlowNode<T>): number {
         return this.nodes.push(node);
     }
 

@@ -87,7 +87,7 @@ async function testApi(server: HttpServer<ServiceType>, client: HttpClient<Servi
     }
 }
 
-describe('HttpClient', function () {
+describe('HTTP Server & Client basic', function () {
     it('implement API manually', async function () {
         let server = new HttpServer(getProto(), {
             logger: serverLogger,
@@ -110,7 +110,8 @@ describe('HttpClient', function () {
 
     it('autoImplementApi', async function () {
         let server = new HttpServer(getProto(), {
-            logger: serverLogger
+            logger: serverLogger,
+            apiTimeout: 5000
         });
         await server.start();
 
@@ -362,7 +363,7 @@ describe('HttpClient', function () {
     })
 })
 
-describe('HTTP Flow', function () {
+describe('HTTP Flows', function () {
     it('Server conn flow', async function () {
         let server = new HttpServer(getProto(), {
             logger: serverLogger
@@ -504,6 +505,93 @@ describe('HTTP Flow', function () {
         await server.stop();
     });
 
+    it('ApiCall flow break', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+
+        const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+
+        server.implementApi('Test', async call => {
+            call.succ({ reply: 'asdgasdgasdgasdg' });
+        });
+
+        server.flows.preApiCallFlow.push(call => {
+            assert.strictEqual(call.req.name, 'Changed')
+            call.error('You need login');
+            return undefined;
+        });
+        server.flows.postApiCallFlow.push(v => {
+            flowExecResult.postApiCallFlow = true;
+            return v;
+        })
+
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        });
+
+        client.flows.preCallApiFlow.push(v => {
+            v.req.name = 'Changed'
+            return v;
+        });
+
+        let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.strictEqual(flowExecResult.postApiCallFlow, undefined);
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError('You need login')
+        })
+
+        await server.stop();
+    });
+
+    it('ApiCall flow error', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+
+        const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+
+        server.implementApi('Test', async call => {
+            call.succ({ reply: 'asdgasdgasdgasdg' });
+        });
+
+        server.flows.preApiCallFlow.push(call => {
+            assert.strictEqual(call.req.name, 'Changed')
+            throw new Error('ASDFASDF')
+        });
+        server.flows.postApiCallFlow.push(v => {
+            flowExecResult.postApiCallFlow = true;
+            return v;
+        })
+
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        });
+
+        client.flows.preCallApiFlow.push(v => {
+            v.req.name = 'Changed'
+            return v;
+        });
+
+        let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.strictEqual(flowExecResult.postApiCallFlow, undefined);
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError('Internal Server Error', {
+                type: TsrpcErrorType.ServerError,
+                innerErr: 'ASDFASDF',
+                code: 'INTERNAL_ERR'
+            })
+        })
+
+        await server.stop();
+    });
+
     it('server ApiReturn flow', async function () {
         let server = new HttpServer(getProto(), {
             logger: serverLogger
@@ -587,5 +675,9 @@ describe('HTTP Flow', function () {
         })
 
         await server.stop();
+    });
+
+    it('Flow error', async function () {
+        // TODO
     });
 })

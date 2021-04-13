@@ -102,6 +102,48 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // Process uncaught exception, so that Node.js process would not exit easily
         BaseServer.processUncaughtException(this.logger);
+
+        // API Flow Error: return [InternalServerError]
+        this.flows.preApiCallFlow.onError = (e, call) => {
+            if (e instanceof TsrpcError) {
+                call.error(e)
+            }
+            else {
+                this._onInternalServerError(e, call)
+            }
+        };
+        this.flows.postApiCallFlow.onError = (e, call) => {
+            if (!call.return) {
+                if (e instanceof TsrpcError) {
+                    call.error(e)
+                }
+                else {
+                    this._onInternalServerError(e, call)
+                }
+            }
+            else {
+                call.logger.error('postApiCallFlow Error:', e);
+            }
+        };
+        this.flows.preApiReturnFlow.onError = (e, last) => {
+            last.call['_return'] = undefined;
+            if (e instanceof TsrpcError) {
+                last.call.error(e)
+            }
+            else {
+                this._onInternalServerError(e, last.call)
+            }
+        }
+        this.flows.postApiReturnFlow.onError = (e, last) => {
+            if (!last.call.return) {
+                if (e instanceof TsrpcError) {
+                    last.call.error(e)
+                }
+                else {
+                    this._onInternalServerError(e, last.call)
+                }
+            }
+        }
     }
 
     // #region receive buffer process flow
