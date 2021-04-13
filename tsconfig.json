@@ -59,8 +59,7 @@
   },
   "include": [
     "src",
-    "test/http.test.ts"
-    // "test"
+    "test"
   ],
   "exclude": [
     "src/client/ws"

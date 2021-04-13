@@ -9,5 +9,7 @@ module.exports = {
     spec: [
         './test/cases/http.test.ts',
     ],
-    parallel: false
+    parallel: false,
+    // 'expose-gc': true,
+    // fgrep: 'pendingApis'
 }

@@ -1,5 +1,5 @@
 import { EncodeOutput, TSBuffer } from "tsbuffer";
-import { ApiReturn, ServerInputData, ServerOutputData, TransportDataProto } from 'tsrpc-proto';
+import { ApiReturn, ServerInputData, ServerOutputData, TransportDataProto, TsrpcError } from 'tsrpc-proto';
 import { nodeUtf8 } from "./nodeUtf8";
 import { ApiService, MsgService, ServiceMap } from "./ServiceMapUtil";
 
@@ -159,7 +159,7 @@ export class TransportDataUtil {
                         sn: serverOutputData.sn,
                         ret: {
                             isSucc: false,
-                            err: serverOutputData.error
+                            err: new TsrpcError(serverOutputData.error)
                         }
                     }
                 }

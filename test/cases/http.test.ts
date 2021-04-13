@@ -49,13 +49,11 @@ async function testApi(server: HttpServer<ServiceType>, client: HttpClient<Servi
 
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: {
-                ...new TsrpcError('Internal Server Error', {
-                    code: 'INTERNAL_ERR',
-                    type: TsrpcErrorType.ServerError,
-                    innerErr: `${v} InnerError`
-                })
-            }
+            err: new TsrpcError('Internal Server Error', {
+                code: 'INTERNAL_ERR',
+                type: TsrpcErrorType.ServerError,
+                innerErr: `${v} InnerError`
+            })
         });
     }
 
@@ -66,13 +64,11 @@ async function testApi(server: HttpServer<ServiceType>, client: HttpClient<Servi
         });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: {
-                ...new TsrpcError(`${v} TsrpcError`, {
-                    code: 'CODE_TEST',
-                    type: TsrpcErrorType.ApiError,
-                    info: 'ErrInfo ' + v
-                })
-            }
+            err: new TsrpcError(`${v} TsrpcError`, {
+                code: 'CODE_TEST',
+                type: TsrpcErrorType.ApiError,
+                info: 'ErrInfo ' + v
+            })
         });
     }
 
@@ -83,11 +79,9 @@ async function testApi(server: HttpServer<ServiceType>, client: HttpClient<Servi
         });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: {
-                ...new TsrpcError('Got an error', {
-                    type: TsrpcErrorType.ApiError
-                })
-            }
+            err: new TsrpcError('Got an error', {
+                type: TsrpcErrorType.ApiError
+            })
         });
     }
 }
@@ -195,7 +189,7 @@ describe('HttpClient', function () {
         await server.stop();
     });
 
-    it('pendingApis泄露', async function () {
+    it('pendingApis', async function () {
         let server = new HttpServer(getProto(), {
             logger: serverLogger
         });
@@ -208,7 +202,7 @@ describe('HttpClient', function () {
         })
 
         for (let i = 0; i < 10; ++i) {
-            let promise= Promise.all(Array.from({ length: 10 }, () => new Promise<void>(rs => {
+            let promise = Promise.all(Array.from({ length: 10 }, () => new Promise<void>(rs => {
                 let name = ['Req', 'InnerError', 'TsrpcError', 'error'][Math.random() * 4 | 0];
                 let ret: any | undefined;
                 let promise = client.callApi('Test', { name: name });
@@ -217,7 +211,7 @@ describe('HttpClient', function () {
                 if (abort) {
                     setTimeout(() => {
                         client.abort(sn)
-                    }, 10);
+                    }, 0);
                 }
                 promise.then(v => {
                     ret = v;
@@ -248,139 +242,89 @@ describe('HttpClient', function () {
         await server.stop();
     })
 
-    // it('error', async function () {
-    //     let server = new HttpServer(getProto(), {
-    //         logger: serverLogger
-    //     });
-    //     await server.start();
+    it('error', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+        await server.start();
 
-    //     let client1 = new HttpClient(getProto(), {
-    //         server: 'http://localhost:80',
-    //         logger: clientLogger
-    //     })
+        let client1 = new HttpClient(getProto(), {
+            server: 'http://localhost:80',
+            logger: clientLogger
+        })
 
-    //     let err1: TsrpcError | undefined;
-    //     await client1.callApi('Test', { name: 'xx' }).catch(e => {
-    //         err1 = e
-    //     })
-    //     assert.deepStrictEqual(err1!.info, { code: 'ECONNREFUSED', isNetworkError: true });
+        let ret = await client1.callApi('Test', { name: 'xx' });
+        console.log(ret);
+        assert.strictEqual(ret.isSucc, false);
+        assert.strictEqual(ret.err?.code, 'ECONNREFUSED');
+        assert.strictEqual(ret.err?.type, TsrpcErrorType.NetworkError);
 
-    //     await server.stop();
-    // })
+        await server.stop();
+    })
 
-    // // it('server timeout', async function () {
-    // //     let server = new HttpServer(getProto(), {
-    // //         logger: serverLogger,
-    // //         timeout: 100
-    // //     });
-    // //     server.implementApi('Test', call => {
-    // //         return new Promise(rs => {
-    // //             setTimeout(() => {
-    // //                 call.req && call.succ({
-    // //                     reply: 'Hi, ' + call.req.name
-    // //                 });
-    // //                 rs();
-    // //             }, 200)
-    // //         })
-    // //     })
-    // //     await server.start();
+    it('server timeout', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger,
+            apiTimeout: 100
+        });
+        server.implementApi('Test', call => {
+            return new Promise(rs => {
+                setTimeout(() => {
+                    call.req && call.succ({
+                        reply: 'Hi, ' + call.req.name
+                    });
+                    rs();
+                }, 200)
+            })
+        })
+        await server.start();
 
-    // //     let client = new HttpClient(getProto(), {
-    // //         logger: clientLogger
-    // //     });
-    // //     let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
-    // //     assert.deepStrictEqual(result, {
-    // //         message: 'Server Timeout', info: {
-    // //             code: 'SERVER_TIMEOUT',
-    // //             isServerError: true
-    // //         }
-    // //     });
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        });
+        let ret = await client.callApi('Test', { name: 'Jack' });
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError('Server Timeout', {
+                code: 'SERVER_TIMEOUT',
+                type: TsrpcErrorType.ServerError
+            })
+        });
 
-    // //     await server.stop();
-    // // });
+        await server.stop();
+    });
 
-    // it('client timeout', async function () {
-    //     let server1 = new HttpServer(getProto(), {
-    //         logger: serverLogger
-    //     });
-    //     server1.implementApi('Test', call => {
-    //         return new Promise(rs => {
-    //             setTimeout(() => {
-    //                 call.succ({
-    //                     reply: 'Hello, ' + call.req.name
-    //                 });
-    //                 rs();
-    //             }, 2000)
-    //         })
-    //     })
-    //     await server1.start();
+    it('client timeout', async function () {
+        let server1 = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+        server1.implementApi('Test', call => {
+            return new Promise(rs => {
+                setTimeout(() => {
+                    call.succ({
+                        reply: 'Hello, ' + call.req.name
+                    });
+                    rs();
+                }, 2000)
+            })
+        })
+        await server1.start();
 
-    //     let client = new HttpClient(getProto(), {
-    //         timeout: 100,
-    //         logger: clientLogger
-    //     });
+        let client = new HttpClient(getProto(), {
+            timeout: 100,
+            logger: clientLogger
+        });
 
-    //     let result = await client.callApi('Test', { name: 'Jack123' }).catch(e => e);
-    //     // SERVER TIMEOUT的call还没执行完，但是call却被放入Pool了，导致这个BUG
-    //     assert.strictEqual(result.message, 'Request Timeout');
-    //     assert.deepStrictEqual(result.info, { code: 'TIMEOUT', isNetworkError: true });
-
-    //     await server1.stop();
-    // });
-
-    // // it('enablePool: false', async function () {
-    // //     let server = new HttpServer(getProto(), {
-    // //         logger: serverLogger
-    // //     });
-    // //     await server.start();
-
-    // //     server.implementApi('Test', call => {
-    // //         let callOptions = call.options;
-    // //         let logger = call.logger;
-    // //         let loggerOptions = call.logger.options;
-    // //         call.succ({ reply: 'ok' });
-    // //         setTimeout(() => {
-    // //             assert.strictEqual(call['_options'], callOptions);
-    // //             assert.strictEqual(call.logger, logger);
-    // //             assert.strictEqual(call.logger['_options'], loggerOptions);
-    // //         }, 200)
-    // //     });
-
-    // //     let client = new HttpClient(getProto(), {
-    // //         logger: clientLogger
-    // //     })
-
-    // //     await client.callApi('Test', { name: 'xx' });
-    // //     await new Promise(rs => setTimeout(rs, 300));
-
-    // //     await server.stop();
-    // // })
-
-    // // it('enablePool: true', async function () {
-    // //     let server = new HttpServer({
-    // //         proto: getProto(),
-    // //         logger: serverLogger,
-    // //         enablePool: true
-    // //     });
-    // //     await server.start();
-
-    // //     server.implementApi('Test', call => {
-    // //         let logger = call.logger;
-    // //         call.succ({ reply: 'ok' });
-    // //         setTimeout(() => {
-    // //             assert.strictEqual(call['_options'], undefined);
-    // //             assert.strictEqual(logger['_options'], undefined);
-    // //         }, 200)
-    // //     });
-
-    // //     let client = new HttpClient({
-    // //         proto: getProto(),
-    // //         logger: clientLogger
-    // //     })
-
-    // //     await client.callApi('Test', { name: 'xx' });
-    // //     await new Promise(rs => setTimeout(rs, 300));
-
-    // //     await server.stop();
-    // // })
+        let ret = await client.callApi('Test', { name: 'Jack123' });
+        // SERVER TIMEOUT的call还没执行完，但是call却被放入Pool了，导致这个BUG
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError({
+                message: 'Request Timeout',
+                code: 'TIMEOUT',
+                type: TsrpcErrorType.NetworkError
+            })
+        });
+        await server1.stop();
+    });
 })
