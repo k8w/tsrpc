@@ -11,5 +11,5 @@ module.exports = {
     ],
     parallel: false,
     // 'expose-gc': true,
-    // fgrep: 'pendingApis'
+    fgrep: 'stop'
 }

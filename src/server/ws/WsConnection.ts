@@ -2,6 +2,7 @@ import * as http from "http";
 import { BaseServiceType } from "tsrpc-proto";
 import * as WebSocket from "ws";
 import { BaseConnection, BaseConnectionOptions, ConnectionStatus } from "../base/BaseConnection";
+import { PrefixLogger } from "../models/PrefixLogger";
 import { ApiCallWs } from "./ApiCallWs";
 import { WsServer } from "./WsServer";
 
@@ -22,7 +23,10 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
     readonly httpReq: http.IncomingMessage;
 
     constructor(options: WsConnectionOptions<ServiceType>) {
-        super(options);
+        super(options, new PrefixLogger({
+            logger: options.server.logger,
+            prefixs: [`${options.ip} Conn#${options.id}`]
+        }));
         this.ws = options.ws;
         this.httpReq = options.httpReq;
 
@@ -59,6 +63,10 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
     }
 
     async sendBuf(buf: Uint8Array, call?: ApiCallWs): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+        if (!this.isAlive) {
+            return { isSucc: false, errMsg: 'Connection is closed already when sendBuf' };
+        }
+
         // Pre Flow
         let pre = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: buf, call: call }, call?.logger || this.logger);
         if (!pre) {

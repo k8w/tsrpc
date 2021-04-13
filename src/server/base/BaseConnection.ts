@@ -1,6 +1,5 @@
 import { BaseServiceType, Logger } from "tsrpc-proto";
 import { TransportDataUtil } from "../../models/TransportDataUtil";
-import { PrefixLogger } from "../models/PrefixLogger";
 import { ApiCall } from "./ApiCall";
 import { BaseServer } from "./BaseServer";
 
@@ -8,8 +7,7 @@ export interface BaseConnectionOptions<ServiceType extends BaseServiceType> {
     /** Server端自增 */
     id: string;
     ip: string,
-    server: BaseServer<ServiceType>,
-    logger?: Logger
+    server: BaseServer<ServiceType>
 }
 
 export abstract class BaseConnection<ServiceType extends BaseServiceType> {
@@ -21,14 +19,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
     readonly server: BaseServer;
     readonly logger: Logger;
 
-    constructor(options: BaseConnectionOptions<ServiceType>,) {
+    constructor(options: BaseConnectionOptions<ServiceType>, logger: Logger) {
         this.id = options.id;
         this.ip = options.ip;
         this.server = options.server;
-        this.logger = options.logger ?? new PrefixLogger({
-            logger: options.server.logger,
-            prefixs: [`${options.ip} Conn#${options.id}`]
-        });
+        this.logger = logger;
     }
 
     abstract get status(): ConnectionStatus;
@@ -71,6 +66,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
         return { isSucc: true };
     }
 
+    isAlive = true;
     destroy() {
         if (this.status === ConnectionStatus.Opened) {
             this.close('DESTROY');

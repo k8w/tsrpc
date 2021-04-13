@@ -115,7 +115,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         // Parse Call
         let opInput = TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
         if (!opInput.isSucc) {
-            this.options.onParseCallError(opInput.errMsg, conn, buf);
+            this._onParseCallError(opInput.errMsg, conn, buf);
             return;
         }
         let call = this._makeCall(conn, opInput.result);
@@ -159,7 +159,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // Pre Flow
         let preFlow = await this.flows.preApiCallFlow.exec(call, call.logger);
-        if (!preFlow) {
+        if (!preFlow || !preFlow.conn.isAlive) {
             if (timeoutTimer) {
                 clearTimeout(timeoutTimer);
                 timeoutTimer = undefined;
@@ -169,7 +169,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         call = preFlow;
 
         // exec ApiCall
-        call.logger.log('[Req]', this.options.logReqBody ? call.req : '');
+        call.logger.log('[ApiReq]', this.options.logReqBody ? call.req : '');
         let handler = this._apiHandlers[call.service.name];
         // exec API handler
         if (handler) {
@@ -181,7 +181,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                     call.error(e);
                 }
                 else {
-                    this.options.onApiInnerError(e, call);
+                    this._onApiInnerError(e, call);
                 }
             }
         }
@@ -201,10 +201,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // Destroy call
         if (!call.return) {
-            await call.error('API no response', {
-                code: 'API_NO_RES',
-                type: TsrpcErrorType.ServerError
-            });
+            this._onApiInnerError({ message: 'API not return anything' }, call);
         }
     }
 
@@ -331,6 +328,29 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     };
     // #endregion   
 
+    /**
+     * When the server cannot parse input buffer to api/msg call
+     * By default, it will return "INVALID_INPUT_BUFFER" .
+     */
+    protected _onParseCallError(errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) {
+        conn.logger.error(`[${conn.ip}][Invalid input buffer] ${errMsg} length = ${buf.length}`, buf.subarray(0, 16))
+        conn.close('INVALID_INPUT_BUFFER');
+    }
+
+    /**
+     * On error throwed inside (not TsrpcError)
+     * By default, it will return a "Internal server error".
+     * If `returnInnerError` is `true`, an `innerError` field would be returned.
+     */
+    _onApiInnerError(err: { message: string, stack?: string, name?: string }, call: ApiCall) {
+        call.logger.error(err);
+        call.error('Internal Server Error', {
+            code: 'INTERNAL_ERR',
+            type: TsrpcErrorType.ServerError,
+            innerErr: call.conn.server.options.returnInnerError ? err.message : undefined
+        });
+    }
+
 }
 
 /** @public */
@@ -372,17 +392,6 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
     debugBuf?: boolean;
 
     /**
-     * When the server cannot parse input buffer to api/msg call
-     * By default, it will return "INVALID_INPUT_BUFFER" .
-     */
-    onParseCallError: (errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) => void;
-    /**
-     * On error throwed inside (not TsrpcError)
-     * By default, it will return a "Internal server error".
-     * If `returnInnerError` is `true`, an `innerError` field would be returned.
-     */
-    onApiInnerError: (e: { message: string, stack?: string, name?: string }, call: ApiCall) => void;
-    /**
      * When "Internal server error" occured,
      * whether to return `innerError` to client. 
      * It depends on `NODE_ENV` by default. (be `false` when `NODE_ENV` is `production`, otherwise be `true`)
@@ -396,18 +405,6 @@ export const defaultBaseServerOptions: BaseServerOptions<any> = {
     logger: new TerminalColorLogger,
     logReqBody: true,
     logResBody: true,
-    onParseCallError: (errMsg, conn, buf) => {
-        conn.logger.error(`[${conn.ip}] [Invalid input buffer] ${errMsg} length=${buf.length}`, buf.subarray(0, 16))
-        conn.close('INVALID_INPUT_BUFFER');
-    },
-    onApiInnerError: (err, call) => {
-        call.logger.error(err);
-        call.error('Internal Server Error', {
-            code: 'INTERNAL_ERR',
-            type: TsrpcErrorType.ServerError,
-            innerErr: call.conn.server.options.returnInnerError ? err.message : undefined
-        });
-    },
     returnInnerError: process.env['NODE_ENV'] !== 'production'
 }
 

@@ -38,6 +38,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             throw new Error('Server already started');
         }
 
+        this._stopping = undefined;
         this._status = ServerStatus.Opening;
         return new Promise((rs, rj) => {
             this.logger.log('Starting WebSocket server...');
@@ -58,10 +59,15 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
     }
 
     private _stopping?: {
+        promise: Promise<void>,
         rs: () => void,
-        rj: (e: any) => void;
+        rj: (e: any) => void,
     }
     async stop(immediately: boolean = false): Promise<void> {
+        if (this._stopping) {
+            return this._stopping.promise;
+        }
+
         if (!this._wsServer || this._status === ServerStatus.Closed) {
             return;
         }
@@ -78,8 +84,9 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             else {
                 // 优雅地停止
                 this._stopping = {
+                    promise: output,
                     rs: rs,
-                    rj: rj
+                    rj: rj,
                 }
                 if (this._conns.length) {
                     for (let conn of this._conns) {
@@ -88,7 +95,6 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
                 }
                 else {
                     this._wsServer && this._wsServer.close(e => {
-                        this._stopping = undefined;
                         this._status = ServerStatus.Closed;
                         e ? rj(e) : rs();
                     });
@@ -100,7 +106,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             this.logger.log('[SRV_STOP] Server stopped');
             this._status = ServerStatus.Closed;
             this._wsServer = undefined;
-        })
+        });
 
         return output;
     }
@@ -141,7 +147,6 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
                 this._status = ServerStatus.Closed;
                 if (this._stopping) {
                     e ? this._stopping.rj(e) : this._stopping!.rs();
-                    this._stopping = undefined;
                 }
             });
         }

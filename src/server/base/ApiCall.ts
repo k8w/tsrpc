@@ -22,7 +22,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
     constructor(options: ApiCallOptions<Req, ServiceType>, logger?: Logger) {
         super(options, logger ?? new PrefixLogger({
             logger: options.conn.logger,
-            prefixs: [`API${options.sn !== undefined ? `#${options.sn}` : ''}:${options.service.name}`]
+            prefixs: [`[Api|${options.service.name}]${options.sn !== undefined ? ` SN=${options.sn}` : ''}`]
         }));
 
         this.sn = options.sn;
@@ -81,13 +81,14 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         this._return = ret;
         let opSend = await (sendReturn ? sendReturn(ret) : this._sendReturn(ret));
         if (!opSend.isSucc) {
+            this.logger.log('[SendReturnErr]', opSend.errMsg, ret);
             return;
         }
 
         // record & log ret
         this._usedTime = Date.now() - this.startTime;
         if (ret.isSucc) {
-            this.logger.log('[Res]', `${this.usedTime}ms`, this.server.options.logResBody ? ret.res : '');
+            this.logger.log('[ApiRes]', `${this.usedTime}ms`, this.server.options.logResBody ? ret.res : '');
         }
         else {
             if (ret.err.type === TsrpcErrorType.ApiError) {
@@ -106,13 +107,13 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         // Encode
         let opServerOutput = TransportDataUtil.encodeApiReturn(this.server.tsbuffer, this.service, ret, this.sn);;
         if (!opServerOutput.isSucc) {
-            this.server.options.onApiInnerError({ message: opServerOutput.errMsg }, this);
+            this.server._onApiInnerError({ message: opServerOutput.errMsg }, this);
             return opServerOutput;
         }
 
         let opSend = await this.conn.sendBuf(opServerOutput.buf);
         if (!opSend.isSucc) {
-            this.error('sendBuf Error: ' + opSend.errMsg);
+            return opSend;
         }
         return opSend;
     }

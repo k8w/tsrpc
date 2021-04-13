@@ -1,7 +1,7 @@
 import { assert } from 'chai';
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
-import { TerminalColorLogger } from '../../src';
+import { BaseServer, TerminalColorLogger } from '../../src';
 import { HttpClient } from '../../src/client/http/HttpClient';
 import { HttpServer } from '../../src/server/http/HttpServer';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
@@ -11,11 +11,11 @@ import { MsgChat } from '../proto/MsgChat';
 import { serviceProto, ServiceType } from '../proto/serviceProto';
 
 const serverLogger = new PrefixLogger({
-    prefixs: ['[Server Log]'],
+    prefixs: [' Server '.bgGreen.white],
     logger: new TerminalColorLogger({ pid: 'Server' })
 });
 const clientLogger = new PrefixLogger({
-    prefixs: ['[Client Log]'],
+    prefixs: [' Client '.bgBlue.white],
     logger: new TerminalColorLogger({ pid: 'Client' })
 })
 
@@ -327,4 +327,76 @@ describe('HttpClient', function () {
         });
         await server1.stop();
     });
+
+    it('Progressive stop', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+
+        let reqNum = 0;
+        server.implementApi('Test', async call => {
+            if (++reqNum===10) {
+                server.stop();
+            }
+            await new Promise(rs => setTimeout(rs, parseInt(call.req.name)));
+            call.succ({ reply: 'OK' });
+        });
+
+        await server.start();
+        let isStopped = false;
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        })
+
+        let succNum = 0;
+        await Promise.all(Array.from({ length: 10 }, (v, i) => client.callApi('Test', { name: '' + (i * 100) }).then(v => {
+            if (v.res?.reply === 'OK') {
+                ++succNum;
+            }
+        })))
+        assert.strictEqual(succNum, 10);
+
+        await server.stop();
+    })
 })
+
+// describe('HTTP Flow', function () {
+//     it('Server conn flow', async function () {
+//         let server = new HttpServer(getProto(), {
+//             logger: serverLogger
+//         });
+
+//         const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+
+//         server.implementApi('Test', async call => {
+//             assert.strictEqual(flowExecResult.postConnectFlow, true);
+//             assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
+//             call.succ({ reply: 'ok' });
+//             assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
+//         });
+
+//         server.flows.postConnectFlow.push(v => {
+//             flowExecResult.postConnectFlow = true;
+//             return v;
+//         });
+//         server.flows.postDisconnectFlow.push(v => {
+//             flowExecResult.postDisconnectFlow = true;
+//             return v;
+//         })
+
+//         await server.start();
+
+//         assert.strictEqual(flowExecResult.postConnectFlow, undefined);
+//         assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
+
+//         let client = new HttpClient(getProto(), {
+//             logger: clientLogger
+//         });
+//         await client.callApi('Test', { name: 'xxx' });
+//         assert.strictEqual(flowExecResult.postConnectFlow, true);
+//         assert.strictEqual(flowExecResult.postDisconnectFlow, true);
+
+//         await server.stop();
+//     })
+// })

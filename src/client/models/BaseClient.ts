@@ -312,17 +312,10 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             // Timeout
             let timer: ReturnType<typeof setTimeout> | undefined;
 
-            // TEST
-            console.log('timeout', timeout)
-
             if (timeout) {
                 timer = setTimeout(() => {
                     timer = undefined;
                     this._pendingApis.removeOne(v => v.sn === pendingItem.sn);
-
-                    // TEST
-                    console.log('TIMEOUTTTTTTTTTTTTTTTTT');
-
                     rs({
                         isSucc: false,
                         err: new TsrpcError('Request Timeout', {

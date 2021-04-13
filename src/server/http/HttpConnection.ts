@@ -2,6 +2,7 @@ import * as http from "http";
 import { BaseServiceType } from "tsrpc-proto";
 import { ApiCall } from "../base/ApiCall";
 import { BaseConnection, BaseConnectionOptions, ConnectionStatus } from '../base/BaseConnection';
+import { PrefixLogger } from "../models/PrefixLogger";
 import { ApiCallHttp } from "./ApiCallHttp";
 import { HttpServer } from './HttpServer';
 import { MsgCallHttp } from "./MsgCallHttp";
@@ -21,7 +22,10 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
     call?: ApiCallHttp | MsgCallHttp;
 
     constructor(options: HttpConnectionOptions<ServiceType>) {
-        super(options);
+        super(options, new PrefixLogger({
+            logger: options.server.logger,
+            prefixs: [`${options.ip} #${options.id}`]
+        }));
 
         this.httpReq = options.httpReq;
         this.httpRes = options.httpRes;
@@ -42,6 +46,10 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
     }
 
     async sendBuf(buf: Uint8Array, call?: ApiCall): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+        if (!this.isAlive) {
+            return { isSucc: false, errMsg: 'Connection is closed already when sendBuf' };
+        }
+
         // Pre Flow
         let pre = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: buf, call: call }, call?.logger || this.logger);
         if (!pre) {

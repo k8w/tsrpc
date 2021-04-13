@@ -34,6 +34,7 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
         if (this._httpServer) {
             throw new Error('Server already started');
         }
+        this._promiseStop = undefined;
 
         return new Promise(rs => {
             this._status = ServerStatus.Opening;
@@ -111,8 +112,9 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
                     // Post Flow
                     if (conn) {
                         await this.flows.postDisconnectFlow.exec({ conn: conn }, conn.logger)
-                        conn.destroy();
                     }
+
+                    conn?.destroy();
                 });
             });
 
@@ -128,30 +130,36 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
         });
     }
 
+    private _promiseStop?: Promise<void>
     stop(): Promise<void> {
-        console.log('Stopping server...');
-        return new Promise((rs, rj) => {
-            if (!this._httpServer) {
-                rs();
-                return;
-            }
-            this._status = ServerStatus.Closing;
-
-            // 立即close，不再接受新请求
-            // 等所有连接都断开后rs
-            this._httpServer.close(err => {
-                console.log('done', err)
-                if (err) {
-                    rj(err)
-                }
-                else {
-                    this.logger.log('Server stopped');
+        if (!this._promiseStop) {
+            this._promiseStop = new Promise<void>((rs, rj) => {
+                console.log('Stopping server...');
+                if (!this._httpServer) {
                     rs();
+                    return;
                 }
-            });
+                this._status = ServerStatus.Closing;
 
-            this._httpServer = undefined;
-        })
+                // 立即close，不再接受新请求
+                // 等所有连接都断开后rs
+                this._httpServer.close(err => {
+                    if (err) {
+                        console.error(err);
+                        rj(err)
+                    }
+                    else {
+                        this.logger.log('Server stopped');
+                        rs();
+                    }
+                });
+            });
+            this._promiseStop.then(() => {
+                this._httpServer = undefined;
+            })
+        }
+
+        return this._promiseStop;
     }
 
     // HTTP Server 一个conn只有一个call，对应关联之
