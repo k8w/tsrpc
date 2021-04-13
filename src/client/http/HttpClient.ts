@@ -24,11 +24,11 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
         let sn = pendingApiItem?.sn;
         let promise = new Promise<{ err?: TsrpcError | undefined; }>(async rs => {
             // Pre Flow
-            let pre = await this.flows.preSendBufferFlow.exec(buf, this.logger);
+            let pre = await this.flows.preSendBufferFlow.exec({ buf: buf, sn: pendingApiItem?.sn }, this.logger);
             if (!pre) {
                 return;
             }
-            buf = pre;
+            buf = pre.buf;
 
             // Do Send
             this.options.debugBuf && this.logger?.debug('[SendBuf]' + (sn ? (' #' + sn) : ''), `length=${buf.byteLength}`, buf);

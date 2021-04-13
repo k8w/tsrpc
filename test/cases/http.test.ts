@@ -436,18 +436,18 @@ describe('HTTP Flows', function () {
             logger: clientLogger
         });
 
-        client.flows.preSendBufferFlow.push(buf => {
-            for (let i = 0; i < buf.length; ++i) {
-                buf[i] ^= 128;
+        client.flows.preSendBufferFlow.push(v => {
+            for (let i = 0; i < v.buf.length; ++i) {
+                v.buf[i] ^= 128;
             }
-            return buf;
+            return v;
         });
 
-        client.flows.preRecvBufferFlow.push(buf => {
-            for (let i = 0; i < buf.length; ++i) {
-                buf[i] ^= 128;
+        client.flows.preRecvBufferFlow.push(v => {
+            for (let i = 0; i < v.buf.length; ++i) {
+                v.buf[i] ^= 128;
             }
-            return buf;
+            return v;
         });
 
         let ret = await client.callApi('Test', { name: 'xxx' });
@@ -677,7 +677,37 @@ describe('HTTP Flows', function () {
         await server.stop();
     });
 
-    it('Flow error', async function () {
-        // TODO
+    it('client SendBufferFlow prevent', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+
+        // const flowExecResult: { [K in (keyof BaseClient<any>['flows'])]?: boolean } = {};
+
+        server.implementApi('Test', async call => {
+            call.succ({ reply: 'xxxxxxxxxxxxxxxxxxxx' });
+        });
+
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        });
+
+        client.flows.preSendBufferFlow.push(v => {
+            return undefined
+        });
+
+        let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError({
+                message: 'Send Request Buffer Failed',
+                type: TsrpcErrorType.ClientError,
+                code: 'PRE_SEND_BUF_FLOW_ERR'
+            })
+        })
+
+        await server.stop();
     });
 })

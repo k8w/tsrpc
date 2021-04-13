@@ -27,8 +27,8 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
         postSendMsgFlow: new Flow<SendMsgFlowData<ServiceType>>(),
 
         // buffer
-        preSendBufferFlow: new Flow<Uint8Array>(),
-        preRecvBufferFlow: new Flow<Uint8Array>(),
+        preSendBufferFlow: new Flow<{ buf: Uint8Array, sn?: number }>(),
+        preRecvBufferFlow: new Flow<{ buf: Uint8Array, sn?: number }>(),
     } as const;
 
     private _apiSnCounter = new Counter(1);
@@ -279,11 +279,11 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
 
     protected async _onRecvBuf(buf: Uint8Array, serviceId?: number, sn?: number) {
         // Pre Flow
-        let pre = await this.flows.preRecvBufferFlow.exec(buf, this.logger);
+        let pre = await this.flows.preRecvBufferFlow.exec({ buf: buf, sn: sn}, this.logger);
         if (!pre) {
             return;
         }
-        buf = pre;
+        buf = pre.buf;
 
         // Parse
         let opParsed = TransportDataUtil.parseServerOutout(this.tsbuffer, this.serviceMap, buf, serviceId);
