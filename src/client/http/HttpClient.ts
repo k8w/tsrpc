@@ -16,6 +16,11 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
         });
         this._http = this.options.server.startsWith('https://') ? https : http;
         this.logger?.log('TSRPC HTTP Client :', this.options.server);
+
+        // API Flow onError
+        // this.flows.preSendBufferFlow.onError = (e, last) => {
+            
+        // }
     }
 
     lastReceivedBuf?: Uint8Array;

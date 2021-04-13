@@ -698,15 +698,10 @@ describe('HTTP Flows', function () {
             return undefined
         });
 
-        let ret = await client.callApi('Test', { name: 'xxx' });
-        assert.deepStrictEqual(ret, {
-            isSucc: false,
-            err: new TsrpcError({
-                message: 'Send Request Buffer Failed',
-                type: TsrpcErrorType.ClientError,
-                code: 'PRE_SEND_BUF_FLOW_ERR'
-            })
-        })
+        let ret: any;
+        client.callApi('Test', { name: 'xxx' }).then(v=>{ret = v});
+        await new Promise(rs => { setTimeout(rs, 200) });
+        assert.strictEqual(ret, undefined)
 
         await server.stop();
     });
