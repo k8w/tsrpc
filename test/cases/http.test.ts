@@ -1,14 +1,14 @@
 import { assert } from 'chai';
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
-import { TerminalColorLogger } from '../src';
-import { HttpClient } from '../src/client/http/HttpClient';
-import { HttpServer } from '../src/server/http/HttpServer';
-import { PrefixLogger } from '../src/server/models/PrefixLogger';
-import { ApiTest as ApiAbcTest } from './api/a/b/c/ApiTest';
-import { ApiTest } from './api/ApiTest';
-import { MsgChat } from './proto/MsgChat';
-import { serviceProto, ServiceType } from './proto/serviceProto';
+import { TerminalColorLogger } from '../../src';
+import { HttpClient } from '../../src/client/http/HttpClient';
+import { HttpServer } from '../../src/server/http/HttpServer';
+import { PrefixLogger } from '../../src/server/models/PrefixLogger';
+import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
+import { ApiTest } from '../api/ApiTest';
+import { MsgChat } from '../proto/MsgChat';
+import { serviceProto, ServiceType } from '../proto/serviceProto';
 
 const serverLogger = new PrefixLogger({
     prefixs: ['[Server Log]'],
@@ -119,7 +119,7 @@ describe('HttpClient', function () {
         });
         await server.start();
 
-        server.autoImplementApi(path.resolve(__dirname, 'api'))
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new HttpClient(getProto(), {
             logger: clientLogger
@@ -169,7 +169,7 @@ describe('HttpClient', function () {
         });
         await server.start();
 
-        server.autoImplementApi(path.resolve(__dirname, 'api'))
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new HttpClient(getProto(), {
             logger: clientLogger
@@ -201,7 +201,7 @@ describe('HttpClient', function () {
         });
         await server.start();
 
-        server.autoImplementApi(path.resolve(__dirname, 'api'))
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new HttpClient(getProto(), {
             logger: clientLogger

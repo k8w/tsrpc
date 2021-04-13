@@ -1,12 +1,12 @@
 import { assert } from 'chai';
-import { WsServer } from '../src/server/ws/WsServer';
-import { WsClient } from '../src/client/ws/WsClient';
-import { serviceProto, ServiceType } from './proto/serviceProto';
-import { ApiTest } from './api/ApiTest';
-import { ApiTest as ApiAbcTest } from './api/a/b/c/ApiTest';
-import { PrefixLogger } from '../src/server/models/PrefixLogger';
+import { WsServer } from '../../src/server/ws/WsServer';
+import { WsClient } from '../../src/client/ws/WsClient';
+import { serviceProto, ServiceType } from '../proto/serviceProto';
+import { ApiTest } from '../api/ApiTest';
+import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
+import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import * as path from "path";
-import { MsgChat } from './proto/MsgChat';
+import { MsgChat } from '../proto/MsgChat';
 import { TsrpcError } from 'tsrpc-proto';
 
 const serverLogger = PrefixLogger.pool.get({

@@ -7,7 +7,7 @@ module.exports = {
     timeout: 999999,
     'preserve-symlinks': true,
     spec: [
-        './test/http.test.ts',
+        './test/cases/http.test.ts',
     ],
     parallel: false
 }
