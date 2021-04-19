@@ -45,8 +45,6 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     readonly flows = {
         // Conn Flows
         postConnectFlow: new Flow<BaseConnection<ServiceType>>(),
-        // /** 仅长连接，主动断开连接的情况下执行 */
-        // preDisconnectFlow: new Flow<{conn: BaseConnection, reason?: string}>(),
         postDisconnectFlow: new Flow<{ conn: BaseConnection<ServiceType>, reason?: string }>(),
 
         // Buffer Flows
@@ -103,6 +101,11 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         // Process uncaught exception, so that Node.js process would not exit easily
         BaseServer.processUncaughtException(this.logger);
 
+        // default flows onError handler
+        this._setDefaultFlowOnError();
+    }
+
+    protected _setDefaultFlowOnError() {
         // API Flow Error: return [InternalServerError]
         this.flows.preApiCallFlow.onError = (e, call) => {
             if (e instanceof TsrpcError) {

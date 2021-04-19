@@ -25,7 +25,7 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
 
     lastReceivedBuf?: Uint8Array;
 
-    protected async _sendBuf(buf: Uint8Array, options: TransportOptions, serviceId?: number, pendingApiItem?: PendingApiItem): Promise<{ err?: TsrpcError | undefined; }> {
+    protected async _sendBuf(buf: Uint8Array, options: TransportOptions, serviceId: number, pendingApiItem?: PendingApiItem): Promise<{ err?: TsrpcError | undefined; }> {
         let sn = pendingApiItem?.sn;
         let promise = new Promise<{ err?: TsrpcError | undefined; }>(async rs => {
             // Pre Flow

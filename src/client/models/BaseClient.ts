@@ -2,6 +2,7 @@ import { TSBuffer } from "tsbuffer";
 import { ApiReturn, BaseServiceType, Logger, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
 import { Counter } from '../../models/Counter';
 import { Flow } from "../../models/Flow";
+import { MsgHandlerManager } from "../../models/MsgHandlerManager";
 import { nodeUtf8 } from '../../models/nodeUtf8';
 import { ApiService, ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
 import { TransportDataUtil } from "../../models/TransportDataUtil";
@@ -15,6 +16,8 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
     readonly serviceMap: ServiceMap;
     readonly tsbuffer: TSBuffer;
     readonly logger?: Logger;
+
+    protected _msgHandlers = new MsgHandlerManager();
 
     readonly flows = {
         // callApi
@@ -243,6 +246,13 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
         return promise;
     }
 
+    listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: ClientMsgHandler<ServiceType['msg'][T]>) {
+        this._msgHandlers.addHandler(msgName as string, handler)
+    }
+    unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler?: ClientMsgHandler<ServiceType['msg'][T]>) {
+        this._msgHandlers.removeHandler(msgName as string, handler)
+    }
+
     /** 中断请求 */
     abort(sn: number): void {
         // Find
@@ -275,11 +285,11 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
      * @param options 
      * @param sn 
      */
-    protected abstract _sendBuf(buf: Uint8Array, options: TransportOptions, serviceId?: number, pendingApiItem?: PendingApiItem): Promise<{ err?: TsrpcError }>;
+    protected abstract _sendBuf(buf: Uint8Array, options: TransportOptions, serviceId: number, pendingApiItem?: PendingApiItem): Promise<{ err?: TsrpcError }>;
 
     protected async _onRecvBuf(buf: Uint8Array, serviceId?: number, sn?: number) {
         // Pre Flow
-        let pre = await this.flows.preRecvBufferFlow.exec({ buf: buf, sn: sn}, this.logger);
+        let pre = await this.flows.preRecvBufferFlow.exec({ buf: buf, sn: sn }, this.logger);
         if (!pre) {
             return;
         }
@@ -293,6 +303,9 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
                 sn = sn ?? parsed.sn;
                 // call ApiReturn listeners
                 this._pendingApis.find(v => v.sn === sn)?.onReturn?.(parsed.ret);
+            }
+            else if (parsed.type === 'msg') {
+                this._msgHandlers.forEachHandler(parsed.service.name, parsed.msg);
             }
         }
         else {
@@ -368,3 +381,5 @@ export interface PendingApiItem {
     onAbort?: () => void,
     onReturn?: (ret: ApiReturn<any>) => void
 }
+
+export type ClientMsgHandler<Msg> = (msg: Msg) => void | Promise<void>;
