@@ -18,6 +18,7 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
 
     readonly httpReq: http.IncomingMessage;
     readonly httpRes: http.ServerResponse;
+    readonly server!: HttpServer<ServiceType>;
 
     call?: ApiCallHttp | MsgCallHttp;
 

@@ -16,7 +16,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
 
     readonly id: string;
     readonly ip: string;
-    readonly server: BaseServer;
+    readonly server: BaseServer<ServiceType>;
     readonly logger: Logger;
 
     constructor(options: BaseConnectionOptions<ServiceType>, logger: Logger) {

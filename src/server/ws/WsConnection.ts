@@ -21,6 +21,7 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
 
     readonly ws: WebSocket;
     readonly httpReq: http.IncomingMessage;
+    readonly server!: WsServer<ServiceType>;
 
     constructor(options: WsConnectionOptions<ServiceType>) {
         super(options, new PrefixLogger({

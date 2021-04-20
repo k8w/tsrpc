@@ -6,7 +6,7 @@ export class MsgHandlerManager {
     /**
      * @return handlers count
      */
-    forEachHandler(key: string, logger: Logger, ...args: any[]): (any | Promise<any>)[] {
+    forEachHandler(key: string, logger: Logger | undefined, ...args: any[]): (any | Promise<any>)[] {
         let handlers = this._handlers[key];
         if (!handlers) {
             return [];
@@ -18,7 +18,7 @@ export class MsgHandlerManager {
                 output.push(handler(...args));
             }
             catch (e) {
-                logger.error('[MsgHandlerError]', e);
+                logger?.error('[MsgHandlerError]', e);
             }
         }
         return output;
@@ -46,7 +46,7 @@ export class MsgHandlerManager {
 
         // 未指定handler，删除所有handler
         if (!handler) {
-            delete this._handlers[key];
+            this._handlers[key] = undefined;
             return;
         }
 

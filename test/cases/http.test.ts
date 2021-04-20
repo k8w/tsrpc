@@ -2,7 +2,7 @@ import { assert } from 'chai';
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { BaseServer, TerminalColorLogger } from '../../src';
-import { HttpClient } from '../../src/client/http/HttpClient';
+import { WsClient } from '../../src/client/ws/WsClient';
 import { BaseClient } from '../../src/client/models/BaseClient';
 import { HttpServer } from '../../src/server/http/HttpServer';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
@@ -22,7 +22,7 @@ const clientLogger = new PrefixLogger({
 
 const getProto = () => Object.merge({}, serviceProto) as ServiceProto<ServiceType>;
 
-async function testApi(server: HttpServer<ServiceType>, client: HttpClient<ServiceType>) {
+async function testApi(server: HttpServer<ServiceType>, client: WsClient<ServiceType>) {
     // Succ
     assert.deepStrictEqual(await client.callApi('Test', {
         name: 'Req1'
@@ -98,7 +98,7 @@ describe('HTTP Server & Client basic', function () {
         server.implementApi('Test', ApiTest);
         server.implementApi('a/b/c/Test', ApiAbcTest);
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger,
             debugBuf: true
         })
@@ -117,7 +117,7 @@ describe('HTTP Server & Client basic', function () {
 
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         })
 
@@ -135,7 +135,7 @@ describe('HTTP Server & Client basic', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             server: 'http://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
@@ -167,7 +167,7 @@ describe('HTTP Server & Client basic', function () {
 
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         })
 
@@ -199,7 +199,7 @@ describe('HTTP Server & Client basic', function () {
 
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         })
 
@@ -250,7 +250,7 @@ describe('HTTP Server & Client basic', function () {
         });
         await server.start();
 
-        let client1 = new HttpClient(getProto(), {
+        let client1 = new WsClient(getProto(), {
             server: 'http://localhost:80',
             logger: clientLogger
         })
@@ -281,7 +281,7 @@ describe('HTTP Server & Client basic', function () {
         })
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         });
         let ret = await client.callApi('Test', { name: 'Jack' });
@@ -312,7 +312,7 @@ describe('HTTP Server & Client basic', function () {
         })
         await server1.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             timeout: 100,
             logger: clientLogger
         });
@@ -347,7 +347,7 @@ describe('HTTP Server & Client basic', function () {
         await server.start();
         let isStopped = false;
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         })
 
@@ -394,7 +394,7 @@ describe('HTTP Flows', function () {
         assert.strictEqual(flowExecResult.postConnectFlow, undefined);
         assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         });
         await client.callApi('Test', { name: 'xxx' });
@@ -432,7 +432,7 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         });
 
@@ -486,7 +486,7 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         });
 
@@ -528,7 +528,7 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         });
 
@@ -569,7 +569,7 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         });
 
@@ -619,7 +619,7 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         });
 
@@ -648,7 +648,7 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         });
 
@@ -690,7 +690,7 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
             logger: clientLogger
         });
 

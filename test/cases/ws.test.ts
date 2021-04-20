@@ -1,329 +1,831 @@
-// import { assert } from 'chai';
-// import { WsServer } from '../../src/server/ws/WsServer';
-// import { WsClient } from '../../src/client/ws/WsClient';
-// import { serviceProto, ServiceType } from '../proto/serviceProto';
-// import { ApiTest } from '../api/ApiTest';
-// import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
-// import { PrefixLogger } from '../../src/server/models/PrefixLogger';
-// import * as path from "path";
-// import { MsgChat } from '../proto/MsgChat';
-// import { TsrpcError } from 'tsrpc-proto';
+import { assert } from 'chai';
+import * as path from "path";
+import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
+import { TerminalColorLogger } from '../../src';
+import { WsClient } from '../../src/client/ws/WsClient';
+import { PrefixLogger } from '../../src/server/models/PrefixLogger';
+import { WsServer } from '../../src/server/ws/WsServer';
+import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
+import { ApiTest } from '../api/ApiTest';
+import { MsgChat } from '../proto/MsgChat';
+import { serviceProto, ServiceType } from '../proto/serviceProto';
 
-// const serverLogger = PrefixLogger.pool.get({
-//     prefixs: ['[Server Log]'],
-//     logger: console
-// });
-// const clientLogger = PrefixLogger.pool.get({
-//     prefixs: ['[Client Log]'],
-//     logger: console
-// })
+const serverLogger = new PrefixLogger({
+    prefixs: [' Server '.bgGreen.white],
+    logger: new TerminalColorLogger({ pid: 'Server' })
+});
+const clientLogger = new PrefixLogger({
+    prefixs: [' Client '.bgBlue.white],
+    logger: new TerminalColorLogger({ pid: 'Client' })
+})
 
-// async function testApi(server: WsServer<ServiceType>, client: WsClient<ServiceType>) {
-//     // Succ
-//     assert.deepStrictEqual(await client.callApi('Test', {
-//         name: 'Req1'
-//     }), {
-//         reply: 'Test reply: Req1'
-//     });
-//     assert.deepStrictEqual(await client.callApi('a/b/c/Test', {
-//         name: 'Req2'
-//     }), {
-//         reply: 'a/b/c/Test reply: Req2'
-//     });
+const getProto = () => Object.merge({}, serviceProto) as ServiceProto<ServiceType>;
 
-//     // Inner error
-//     for (let v of ['Test', 'a/b/c/Test']) {
-//         assert.deepStrictEqual(await client.callApi(v as any, {
-//             name: 'InnerError'
-//         }).catch(e => ({
-//             isSucc: false,
-//             message: e.message,
-//             info: e.info
-//         })), {
-//             isSucc: false,
-//             message: 'Internal server error',
-//             info: {
-//                 code: 'INTERNAL_ERR',
-//                 isServerError: true
-//             }
-//         });
-//     }
+async function testApi(server: WsServer<ServiceType>, client: WsClient<ServiceType>) {
+    // Succ
+    assert.deepStrictEqual(await client.callApi('Test', {
+        name: 'Req1'
+    }), {
+        isSucc: true,
+        res: {
+            reply: 'Test reply: Req1'
+        }
+    });
+    assert.deepStrictEqual(await client.callApi('a/b/c/Test', {
+        name: 'Req2'
+    }), {
+        isSucc: true,
+        res: {
+            reply: 'a/b/c/Test reply: Req2'
+        }
+    });
 
-//     // TsrpcError
-//     for (let v of ['Test', 'a/b/c/Test']) {
-//         assert.deepStrictEqual(await client.callApi(v as any, {
-//             name: 'TsrpcError'
-//         }).catch(e => ({
-//             isSucc: false,
-//             message: e.message,
-//             info: e.info
-//         })), {
-//             isSucc: false,
-//             message: v + ' TsrpcError',
-//             info: 'ErrInfo ' + v
-//         });
-//     }
-// }
+    // Inner error
+    for (let v of ['Test', 'a/b/c/Test']) {
+        let ret = await client.callApi(v as any, {
+            name: 'InnerError'
+        });
+        delete ret.err!.innerErr.stack;
 
-// describe('WsClient', function () {
-//     it('implement API manually', async function () {
-//         let server = new WsServer({
-//             proto: serviceProto,
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError('Internal Server Error', {
+                code: 'INTERNAL_ERR',
+                type: TsrpcErrorType.ServerError,
+                innerErr: `${v} InnerError`
+            })
+        });
+    }
+
+    // TsrpcError
+    for (let v of ['Test', 'a/b/c/Test']) {
+        let ret = await client.callApi(v as any, {
+            name: 'TsrpcError'
+        });
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError(`${v} TsrpcError`, {
+                code: 'CODE_TEST',
+                type: TsrpcErrorType.ApiError,
+                info: 'ErrInfo ' + v
+            })
+        });
+    }
+
+    // call.error
+    for (let v of ['Test', 'a/b/c/Test']) {
+        let ret = await client.callApi(v as any, {
+            name: 'error'
+        });
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError('Got an error', {
+                type: TsrpcErrorType.ApiError
+            })
+        });
+    }
+}
+
+describe('WS Server & Client basic', function () {
+    it('cannot callApi before connect', async function () {
+        let client = new WsClient(getProto(), {
+            logger: clientLogger,
+            debugBuf: true
+        })
+        let res = await client.callApi('Test', { name: 'xxx' });
+        assert.deepStrictEqual(res, {
+            isSucc: false,
+            err: new TsrpcError('WebSocket is not connected', {
+                code: 'WS_NOT_OPEN',
+                type: TsrpcErrorType.ClientError
+            })
+        })
+    })
+
+    it('implement API manually', async function () {
+        let server = new WsServer(getProto(), {
+            logger: serverLogger,
+            debugBuf: true
+        });
+        await server.start();
+
+        server.implementApi('Test', ApiTest);
+        server.implementApi('a/b/c/Test', ApiAbcTest);
+
+        let client = new WsClient(getProto(), {
+            logger: clientLogger,
+            debugBuf: true
+        })
+        await client.connect();
+
+        await testApi(server, client);
+
+        await server.stop();
+    })
+
+    it('autoImplementApi', async function () {
+        let server = new WsServer(getProto(), {
+            logger: serverLogger,
+            apiTimeout: 5000
+        });
+        await server.start();
+
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
+
+        let client = new WsClient(getProto(), {
+            logger: clientLogger
+        });
+        await client.connect();
+
+        await testApi(server, client);
+
+        await server.stop();
+    });
+
+    it('sendMsg', async function () {
+        let server = new WsServer(getProto(), {
+            port: 3001,
+            logger: serverLogger,
+            // debugBuf: true
+        });
+
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            // debugBuf: true
+        });
+        await client.connect();
+
+        return new Promise(rs => {
+            let msg: MsgChat = {
+                channel: 123,
+                userName: 'fff',
+                content: '666',
+                time: Date.now()
+            };
+
+            server.listenMsg('Chat', async v => {
+                assert.deepStrictEqual(v.msg, msg);
+                await server.stop();
+                rs();
+            });
+
+            client.sendMsg('Chat', msg);
+        })
+    });
+
+    it('server send msg', async function () {
+        let server = new WsServer(getProto(), {
+            port: 3001,
+            logger: serverLogger,
+            // debugBuf: true
+        });
+
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            // debugBuf: true
+        });
+        await client.connect();
+
+        return new Promise(rs => {
+            let msg: MsgChat = {
+                channel: 123,
+                userName: 'fff',
+                content: '666',
+                time: Date.now()
+            };
+
+            client.listenMsg('Chat', async msg1 => {
+                assert.deepStrictEqual(msg1, msg);
+                await server.stop();
+                rs();
+            });
+
+            server.connections[0].sendMsg('Chat', msg);
+        })
+    });
+
+    it('server broadcast msg', async function () {
+        let server = new WsServer(getProto(), {
+            port: 3001,
+            logger: serverLogger,
+            // debugBuf: true
+        });
+
+        await server.start();
+
+        let client1 = new WsClient(getProto(), {
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            // debugBuf: true
+        });
+        let client2 = new WsClient(getProto(), {
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            // debugBuf: true
+        });
+        await client1.connect();
+        await client2.connect();
+
+        let msg: MsgChat = {
+            channel: 123,
+            userName: 'fff',
+            content: '666',
+            time: Date.now()
+        };
+
+        await new Promise<void>(rs => {
+            let recvClients: WsClient<any>[] = [];
+            let msgHandler = async (msg1: MsgChat, client: WsClient<any>) => {
+                recvClients.push(client);
+                assert.deepStrictEqual(msg1, msg);
+                if (recvClients.some(v => v === client1) && recvClients.some(v => v === client2)) {
+                    client1.unlistenMsg('Chat');
+                    client2.unlistenMsg('Chat');
+                    rs();
+                }
+            }
+
+            client1.listenMsg('Chat', msgHandler);
+            client2.listenMsg('Chat', msgHandler);
+
+            server.broadcastMsg('Chat', msg);
+        })
+
+        await new Promise<void>(rs => {
+            let recvClients: WsClient<any>[] = [];
+            let msgHandler = async (msg1: MsgChat, client: WsClient<any>) => {
+                recvClients.push(client);
+                assert.deepStrictEqual(msg1, msg);
+                if (recvClients.some(v => v === client1) && recvClients.some(v => v === client2)) {
+                    await server.stop();
+                    rs();
+                }
+            }
+
+            client1.listenMsg('Chat', msgHandler);
+            client2.listenMsg('Chat', msgHandler);
+
+            server.broadcastMsg('Chat', msg, server.connections.map(v => v.id));
+        })
+    })
+
+    it('abort', async function () {
+        let server = new WsServer(getProto(), {
+            logger: serverLogger
+        });
+        await server.start();
+
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
+
+        let client = new WsClient(getProto(), {
+            logger: clientLogger
+        });
+        await client.connect();
+
+        let result: any | undefined;
+        let promise = client.callApi('Test', { name: 'aaaaaaaa' });
+        let sn = client.lastSN;
+        setTimeout(() => {
+            client.abort(sn)
+        }, 10);
+        promise.then(v => {
+            result = v;
+        });
+
+        await new Promise<void>(rs => {
+            setTimeout(() => {
+                assert.strictEqual(result, undefined);
+                rs();
+            }, 150)
+        })
+
+        await server.stop();
+    });
+
+    it('pendingApis', async function () {
+        let server = new WsServer(getProto(), {
+            logger: serverLogger
+        });
+        await server.start();
+
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
+
+        let client = new WsClient(getProto(), {
+            logger: clientLogger
+        });
+        await client.connect();
+
+        for (let i = 0; i < 10; ++i) {
+            let promise = Promise.all(Array.from({ length: 10 }, () => new Promise<void>(rs => {
+                let name = ['Req', 'InnerError', 'TsrpcError', 'error'][Math.random() * 4 | 0];
+                let ret: any | undefined;
+                let promise = client.callApi('Test', { name: name });
+                let sn = client.lastSN;
+                let abort = Math.random() > 0.5;
+                if (abort) {
+                    setTimeout(() => {
+                        client.abort(sn)
+                    }, 0);
+                }
+                promise.then(v => {
+                    ret = v;
+                });
+
+                setTimeout(() => {
+                    client.logger?.log('sn', sn, name, abort, ret)
+                    if (abort) {
+                        assert.strictEqual(ret, undefined);
+                    }
+                    else {
+                        assert.notEqual(ret, undefined);
+                        if (name === 'Req') {
+                            assert.strictEqual(ret.isSucc, true);
+                        }
+                        else {
+                            assert.strictEqual(ret.isSucc, false)
+                        }
+                    }
+                    rs();
+                }, 300)
+            })));
+            assert.strictEqual(client['_pendingApis'].length, 10);
+            await promise;
+            assert.strictEqual(client['_pendingApis'].length, 0);
+        }
+
+        await server.stop();
+    })
+
+    it('error', async function () {
+        let server = new WsServer(getProto(), {
+            logger: serverLogger
+        });
+        await server.start();
+
+        let client1 = new WsClient(getProto(), {
+            server: 'ws://localhost:80',
+            logger: clientLogger
+        })
+        let res = await client1.connect();
+        assert.strictEqual(res.isSucc, false);
+
+        let ret = await client1.callApi('Test', { name: 'xx' });
+        console.log(ret);
+        assert.strictEqual(ret.isSucc, false);
+        assert.strictEqual(ret.err?.code, 'WS_NOT_OPEN');
+        assert.strictEqual(ret.err?.type, TsrpcErrorType.ClientError);
+
+        await server.stop();
+    })
+
+    it('server timeout', async function () {
+        let server = new WsServer(getProto(), {
+            logger: serverLogger,
+            apiTimeout: 100
+        });
+        server.implementApi('Test', call => {
+            return new Promise(rs => {
+                setTimeout(() => {
+                    call.req && call.succ({
+                        reply: 'Hi, ' + call.req.name
+                    });
+                    rs();
+                }, 200)
+            })
+        })
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            logger: clientLogger
+        });
+        await client.connect();
+        let ret = await client.callApi('Test', { name: 'Jack' });
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError('Server Timeout', {
+                code: 'SERVER_TIMEOUT',
+                type: TsrpcErrorType.ServerError
+            })
+        });
+
+        await server.stop();
+    });
+
+    it('client timeout', async function () {
+        let server1 = new WsServer(getProto(), {
+            logger: serverLogger
+        });
+        server1.implementApi('Test', call => {
+            return new Promise(rs => {
+                setTimeout(() => {
+                    call.succ({
+                        reply: 'Hello, ' + call.req.name
+                    });
+                    rs();
+                }, 2000)
+            })
+        })
+        await server1.start();
+
+        let client = new WsClient(getProto(), {
+            timeout: 100,
+            logger: clientLogger
+        });
+        await client.connect();
+
+        let ret = await client.callApi('Test', { name: 'Jack123' });
+        // SERVER TIMEOUT的call还没执行完，但是call却被放入Pool了，导致这个BUG
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError({
+                message: 'Request Timeout',
+                code: 'TIMEOUT',
+                type: TsrpcErrorType.NetworkError
+            })
+        });
+        await server1.stop();
+    });
+
+    // it('Progressive stop', async function () {
+    //     let server = new WsServer(getProto(), {
+    //         logger: serverLogger
+    //     });
+
+    //     let reqNum = 0;
+    //     server.implementApi('Test', async call => {
+    //         if (++reqNum === 10) {
+    //             server.stop();
+    //         }
+    //         await new Promise(rs => setTimeout(rs, parseInt(call.req.name)));
+    //         call.succ({ reply: 'OK' });
+    //     });
+
+    //     await server.start();
+    //     let isStopped = false;
+
+    //     let client = new WsClient(getProto(), {
+    //         logger: clientLogger
+    //     });
+    //     await client.connect();
+
+    //     let succNum = 0;
+    //     await Promise.all(Array.from({ length: 10 }, (v, i) => client.callApi('Test', { name: '' + (i * 100) }).then(v => {
+    //         if (v.res?.reply === 'OK') {
+    //             ++succNum;
+    //         }
+    //     })))
+    //     assert.strictEqual(succNum, 10);
+
+    //     await server.stop();
+    // })
+})
+
+// describe('WS Flows', function () {
+//     it('Server conn flow', async function () {
+//         let server = new WsServer(getProto(), {
 //             logger: serverLogger
 //         });
-//         await server.start();
 
-//         server.implementApi('Test', ApiTest);
-//         server.implementApi('a/b/c/Test', ApiAbcTest);
+//         const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
 
-//         let client = new WsClient({
-//             proto: serviceProto,
-//             logger: clientLogger
+//         server.implementApi('Test', async call => {
+//             assert.strictEqual((call.conn as any).xxxx, 'asdfasdf')
+//             assert.strictEqual(flowExecResult.postConnectFlow, true);
+//             assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
+//             call.succ({ reply: 'ok' });
+//             assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
 //         });
-//         await client.connect();
 
-//         await testApi(server, client);
-
-//         await server.stop();
-//     })
-
-//     it('autoImplementApi', async function () {
-//         let server = new WsServer({
-//             proto: serviceProto,
-//             logger: serverLogger
+//         server.flows.postConnectFlow.push(v => {
+//             flowExecResult.postConnectFlow = true;
+//             (v as any).xxxx = 'asdfasdf';
+//             return v;
 //         });
-//         await server.start();
-
-//         server.autoImplementApi(path.resolve(__dirname, 'api'))
-
-//         let client = new WsClient({
-//             proto: serviceProto,
-//             logger: clientLogger
-//         });
-//         await client.connect();
-
-//         await testApi(server, client);
-
-//         await server.stop();
-//     });
-
-//     it('sendMsg', async function () {
-//         let server = new WsServer({
-//             port: 3001,
-//             proto: serviceProto,
-//             logger: serverLogger
-//         });
-//         await server.start();
-
-//         let client = new WsClient({
-//             server: 'http://127.0.0.1:3001',
-//             proto: serviceProto,
-//             logger: clientLogger
-//         });
-//         await client.connect();
-
-//         return new Promise(rs => {
-//             let msg: MsgChat = {
-//                 channel: 123,
-//                 userName: 'fff',
-//                 content: '666',
-//                 time: Date.now()
-//             };
-
-//             server.listenMsg('Chat', async v => {
-//                 assert.deepStrictEqual(v.msg, msg);
-//                 await server.stop();
-//                 rs();
-//             });
-
-//             client.sendMsg('Chat', msg);
+//         server.flows.postDisconnectFlow.push(v => {
+//             flowExecResult.postDisconnectFlow = true;
+//             return v;
 //         })
-//     })
 
-//     it('cancel', async function () {
-//         let server = new WsServer({
-//             proto: serviceProto,
-//             logger: serverLogger
-//         });
 //         await server.start();
 
-//         server.autoImplementApi(path.resolve(__dirname, 'api'))
+//         assert.strictEqual(flowExecResult.postConnectFlow, undefined);
+//         assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
 
-//         let client = new WsClient({
-//             proto: serviceProto,
+//         let client = new WsClient(getProto(), {
 //             logger: clientLogger
 //         });
-//         await client.connect();
+//         await client.callApi('Test', { name: 'xxx' });
+//         assert.strictEqual(flowExecResult.postConnectFlow, true);
+//         assert.strictEqual(flowExecResult.postDisconnectFlow, true);
 
-//         let result: any | undefined;
-//         let promise = client.callApi('Test', { name: 'aaaaaaaa' });
-//         setTimeout(() => {
-//             promise.cancel();
-//         }, 0);
-//         promise.then(v => {
-//             result = v;
+//         await server.stop();
+//     })
+
+//     it('Buffer enc/dec flow', async function () {
+//         let server = new WsServer(getProto(), {
+//             logger: serverLogger
+//         });
+
+//         const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+
+//         server.implementApi('Test', async call => {
+//             call.succ({ reply: 'Enc&Dec' });
+//         });
+
+//         server.flows.preRecvBufferFlow.push(v => {
+//             flowExecResult.preRecvBufferFlow = true;
+//             for (let i = 0; i < v.buf.length; ++i) {
+//                 v.buf[i] ^= 128;
+//             }
+//             return v;
+//         });
+//         server.flows.preSendBufferFlow.push(v => {
+//             flowExecResult.preSendBufferFlow = true;
+//             for (let i = 0; i < v.buf.length; ++i) {
+//                 v.buf[i] ^= 128;
+//             }
+//             return v;
+//         })
+
+//         await server.start();
+
+//         let client = new WsClient(getProto(), {
+//             logger: clientLogger
+//         });
+
+//         client.flows.preSendBufferFlow.push(v => {
+//             for (let i = 0; i < v.buf.length; ++i) {
+//                 v.buf[i] ^= 128;
+//             }
 //             return v;
 //         });
 
-//         await new Promise(rs => {
-//             setTimeout(() => {
-//                 assert.strictEqual(result, undefined);
-//                 rs();
-//             }, 100)
-//         })
-
-//         await server.stop();
-//     });
-
-//     it('error', async function () {
-//         let server = new WsServer({
-//             proto: serviceProto,
-//             logger: serverLogger
-//         });
-//         await server.start();
-
-//         let client1 = new WsClient({
-//             server: 'http://localhost:80',
-//             proto: serviceProto,
-//             logger: clientLogger
-//         })
-
-//         let err1: TsrpcError | undefined;
-//         await client1.connect().catch(e => {
-//             err1 = e
-//         })
-//         assert.deepStrictEqual(err1!.info, { code: 'ECONNREFUSED', isNetworkError: true });
-//         assert(err1!.message.indexOf('ECONNREFUSED') > -1)
-
-//         await server.stop();
-//     });
-
-//     it('server timeout', async function () {
-//         let server = new WsServer({
-//             proto: serviceProto,
-//             logger: serverLogger,
-//             timeout: 100
-//         });
-//         server.implementApi('Test', call => {
-//             return new Promise(rs => {
-//                 setTimeout(() => {
-//                     call.req && call.succ({
-//                         reply: 'Hi, ' + call.req.name
-//                     });
-//                     rs();
-//                 }, 200)
-//             })
-//         })
-//         await server.start();
-
-//         let client = new WsClient({
-//             proto: serviceProto,
-//             logger: clientLogger
-//         });
-//         await client.connect();
-
-//         let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
-//         assert.deepStrictEqual(result, {
-//             message: 'Server Timeout', info: {
-//                 code: 'SERVER_TIMEOUT',
-//                 isServerError: true
+//         client.flows.preRecvBufferFlow.push(v => {
+//             for (let i = 0; i < v.buf.length; ++i) {
+//                 v.buf[i] ^= 128;
 //             }
+//             return v;
 //         });
+
+//         let ret = await client.callApi('Test', { name: 'xxx' });
+//         assert.strictEqual(flowExecResult.preRecvBufferFlow, true);
+//         assert.strictEqual(flowExecResult.preSendBufferFlow, true);
+//         assert.deepStrictEqual(ret, {
+//             isSucc: true,
+//             res: {
+//                 reply: 'Enc&Dec'
+//             }
+//         })
 
 //         await server.stop();
 //     });
 
-//     it('client timeout', async function () {
-//         let server = new WsServer({
-//             proto: serviceProto,
+//     it('ApiCall flow', async function () {
+//         let server = new WsServer(getProto(), {
 //             logger: serverLogger
 //         });
-//         server.implementApi('Test', call => {
-//             return new Promise(rs => {
-//                 setTimeout(() => {
-//                     call.succ({
-//                         reply: 'Hi, ' + call.req.name
-//                     });
-//                     rs();
-//                 }, 2000)
+
+//         const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+
+//         server.implementApi('Test', async call => {
+//             call.succ({ reply: 'asdgasdgasdgasdg' });
+//         });
+
+//         server.flows.preApiCallFlow.push(call => {
+//             assert.strictEqual(call.req.name, 'Changed')
+//             call.error('You need login');
+//             return call;
+//         });
+//         server.flows.postApiCallFlow.push(v => {
+//             flowExecResult.postApiCallFlow = true;
+//             return v;
+//         })
+
+//         await server.start();
+
+//         let client = new WsClient(getProto(), {
+//             logger: clientLogger
+//         });
+
+//         client.flows.preCallApiFlow.push(v => {
+//             v.req.name = 'Changed'
+//             return v;
+//         });
+
+//         let ret = await client.callApi('Test', { name: 'xxx' });
+//         assert.strictEqual(flowExecResult.postApiCallFlow, true);
+//         assert.deepStrictEqual(ret, {
+//             isSucc: false,
+//             err: new TsrpcError('You need login')
+//         })
+
+//         await server.stop();
+//     });
+
+//     it('ApiCall flow break', async function () {
+//         let server = new WsServer(getProto(), {
+//             logger: serverLogger
+//         });
+
+//         const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+
+//         server.implementApi('Test', async call => {
+//             call.succ({ reply: 'asdgasdgasdgasdg' });
+//         });
+
+//         server.flows.preApiCallFlow.push(call => {
+//             assert.strictEqual(call.req.name, 'Changed')
+//             call.error('You need login');
+//             return undefined;
+//         });
+//         server.flows.postApiCallFlow.push(v => {
+//             flowExecResult.postApiCallFlow = true;
+//             return v;
+//         })
+
+//         await server.start();
+
+//         let client = new WsClient(getProto(), {
+//             logger: clientLogger
+//         });
+
+//         client.flows.preCallApiFlow.push(v => {
+//             v.req.name = 'Changed'
+//             return v;
+//         });
+
+//         let ret = await client.callApi('Test', { name: 'xxx' });
+//         assert.strictEqual(flowExecResult.postApiCallFlow, undefined);
+//         assert.deepStrictEqual(ret, {
+//             isSucc: false,
+//             err: new TsrpcError('You need login')
+//         })
+
+//         await server.stop();
+//     });
+
+//     it('ApiCall flow error', async function () {
+//         let server = new WsServer(getProto(), {
+//             logger: serverLogger
+//         });
+
+//         const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+
+//         server.implementApi('Test', async call => {
+//             call.succ({ reply: 'asdgasdgasdgasdg' });
+//         });
+
+//         server.flows.preApiCallFlow.push(call => {
+//             assert.strictEqual(call.req.name, 'Changed')
+//             throw new Error('ASDFASDF')
+//         });
+//         server.flows.postApiCallFlow.push(v => {
+//             flowExecResult.postApiCallFlow = true;
+//             return v;
+//         })
+
+//         await server.start();
+
+//         let client = new WsClient(getProto(), {
+//             logger: clientLogger
+//         });
+
+//         client.flows.preCallApiFlow.push(v => {
+//             v.req.name = 'Changed'
+//             return v;
+//         });
+
+//         let ret = await client.callApi('Test', { name: 'xxx' });
+//         assert.strictEqual(flowExecResult.postApiCallFlow, undefined);
+//         assert.deepStrictEqual(ret, {
+//             isSucc: false,
+//             err: new TsrpcError('Internal Server Error', {
+//                 type: TsrpcErrorType.ServerError,
+//                 innerErr: 'ASDFASDF',
+//                 code: 'INTERNAL_ERR'
 //             })
 //         })
-//         await server.start();
-
-//         let client = new WsClient({
-//             timeout: 100,
-//             proto: serviceProto,
-//             logger: clientLogger
-//         });
-//         await client.connect();
-
-//         let result = await client.callApi('Test', { name: 'Jack' }).catch(e => e);
-//         assert.strictEqual(result.message, 'Request Timeout');
-//         assert.deepStrictEqual(result.info, {
-//             code: 'TIMEOUT',
-//             isNetworkError: true
-//         });
 
 //         await server.stop();
 //     });
 
-//     it('enablePool: false', async function () {
-//         let server = new WsServer({
-//             proto: serviceProto,
+//     it('server ApiReturn flow', async function () {
+//         let server = new WsServer(getProto(), {
 //             logger: serverLogger
 //         });
+
+//         const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+
+//         server.implementApi('Test', async call => {
+//             call.succ({ reply: 'xxxxxxxxxxxxxxxxxxxx' });
+//         });
+
+//         server.flows.preApiReturnFlow.push(v => {
+//             flowExecResult.preApiReturnFlow = true;
+//             v.return = {
+//                 isSucc: false,
+//                 err: new TsrpcError('Ret changed')
+//             }
+//             return v;
+//         });
+//         server.flows.postApiReturnFlow.push(v => {
+//             flowExecResult.postApiReturnFlow = true;
+//             v.call.logger.log('RETTT', v.return);
+//             return v;
+//         })
+
 //         await server.start();
 
-//         server.implementApi('Test', call => {
-//             let callOptions = call.options;
-//             let logger = call.logger;
-//             let loggerOptions = call.logger.options;
-//             call.succ({ reply: 'ok' });
-//             setTimeout(() => {
-//                 assert.strictEqual(call['_options'], callOptions);
-//                 assert.strictEqual(call.logger, logger);
-//                 assert.strictEqual(call.logger['_options'], loggerOptions);
-//             }, 200)
-//         });
-
-//         let client = new WsClient({
-//             proto: serviceProto,
+//         let client = new WsClient(getProto(), {
 //             logger: clientLogger
 //         });
-//         await client.connect();
 
-//         await client.callApi('Test', { name: 'xx' });
-//         await new Promise(rs => setTimeout(rs, 300));
+
+//         let ret = await client.callApi('Test', { name: 'xxx' });
+//         assert.strictEqual(flowExecResult.preApiReturnFlow, true);
+//         assert.strictEqual(flowExecResult.postApiReturnFlow, true);
+//         assert.deepStrictEqual(ret, {
+//             isSucc: false,
+//             err: new TsrpcError('Ret changed')
+//         })
 
 //         await server.stop();
-//     })
+//     });
 
-//     it('enablePool: true', async function () {
-//         let server = new WsServer({
-//             proto: serviceProto,
-//             logger: serverLogger,
-//             enablePool: true
+//     it('client ApiReturn flow', async function () {
+//         let server = new WsServer(getProto(), {
+//             logger: serverLogger
 //         });
+
+//         const flowExecResult: { [K in (keyof BaseClient<any>['flows'])]?: boolean } = {};
+
+//         server.implementApi('Test', async call => {
+//             call.succ({ reply: 'xxxxxxxxxxxxxxxxxxxx' });
+//         });
+
 //         await server.start();
 
-//         server.implementApi('Test', call => {
-//             let logger = call.logger;
-//             call.succ({ reply: 'ok' });
-//             setTimeout(() => {
-//                 assert.strictEqual(call['_options'], undefined);
-//                 assert.strictEqual(logger['_options'], undefined);
-//             }, 200)
-//         });
-
-//         let client = new WsClient({
-//             proto: serviceProto,
+//         let client = new WsClient(getProto(), {
 //             logger: clientLogger
 //         });
-//         await client.connect();
 
-//         await client.callApi('Test', { name: 'xx' });
-//         await new Promise(rs => setTimeout(rs, 300));
+//         client.flows.preApiReturnFlow.push(v => {
+//             flowExecResult.preApiReturnFlow = true;
+//             v.return = {
+//                 isSucc: false,
+//                 err: new TsrpcError('Ret changed')
+//             }
+//             return v;
+//         });
+//         client.flows.postApiReturnFlow.push(v => {
+//             flowExecResult.postApiReturnFlow = true;
+//             client.logger?.log('RETTT', v.return);
+//             return v;
+//         })
+
+//         let ret = await client.callApi('Test', { name: 'xxx' });
+//         assert.strictEqual(flowExecResult.preApiReturnFlow, true);
+//         assert.strictEqual(flowExecResult.postApiReturnFlow, true);
+//         assert.deepStrictEqual(ret, {
+//             isSucc: false,
+//             err: new TsrpcError('Ret changed')
+//         })
 
 //         await server.stop();
-//     })
+//     });
+
+//     it('client SendBufferFlow prevent', async function () {
+//         let server = new WsServer(getProto(), {
+//             logger: serverLogger
+//         });
+
+//         // const flowExecResult: { [K in (keyof BaseClient<any>['flows'])]?: boolean } = {};
+
+//         server.implementApi('Test', async call => {
+//             call.succ({ reply: 'xxxxxxxxxxxxxxxxxxxx' });
+//         });
+
+//         await server.start();
+
+//         let client = new WsClient(getProto(), {
+//             logger: clientLogger
+//         });
+
+//         client.flows.preSendBufferFlow.push(v => {
+//             return undefined
+//         });
+
+//         let ret: any;
+//         client.callApi('Test', { name: 'xxx' }).then(v => { ret = v });
+//         await new Promise(rs => { setTimeout(rs, 200) });
+//         assert.strictEqual(ret, undefined)
+
+//         await server.stop();
+//     });
 // })

@@ -6,6 +6,8 @@ import { TransportOptions } from "../models/TransportOptions";
 
 export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
 
+    readonly type = 'SHORT';
+
     private _http: typeof http | typeof https;
 
     readonly options!: HttpClientOptions;

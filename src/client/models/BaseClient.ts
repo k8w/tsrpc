@@ -11,6 +11,8 @@ import { ApiReturnFlowData, CallApiFlowData, SendMsgFlowData } from "./ClientFlo
 
 export abstract class BaseClient<ServiceType extends BaseServiceType> {
 
+    abstract readonly type: 'SHORT' | 'LONG';
+
     readonly options: BaseClientOptions;
 
     readonly serviceMap: ServiceMap;
@@ -135,7 +137,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             pendingItem.service = service;
 
             // Encode
-            let opEncode = TransportDataUtil.encodeApiReq(this.tsbuffer, service, req);
+            let opEncode = TransportDataUtil.encodeApiReq(this.tsbuffer, service, req, this.type === 'LONG' ? pendingItem.sn : undefined);
             if (!opEncode.isSucc) {
                 rs({
                     isSucc: false, err: new TsrpcError(opEncode.errMsg, {
@@ -246,10 +248,10 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
         return promise;
     }
 
-    listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: ClientMsgHandler<ServiceType['msg'][T]>) {
+    listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: ClientMsgHandler<ServiceType['msg'][T], this>) {
         this._msgHandlers.addHandler(msgName as string, handler)
     }
-    unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler?: ClientMsgHandler<ServiceType['msg'][T]>) {
+    unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler?: Function) {
         this._msgHandlers.removeHandler(msgName as string, handler)
     }
 
@@ -305,12 +307,13 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
                 this._pendingApis.find(v => v.sn === sn)?.onReturn?.(parsed.ret);
             }
             else if (parsed.type === 'msg') {
-                this._msgHandlers.forEachHandler(parsed.service.name, parsed.msg);
+                this.logger?.log(`[RecvMsg] ${parsed.service.name}`, parsed.msg)
+                this._msgHandlers.forEachHandler(parsed.service.name, this.logger, parsed.msg, this);
             }
         }
         else {
             this.logger?.error('ParseServerOutputError: ' + opParsed.errMsg);
-            this.logger?.warn('Please check if the server proto is compatible with the client.');
+            this.logger?.error('Please check if the proto be the same between server and client');
         }
     }
 
@@ -382,4 +385,4 @@ export interface PendingApiItem {
     onReturn?: (ret: ApiReturn<any>) => void
 }
 
-export type ClientMsgHandler<Msg> = (msg: Msg) => void | Promise<void>;
+export type ClientMsgHandler<Msg, Client extends BaseClient<any> = BaseClient<any>> = (msg: Msg, client: Client) => void | Promise<void>;

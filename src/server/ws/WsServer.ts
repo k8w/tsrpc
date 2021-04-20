@@ -16,7 +16,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 
     readonly options!: WsServerOptions<ServiceType>;
 
-    private readonly _conns: WsConnection<ServiceType>[] = [];
+    readonly connections: WsConnection<ServiceType>[] = [];
     private readonly _id2Conn: { [connId: string]: WsConnection<ServiceType> | undefined } = {};
     private _connIdCounter = new Counter(1);
 
@@ -88,8 +88,8 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
                     rs: rs,
                     rj: rj,
                 }
-                if (this._conns.length) {
-                    for (let conn of this._conns) {
+                if (this.connections.length) {
+                    for (let conn of this.connections) {
                         conn.close();
                     }
                 }
@@ -127,22 +127,22 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             httpReq: httpReq,
             onClose: this._onClientClose
         });
-        this._conns.push(conn);
+        this.connections.push(conn);
         this._id2Conn[conn.id] = conn;
 
-        conn.logger.log('[Connected]', `ActiveConn=${this._conns.length}`);
+        conn.logger.log('[Connected]', `ActiveConn=${this.connections.length}`);
         this.flows.postConnectFlow.exec(conn, conn.logger);
     };
 
 
 
     private _onClientClose = (conn: WsConnection<ServiceType>, code: number, reason: string) => {
-        conn.logger.log('[Disconnected]', `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this._conns.length}`)
-        this._conns.removeOne(v => v.id === conn.id);
+        conn.logger.log('[Disconnected]', `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this.connections.length}`)
+        this.connections.removeOne(v => v.id === conn.id);
         this._id2Conn[conn.id] = undefined;
 
         // 优雅地停止
-        if (this._stopping && this._conns.length === 0) {
+        if (this._stopping && this.connections.length === 0) {
             this._wsServer && this._wsServer.close(e => {
                 this._status = ServerStatus.Closed;
                 if (this._stopping) {
@@ -153,31 +153,65 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
     }
 
     // Send Msg
-    async sendMsg<T extends keyof ServiceType['msg']>(connIds: string[], msgName: T, msg: ServiceType['msg'][T]): Promise<void> {
+    async broadcastMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], connIds?: string[]): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         if (this.status !== ServerStatus.Opened) {
-            this.logger.error('Server not open, sendMsg failed');
-            return;
+            return { isSucc: false, errMsg: 'Server not open' };
         }
 
         // GetService
         let service = this.serviceMap.msgName2Service[msgName as string];
         if (!service) {
-            throw new Error('Invalid msg name: ' + msgName)
+            return { isSucc: false, errMsg: 'Invalid msg name: ' + msgName };
         }
 
         // Encode
-        let transportData = TransportDataUtil.encodeServerMsg(this.tsbuffer, service, msg);
+        let opEncode = TransportDataUtil.encodeServerMsg(this.tsbuffer, service, msg);
+        if (!opEncode.isSucc) {
+            return opEncode;
+        }
+
+        let errMsgs: string[] = [];
+        let conns = (connIds ? connIds.map(v => {
+            let conn = this._id2Conn[v];
+            if (!conn) {
+                errMsgs.push(`Error connId '${v}'`);
+            }
+            return conn;
+        }).filter(v => !!v) : this.connections) as WsConnection<ServiceType>[];
 
         // Batch send
-        await Promise.all(connIds.map(v => {
-            let conn = this._id2Conn[v];
-            if (conn) {
-                conn.ws.send(transportData)
+        return Promise.all(conns.map(async conn => {
+            // Pre Flow
+            let pre = await this.flows.preSendMsgFlow.exec({ conn: conn, service: service!, msg: msg }, this.logger);
+            if (!pre) {
+                return { isSucc: false, errMsg: 'sendMsg prevent by preSendMsgFlow' };
+            }
+            msg = pre.msg;
+
+            // Do send!
+            let opSend = await conn.sendBuf(opEncode.buf!);
+            if (!opSend.isSucc) {
+                return opSend;
+            }
+
+            // Post Flow
+            this.flows.postSendMsgFlow.exec(pre, this.logger);
+
+            return { isSucc: true };
+        })).then(results => {
+            for (let i = 0; i < results.length; ++i) {
+                let op = results[i];
+                if (!op.isSucc) {
+                    errMsgs.push(`Conn#conns[i].id: ${op.errMsg}`)
+                };
+            }
+            if (errMsgs.length) {
+                return { isSucc: false, errMsg: errMsgs.join('\n') }
             }
             else {
-                this.logger.error('SendMsg failed, invalid connId: ' + v)
+                return { isSucc: true }
             }
-        }))
+        })
     };
 }
 

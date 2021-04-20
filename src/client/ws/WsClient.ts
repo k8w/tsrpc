@@ -5,11 +5,7 @@ import { TransportOptions } from "../models/TransportOptions";
 
 export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
 
-    // Events
-    /** 连接状态变化事件 */
-    onStatusChange?: (newStatus: WsClientStatus) => void;
-    /** 掉线（非人为断开连接） */
-    onLostConnection?: () => void;
+    readonly type = 'LONG';
 
     readonly options!: WsClientOptions;
     constructor(proto: ServiceProto<ServiceType>, options?: Partial<WsClientOptions>) {
@@ -68,8 +64,8 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
 
     private _ws?: WebSocket;
 
-    private _promiseConnect?: Promise<void>;
-    async connect(): Promise<void> {
+    private _promiseConnect?: Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
+    async connect(): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
         // 已连接中
         if (this._promiseConnect) {
             return this._promiseConnect;
@@ -77,48 +73,47 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
 
         // 已连接成功
         if (this._ws) {
-            return;
+            return { isSucc: true };
         }
 
         let ws = new (WebSocket as any)(this.options.server) as WebSocket;
         this.logger?.log(`Start connecting ${this.options.server}...`)
-        this._promiseConnect = new Promise<void>((rs: Function, rj?: Function) => {
+        this._promiseConnect = new Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>(rs => {
             ws.onopen = () => {
                 this._promiseConnect = undefined;
-                rs();
-                rj = undefined;
                 ws.onopen = undefined as any;
                 this._ws = ws;
                 this.logger?.log('Connected succ');
-                this.onStatusChange && this.onStatusChange(WsClientStatus.Opened);
+                rs({ isSucc: true });
+                this.options.onStatusChange?.(WsClientStatus.Opened);
             };
 
             ws.onerror = e => {
                 this.logger?.error('[WebSocket Error]', e.message);
                 // 还在连接中，则连接失败
-                if (rj) {
+                if (this._promiseConnect) {
                     this._promiseConnect = undefined;
-                    rj(new TsrpcError(e.message, {
-                        type: TsrpcErrorType.NetworkError,
-                        code: e.error?.code
-                    }));
+                    rs({
+                        isSucc: false,
+                        errMsg: e.message
+                    });
                 }
             }
 
             ws.onclose = e => {
-                if (rj) {
+                if (this._promiseConnect) {
                     this._promiseConnect = undefined;
-                    rj(new TsrpcError('Network Error', {
-                        type: TsrpcErrorType.NetworkError,
-                        code: e.reason
-                    }));
+                    rs({
+                        isSucc: false,
+                        errMsg: e.reason ? `Error: ${e.reason}` : 'Network Error'
+                    });
                 }
 
                 // 清空WebSocket Listener
                 ws.onopen = ws.onclose = ws.onmessage = ws.onerror = undefined as any;
                 this._ws = undefined;
 
-                this.onStatusChange?.(WsClientStatus.Closed);
+                this.options.onStatusChange?.(WsClientStatus.Closed);
 
                 if (this._rsDisconnecting) {
                     this._rsDisconnecting();
@@ -126,9 +121,9 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
                     this.logger?.log('Disconnected succ', `code=${e.code} reason=${e.reason}`);
                 }
                 // 已连接上 非主动关闭 触发掉线
-                else if (rj) {
+                else {
                     this.logger?.log(`Lost connection to ${this.options.server}`, `code=${e.code} reason=${e.reason}`);
-                    this.onLostConnection?.();
+                    this.options.onLostConnection?.();
                 }
             };
         })
@@ -145,7 +140,7 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
             }
         }
 
-        this.onStatusChange?.(WsClientStatus.Opening);
+        this.options.onStatusChange?.(WsClientStatus.Opening);
         return this._promiseConnect;
     }
 
@@ -157,6 +152,7 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
         }
 
         this.logger?.log('Disconnecting...');
+        this.options.onStatusChange?.(WsClientStatus.Closing);
         return new Promise<void>(rs => {
             this._rsDisconnecting = rs;
             this._ws!.close();
@@ -166,12 +162,18 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
 
 const defaultWsClientOptions: WsClientOptions = {
     ...defaultBaseClientOptions,
-    server: 'http://localhost:3000'
+    server: 'ws://localhost:3000'
 }
 
 export interface WsClientOptions extends BaseClientOptions {
     /** Server URL */
     server: string;
+
+    // Events
+    /** 连接状态变化事件 */
+    onStatusChange?: (newStatus: WsClientStatus) => void;
+    /** 掉线（非人为断开连接） */
+    onLostConnection?: () => void;
 }
 
 export enum WsClientStatus {
