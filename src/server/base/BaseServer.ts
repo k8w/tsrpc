@@ -26,9 +26,12 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * Wait all requests finished and the stop server
      * @param immediately Stop server immediately, not waiting for the requests ending
      */
-    abstract stop(immediately?: boolean): Promise<void>;
+    abstract stop(): Promise<void>;
 
-    abstract get status(): ServerStatus;
+    protected _status: ServerStatus = ServerStatus.Closed;
+    get status(): ServerStatus {
+        return this._status;
+    }
 
     // 配置及其衍生项
     readonly proto: ServiceProto<ServiceType>;
@@ -149,8 +152,11 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
     }
 
+    protected _pendingApiCallNum = 0;
+
     // #region receive buffer process flow
     async _onRecvBuffer(conn: BaseConnection<ServiceType>, buf: Buffer) {
+        // 非 OPENED 状态 停止接受新的请求
         if (this.status !== ServerStatus.Opened) {
             return;
         }
@@ -170,10 +176,14 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         let call = this._makeCall(conn, opInput.result);
 
         if (call.type === 'api') {
-            this._onApiCall(call);
+            ++this._pendingApiCallNum;
+            await this._onApiCall(call);
+            if (--this._pendingApiCallNum === 0) {
+                this._gracefulStop?.rs();
+            }
         }
         else {
-            this._onMsgCall(call);
+            await this._onMsgCall(call);
         }
     }
 
@@ -398,6 +408,54 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             type: TsrpcErrorType.ServerError,
             innerErr: call.conn.server.options.returnInnerError ? err.message : undefined
         });
+    }
+
+    protected _gracefulStop?: {
+        rs: () => void
+    };
+    /**
+     * 优雅的停止
+     * 立即停止接收所有请求，直到所有现有请求都处理完，停止服务
+     * @param maxWaitTime - 最长等待时间，undefined 或 0 代表无限
+     */
+    async gracefulStop(maxWaitTime?: number) {
+        if (this._status !== ServerStatus.Opened) {
+            throw new Error(`Cannot gracefulStop when server status is '${this._status}'`);
+        }
+
+        this.logger.log('[GracefulStop] Start graceful stop, waiting all ApiCall finished...')
+        this._status = ServerStatus.Closing;
+        let promiseWaitApi = new Promise<void>(rs => {
+            this._gracefulStop = {
+                rs: rs
+            };
+        });
+
+        return new Promise<void>(rs => {
+            let maxWaitTimer: ReturnType<typeof setTimeout> | undefined;
+            if (maxWaitTime) {
+                maxWaitTimer = setTimeout(() => {
+                    maxWaitTimer = undefined;
+                    if (this._gracefulStop) {
+                        this._gracefulStop = undefined;
+                        this.logger.log('[GracefulStop] Graceful stop timeout, stop the server directly');
+                        this.stop().then(() => { rs() });
+                    }
+                }, maxWaitTime);
+            }
+
+            promiseWaitApi.then(() => {
+                this.logger.log('[GracefulStop] All ApiCall finished');
+                if (maxWaitTimer) {
+                    clearTimeout(maxWaitTimer);
+                    maxWaitTimer = undefined;
+                }
+                if (this._gracefulStop) {
+                    this._gracefulStop = undefined;
+                    this.stop().then(() => { rs() });
+                }
+            })
+        })
     }
 
 }

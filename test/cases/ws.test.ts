@@ -453,38 +453,37 @@ describe('WS Server & Client basic', function () {
         await server1.stop();
     });
 
-    // it('Progressive stop', async function () {
-    //     let server = new WsServer(getProto(), {
-    //         logger: serverLogger
-    //     });
+    it('Graceful stop', async function () {
+        let server = new WsServer(getProto(), {
+            logger: serverLogger
+        });
 
-    //     let reqNum = 0;
-    //     server.implementApi('Test', async call => {
-    //         if (++reqNum === 10) {
-    //             server.stop();
-    //         }
-    //         await new Promise(rs => setTimeout(rs, parseInt(call.req.name)));
-    //         call.succ({ reply: 'OK' });
-    //     });
+        let reqNum = 0;
+        server.implementApi('Test', async call => {
+            if (++reqNum === 10) {
+                server.gracefulStop();
+            }
+            await new Promise(rs => setTimeout(rs, parseInt(call.req.name)));
+            call.succ({ reply: 'OK' });
+        });
 
-    //     await server.start();
-    //     let isStopped = false;
+        await server.start();
+        let isStopped = false;
 
-    //     let client = new WsClient(getProto(), {
-    //         logger: clientLogger
-    //     });
-    //     await client.connect();
+        let client = new WsClient(getProto(), {
+            logger: clientLogger
+        });
+        await client.connect();
 
-    //     let succNum = 0;
-    //     await Promise.all(Array.from({ length: 10 }, (v, i) => client.callApi('Test', { name: '' + (i * 100) }).then(v => {
-    //         if (v.res?.reply === 'OK') {
-    //             ++succNum;
-    //         }
-    //     })))
-    //     assert.strictEqual(succNum, 10);
-
-    //     await server.stop();
-    // })
+        let succNum = 0;
+        await Promise.all(Array.from({ length: 10 }, (v, i) => client.callApi('Test', { name: '' + (i * 100) }).then(v => {
+            console.log('xxx', v)
+            if (v.res?.reply === 'OK') {
+                ++succNum;
+            }
+        })))
+        assert.strictEqual(succNum, 10);
+    })
 })
 
 describe('WS Flows', function () {
@@ -509,6 +508,7 @@ describe('WS Flows', function () {
             return v;
         });
         server.flows.postDisconnectFlow.push(v => {
+            server.logger.log('server postDisconnectFlow')
             flowExecResult.postDisconnectFlow = true;
             return v;
         })

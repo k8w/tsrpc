@@ -34,6 +34,7 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
         // Init WS
         this.ws.onclose = async e => {
             await options.onClose(this, e.code, e.reason);
+            this._rsClose?.();
             this.destroy();
         };
         this.ws.onerror = e => { this.logger.warn('[ClientErr]', e.error) };
@@ -87,8 +88,14 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
         return { isSucc: true }
     }
 
-    close(reason?: string) {
+    protected _rsClose?: () => void;
+    close(reason?: string): Promise<void> {
         // 已连接 Close之
-        this.ws.close(1000, reason);
+        return new Promise<void>(rs => {
+            this._rsClose = rs;
+            this.ws.close(1000, reason);
+        }).finally(() => {
+            this._rsClose = undefined
+        })
     }
 }

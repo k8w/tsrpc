@@ -27,18 +27,11 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         });
     }
 
-    private _status: ServerStatus = ServerStatus.Closed;
-    public get status(): ServerStatus {
-        return this._status;
-    }
-
     private _wsServer?: WebSocketServer;
     start(): Promise<void> {
         if (this._wsServer) {
             throw new Error('Server already started');
         }
-
-        this._stopping = undefined;
         this._status = ServerStatus.Opening;
         return new Promise((rs, rj) => {
             this.logger.log('Starting WebSocket server...');
@@ -58,66 +51,31 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         })
     }
 
-    private _stopping?: {
-        promise: Promise<void>,
-        rs: () => void,
-        rj: (e: any) => void,
-    }
     async stop(immediately: boolean = false): Promise<void> {
-        if (this._stopping) {
-            return this._stopping.promise;
-        }
-
         // Closed Already
-        if (!this._wsServer || this._status === ServerStatus.Closed) {
-            return;
+        if (!this._wsServer) {
+            throw new Error('Server has not been started')
+        }
+        if (this._status === ServerStatus.Closed) {
+            throw new Error('Server is closed already');
         }
 
         this._status = ServerStatus.Closing;
-        // this._stopping
-        let output = new Promise<void>(async (rs, rj) => {
-            if (!this._wsServer) {
-                throw new Error('Server has not been started')
-            }
 
-            if (immediately) {
-                this._wsServer.close(() => { rs(); })
-            }
-            else {
-                // 优雅地停止
-                this._stopping = {
-                    promise: output,
-                    rs: rs,
-                    rj: rj,
-                }
-                if (this.connections.length) {
-                    for (let conn of this.connections) {
-                        // TODO wait api结束
-                        conn.close();
-                    }
-                }
-                else {
-                    this._wsServer && this._wsServer.close(e => {
-                        this._status = ServerStatus.Closed;
-                        e ? rj(e) : rs();
-                    });
-                }
-            }
-        });
-
-        output.then(() => {
+        return new Promise<void>(async (rs, rj) => {
+            await Promise.all(this.connections.map(v => v.close('Server Stop')));
+            this._wsServer!.close(() => { rs(); })
+        }).then(() => {
             this.logger.log('[ServerStop] Server stopped');
             this._status = ServerStatus.Closed;
             this._wsServer = undefined;
         });
-
-        return output;
     }
 
     private _onClientConnect = (ws: WebSocket, httpReq: http.IncomingMessage) => {
         // 停止中 不再接受新的连接
-        if (this._stopping) {
-            ws.close();
+        if (this._status !== ServerStatus.Opened) {
+            ws.close(1012);
             return;
         }
 
@@ -145,16 +103,6 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         this._id2Conn[conn.id] = undefined;
 
         await this.flows.postDisconnectFlow.exec({ conn: conn, reason: reason }, conn.logger);
-
-        // 优雅地停止Server
-        if (this._stopping && this.connections.length === 0) {
-            this._wsServer && this._wsServer.close(e => {
-                this._status = ServerStatus.Closed;
-                if (this._stopping) {
-                    e ? this._stopping.rj(e) : this._stopping!.rs();
-                }
-            });
-        }
     }
 
     // Send Msg

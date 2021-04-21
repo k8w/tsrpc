@@ -330,7 +330,7 @@ describe('HTTP Server & Client basic', function () {
         await server1.stop();
     });
 
-    it('Progressive stop', async function () {
+    it('Graceful stop', async function () {
         let server = new HttpServer(getProto(), {
             logger: serverLogger
         });
@@ -338,7 +338,7 @@ describe('HTTP Server & Client basic', function () {
         let reqNum = 0;
         server.implementApi('Test', async call => {
             if (++reqNum === 10) {
-                server.stop();
+                server.gracefulStop();
             }
             await new Promise(rs => setTimeout(rs, parseInt(call.req.name)));
             call.succ({ reply: 'OK' });
@@ -358,8 +358,6 @@ describe('HTTP Server & Client basic', function () {
             }
         })))
         assert.strictEqual(succNum, 10);
-
-        await server.stop();
     })
 })
 
@@ -699,7 +697,7 @@ describe('HTTP Flows', function () {
         });
 
         let ret: any;
-        client.callApi('Test', { name: 'xxx' }).then(v=>{ret = v});
+        client.callApi('Test', { name: 'xxx' }).then(v => { ret = v });
         await new Promise(rs => { setTimeout(rs, 200) });
         assert.strictEqual(ret, undefined)
 

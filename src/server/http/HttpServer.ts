@@ -24,22 +24,22 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
         });
     }
 
-    private _status: ServerStatus = ServerStatus.Closed;
-    public get status(): ServerStatus {
-        return this._status;
-    }
-
     private _httpServer?: http.Server;
     start(): Promise<void> {
         if (this._httpServer) {
             throw new Error('Server already started');
         }
-        this._promiseStop = undefined;
 
         return new Promise(rs => {
             this._status = ServerStatus.Opening;
             this.logger.log(`Starting HTTP server ...`);
             this._httpServer = http.createServer((httpReq, httpRes) => {
+                if (this.status !== ServerStatus.Opened) {
+                    httpRes.statusCode = 503;
+                    httpRes.end();
+                    return;
+                }
+
                 let ip = HttpUtil.getClientIp(httpReq);
 
                 httpRes.statusCode = 200;
@@ -130,36 +130,29 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
         });
     }
 
-    private _promiseStop?: Promise<void>
-    stop(): Promise<void> {
-        if (!this._promiseStop) {
-            this._promiseStop = new Promise<void>((rs, rj) => {
-                console.log('Stopping server...');
-                if (!this._httpServer) {
-                    rs();
-                    return;
-                }
-                this._status = ServerStatus.Closing;
-
-                // 立即close，不再接受新请求
-                // 等所有连接都断开后rs
-                this._httpServer.close(err => {
-                    if (err) {
-                        console.error(err);
-                        rj(err)
-                    }
-                    else {
-                        this.logger.log('[ServerStop] Server stopped');
-                        rs();
-                    }
-                });
-            });
-            this._promiseStop.then(() => {
-                this._httpServer = undefined;
-            })
+    async stop(): Promise<void> {
+        if (!this._httpServer) {
+            return;
         }
+        this.logger.log('Stopping server...');        
 
-        return this._promiseStop;
+        return new Promise<void>((rs) => {
+            this._status = ServerStatus.Closing;
+
+            // 立即close，不再接受新请求
+            // 等所有连接都断开后rs
+            this._httpServer?.close(err => {
+                this._status = ServerStatus.Closed;
+                this._httpServer = undefined;
+
+                if (err) {
+                    this.logger.error(err);
+                }
+                this.logger.log('[ServerStop] Server stopped');
+                rs();
+            });
+        })
+
     }
 
     // HTTP Server 一个conn只有一个call，对应关联之
