@@ -18,6 +18,13 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
 
     protected async _sendBuf(buf: Uint8Array, options: TransportOptions, serviceId: number, pendingApiItem?: PendingApiItem): Promise<{ err?: TsrpcError; }> {
         return new Promise<{ err?: TsrpcError | undefined; }>(async rs => {
+            // Pre Flow
+            let pre = await this.flows.preSendBufferFlow.exec({ buf: buf, sn: pendingApiItem?.sn }, this.logger);
+            if (!pre) {
+                return;
+            }
+            buf = pre.buf;
+
             if (!this._ws) {
                 rs({
                     err: new TsrpcError('WebSocket is not connected', {
@@ -28,8 +35,10 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
                 return;
             }
 
-            // Send
-            this._ws.send(buf, err => {
+            // Do Send
+            let buffer = Buffer.from(buf);
+            this.options.debugBuf && this.logger?.debug('[SendBuf]' + (pendingApiItem ? (' #' + pendingApiItem.sn) : ''), `length=${buffer.byteLength}`, buffer);
+            this._ws.send(buffer, err => {
                 if (err) {
                     this.logger?.error('WebSocket Send Error:', err);
                     rs({
@@ -129,6 +138,7 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
         })
 
         ws.onmessage = e => {
+            this.options.debugBuf && this.logger?.debug('[RecvBuf]', e.data);
             if (e.data instanceof Buffer) {
                 this._onRecvBuf(e.data)
             }

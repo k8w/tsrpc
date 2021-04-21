@@ -45,7 +45,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             this._wsServer = new WebSocketServer({
                 port: this.options.port
             }, () => {
-                this.logger.log(`Server started at ${this.options.port}...`);
+                this.logger.log(`[ServerStart] Server started at ${this.options.port}...`);
                 this._status = ServerStatus.Opened;
                 rs();
             });
@@ -68,11 +68,13 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             return this._stopping.promise;
         }
 
+        // Closed Already
         if (!this._wsServer || this._status === ServerStatus.Closed) {
             return;
         }
 
         this._status = ServerStatus.Closing;
+        // this._stopping
         let output = new Promise<void>(async (rs, rj) => {
             if (!this._wsServer) {
                 throw new Error('Server has not been started')
@@ -90,6 +92,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
                 }
                 if (this.connections.length) {
                     for (let conn of this.connections) {
+                        // TODO wait api结束
                         conn.close();
                     }
                 }
@@ -103,7 +106,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         });
 
         output.then(() => {
-            this.logger.log('[SRV_STOP] Server stopped');
+            this.logger.log('[ServerStop] Server stopped');
             this._status = ServerStatus.Closed;
             this._wsServer = undefined;
         });
@@ -136,12 +139,14 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 
 
 
-    private _onClientClose = (conn: WsConnection<ServiceType>, code: number, reason: string) => {
+    private _onClientClose = async (conn: WsConnection<ServiceType>, code: number, reason: string) => {
         conn.logger.log('[Disconnected]', `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this.connections.length}`)
         this.connections.removeOne(v => v.id === conn.id);
         this._id2Conn[conn.id] = undefined;
 
-        // 优雅地停止
+        await this.flows.postDisconnectFlow.exec({ conn: conn, reason: reason }, conn.logger);
+
+        // 优雅地停止Server
         if (this._stopping && this.connections.length === 0) {
             this._wsServer && this._wsServer.close(e => {
                 this._status = ServerStatus.Closed;

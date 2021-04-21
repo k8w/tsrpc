@@ -124,7 +124,7 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
 
             this._httpServer.listen(this.options.port, () => {
                 this._status = ServerStatus.Opened;
-                this.logger.log(`Server started at ${this.options.port}.`);
+                this.logger.log(`[ServerStart] Server started at ${this.options.port}.`);
                 rs();
             })
         });
@@ -149,7 +149,7 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
                         rj(err)
                     }
                     else {
-                        this.logger.log('Server stopped');
+                        this.logger.log('[ServerStop] Server stopped');
                         rs();
                     }
                 });

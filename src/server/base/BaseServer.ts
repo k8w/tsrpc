@@ -151,6 +151,10 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
     // #region receive buffer process flow
     async _onRecvBuffer(conn: BaseConnection<ServiceType>, buf: Buffer) {
+        if (this.status !== ServerStatus.Opened) {
+            return;
+        }
+
         // postRecvBufferFlow
         let opPreRecvBuffer = await this.flows.preRecvBufferFlow.exec({ conn: conn, buf: buf }, conn.logger);
         if (!opPreRecvBuffer) {
