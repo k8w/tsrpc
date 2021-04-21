@@ -38,14 +38,14 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             this._wsServer = new WebSocketServer({
                 port: this.options.port
             }, () => {
-                this.logger.log(`[ServerStart] Server started at ${this.options.port}...`);
+                this.logger.log(`Server started at ${this.options.port}...`);
                 this._status = ServerStatus.Opened;
                 rs();
             });
 
             this._wsServer.on('connection', this._onClientConnect);
             this._wsServer.on('error', e => {
-                this.logger.error('[Server Error]', e);
+                this.logger.error('[ServerError]', e);
                 rj(e);
             });
         })
@@ -66,7 +66,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             await Promise.all(this.connections.map(v => v.close('Server Stop')));
             this._wsServer!.close(() => { rs(); })
         }).then(() => {
-            this.logger.log('[ServerStop] Server stopped');
+            this.logger.log('Server stopped');
             this._status = ServerStatus.Closed;
             this._wsServer = undefined;
         });

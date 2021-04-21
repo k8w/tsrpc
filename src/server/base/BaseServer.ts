@@ -389,11 +389,11 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
     /**
      * When the server cannot parse input buffer to api/msg call
-     * By default, it will return "INVALID_INPUT_BUFFER" .
+     * By default, it will return "Input Buffer Error" .
      */
     protected _onInputBufferError(errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) {
         conn.logger.error(`[${conn.ip}][InputBufferError] ${errMsg} length = ${buf.length}`, buf.subarray(0, 16))
-        conn.close('INPUT_BUFFER_ERROR');
+        conn.close('Input Buffer Error');
     }
 
     /**
@@ -420,7 +420,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      */
     async gracefulStop(maxWaitTime?: number) {
         if (this._status !== ServerStatus.Opened) {
-            throw new Error(`Cannot gracefulStop when server status is '${this._status}'`);
+            throw new Error(`Cannot gracefulStop when server status is '${this._status}'.`);
         }
 
         this.logger.log('[GracefulStop] Start graceful stop, waiting all ApiCall finished...')
@@ -438,14 +438,14 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                     maxWaitTimer = undefined;
                     if (this._gracefulStop) {
                         this._gracefulStop = undefined;
-                        this.logger.log('[GracefulStop] Graceful stop timeout, stop the server directly');
+                        this.logger.log('Graceful stop timeout, stop the server directly.');
                         this.stop().then(() => { rs() });
                     }
                 }, maxWaitTime);
             }
 
             promiseWaitApi.then(() => {
-                this.logger.log('[GracefulStop] All ApiCall finished');
+                this.logger.log('All ApiCall finished, continue stop server.');
                 if (maxWaitTimer) {
                     clearTimeout(maxWaitTimer);
                     maxWaitTimer = undefined;

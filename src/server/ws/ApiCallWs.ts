@@ -8,6 +8,8 @@ export interface ApiCallWsOptions<Req, ServiceType extends BaseServiceType> exte
 
 export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType = any> extends ApiCall<Req, Res, ServiceType> {
 
+    readonly conn!: WsConnection<ServiceType>;
+
     constructor(options: ApiCallWsOptions<Req, ServiceType>) {
         super(options);
     }

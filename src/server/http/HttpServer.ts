@@ -1,5 +1,5 @@
 import * as http from "http";
-import { BaseServiceType, ServiceProto } from 'tsrpc-proto';
+import { ApiReturn, BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { TSRPC_VERSION } from "../..";
 import { Counter } from '../../models/Counter';
 import { HttpUtil } from '../../models/HttpUtil';
@@ -22,6 +22,11 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
             ...defaultHttpServerOptions,
             ...options
         });
+
+        // 确保 jsonRootPath 以 / 开头和结尾
+        this.options.jsonRootPath = this.options.jsonRootPath ?
+            (this.options.jsonRootPath.startsWith('/') ? '' : '/') + this.options.jsonRootPath + (this.options.jsonRootPath.endsWith('/') ? '' : '/')
+            : '/';
     }
 
     httpServer?: http.Server;
@@ -55,17 +60,26 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
 
                 let conn: HttpConnection<ServiceType> | undefined;
                 httpReq.on('end', async () => {
+                    let isJSON = this.options.jsonEnabled && httpReq.headers["content-type"]?.toLowerCase() === 'application/json'
+                        && httpReq.method === 'POST' && httpReq.url?.startsWith(this.options.jsonRootPath);
                     conn = new HttpConnection({
                         server: this,
                         id: '' + this._connCounter.getNext(),
                         ip: ip,
                         httpReq: httpReq,
-                        httpRes: httpRes
+                        httpRes: httpRes,
+                        isJSON: isJSON
                     });
                     await this.flows.postConnectFlow.exec(conn, conn.logger);
 
                     let buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
-                    this._onRecvBuffer(conn, buf);
+
+                    if (isJSON) {
+                        this._onRecvJSON(conn, chunks.toString())
+                    }
+                    else {
+                        this._onRecvBuffer(conn, buf);
+                    }
                 });
 
                 // 处理连接异常关闭的情况
@@ -127,10 +141,90 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
 
             this.httpServer.listen(this.options.port, () => {
                 this._status = ServerStatus.Opened;
-                this.logger.log(`[ServerStart] Server started at ${this.options.port}.`);
+                this.logger.log(`Server started at ${this.options.port}.`);
                 rs();
             })
         });
+    }
+
+    protected async _onRecvJSON(conn: HttpConnection<ServiceType>, jsonStr: string) {
+        // 1. 根据 URL 判断 service
+        let serviceName = conn.httpReq.url!.substr(this.options.jsonRootPath.length);
+        let service = this.serviceMap.apiName2Service[serviceName] ?? this.serviceMap.msgName2Service[serviceName];
+        if (!service) {
+            conn.httpRes.statusCode = 404;
+            this._returnJSON(conn, {
+                isSucc: false, err: new TsrpcError('Service Not Found: ' + serviceName, {
+                    type: TsrpcErrorType.ServerError,
+                    code: 'URL_ERR'
+                })
+            });
+            return;
+        }
+
+        // 2. 解析 JSON 字符串
+        let req: any;
+        try {
+            req = JSON.parse(jsonStr);
+        }
+        catch (e) {
+            conn.logger.error('Parse JSON Error: ' + e.message);
+            conn.httpRes.statusCode = 500;
+            this._returnJSON(conn, {
+                isSucc: false,
+                err: new TsrpcError('Invalid JSON', {
+                    type: TsrpcErrorType.ServerError,
+                    code: 'JSON_ERR'
+                })
+            });
+            return;
+        }
+
+        // 3. Prune
+        if (this.options.jsonPrune) {
+            let opPrune = this.tsbuffer.prune(req, service.type === 'api' ? service.reqSchemaId : service.msgSchemaId);
+            if (!opPrune.isSucc) {
+                conn.httpRes.statusCode = 400;
+                this._returnJSON(conn, {
+                    isSucc: false,
+                    err: new TsrpcError(opPrune.errMsg, {
+                        type: TsrpcErrorType.ServerError,
+                        code: 'REQ_VALIDATE_ERR'
+                    })
+                })
+                return;
+            }
+            req = opPrune.pruneOutput;
+        }
+
+        // 4. MakeCall
+        let call = this._makeCall(conn, service.type === 'api' ? {
+            type: 'api',
+            service: service,
+            req: req
+        } : {
+            type: 'msg',
+            service: service,
+            msg: req
+        });
+
+        // 5. onApi / onMsg
+        if (call.type === 'api') {
+            ++this._pendingApiCallNum;
+            await this._onApiCall(call);
+            if (--this._pendingApiCallNum === 0) {
+                this._gracefulStop?.rs();
+            }
+        }
+        else {
+            await this._onMsgCall(call);
+        }
+    }
+    protected _returnJSON(conn: HttpConnection<ServiceType>, ret: ApiReturn<any>) {
+        conn.httpRes.end(JSON.stringify(ret.isSucc ? ret : {
+            isSucc: false,
+            err: { ...ret.err }
+        }))
     }
 
     async stop(): Promise<void> {
@@ -151,7 +245,7 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
                 if (err) {
                     this.logger.error(err);
                 }
-                this.logger.log('[ServerStop] Server stopped');
+                this.logger.log('Server stopped');
                 rs();
             });
         })

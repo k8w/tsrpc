@@ -8,6 +8,8 @@ export interface MsgCallWsOptions<Msg, ServiceType extends BaseServiceType> exte
 }
 export class MsgCallWs<Msg = any, ServiceType extends BaseServiceType = any> extends MsgCall<Msg, ServiceType> {
 
+    readonly conn!: WsConnection<ServiceType>;
+
     constructor(options: MsgCallWsOptions<Msg, ServiceType>) {
         super(options);
     }

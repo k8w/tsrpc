@@ -10,7 +10,8 @@ import { MsgCallHttp } from "./MsgCallHttp";
 export interface HttpConnectionOptions<ServiceType extends BaseServiceType> extends BaseConnectionOptions<ServiceType> {
     server: HttpServer<ServiceType>,
     httpReq: http.IncomingMessage,
-    httpRes: http.ServerResponse
+    httpRes: http.ServerResponse,
+    isJSON: boolean | undefined;
 }
 
 export class HttpConnection<ServiceType extends BaseServiceType> extends BaseConnection<ServiceType> {
@@ -19,6 +20,7 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
     readonly httpReq: http.IncomingMessage;
     readonly httpRes: http.ServerResponse;
     readonly server!: HttpServer<ServiceType>;
+    readonly isJSON: boolean | undefined;
 
     call?: ApiCallHttp | MsgCallHttp;
 
@@ -30,6 +32,7 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
 
         this.httpReq = options.httpReq;
         this.httpRes = options.httpRes;
+        this.isJSON = options.isJSON;
     }
 
 
