@@ -12,7 +12,7 @@ export default [
             typescript({
                 tsconfigOverride: {
                     compilerOptions: {
-                        target: 'es5',
+                        target: 'es2015',
                         declaration: false,
                         declarationMap: false,
                         module: "esnext"
@@ -32,7 +32,7 @@ export default [
             typescript({
                 tsconfigOverride: {
                     compilerOptions: {
-                        target: 'es6',
+                        target: 'es2015',
                         declaration: false,
                         declarationMap: false,
                         module: "esnext"
