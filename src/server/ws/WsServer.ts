@@ -132,12 +132,14 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             return conn;
         }).filter(v => !!v) : this.connections) as WsConnection<ServiceType>[];
 
+        this.options.logMsg && this.logger.log('[BroadcastMsg]', connIds ? connIds.join(',') : '*', msg);
+
         // Batch send
         return Promise.all(conns.map(async conn => {
             // Pre Flow
             let pre = await this.flows.preSendMsgFlow.exec({ conn: conn, service: service!, msg: msg }, this.logger);
             if (!pre) {
-                return { isSucc: false, errMsg: 'sendMsg prevent by preSendMsgFlow' };
+                return { isSucc: false, errMsg: 'Prevented by preSendMsgFlow' };
             }
             msg = pre.msg;
 

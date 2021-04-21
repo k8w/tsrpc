@@ -23,9 +23,9 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
             ...options
         });
 
-        // 确保 jsonRootPath 以 / 开头和结尾
-        this.options.jsonRootPath = this.options.jsonRootPath ?
-            (this.options.jsonRootPath.startsWith('/') ? '' : '/') + this.options.jsonRootPath + (this.options.jsonRootPath.endsWith('/') ? '' : '/')
+        // 确保 jsonUrlRoot 以 / 开头和结尾
+        this.options.jsonUrlRoot = this.options.jsonUrlRoot ?
+            (this.options.jsonUrlRoot.startsWith('/') ? '' : '/') + this.options.jsonUrlRoot + (this.options.jsonUrlRoot.endsWith('/') ? '' : '/')
             : '/';
     }
 
@@ -61,7 +61,7 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
                 let conn: HttpConnection<ServiceType> | undefined;
                 httpReq.on('end', async () => {
                     let isJSON = this.options.jsonEnabled && httpReq.headers["content-type"]?.toLowerCase() === 'application/json'
-                        && httpReq.method === 'POST' && httpReq.url?.startsWith(this.options.jsonRootPath);
+                        && httpReq.method === 'POST' && httpReq.url?.startsWith(this.options.jsonUrlRoot);
                     conn = new HttpConnection({
                         server: this,
                         id: '' + this._connCounter.getNext(),
@@ -149,7 +149,7 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
 
     protected async _onRecvJSON(conn: HttpConnection<ServiceType>, jsonStr: string) {
         // 1. 根据 URL 判断 service
-        let serviceName = conn.httpReq.url!.substr(this.options.jsonRootPath.length);
+        let serviceName = conn.httpReq.url!.substr(this.options.jsonUrlRoot.length);
         let service = this.serviceMap.apiName2Service[serviceName] ?? this.serviceMap.msgName2Service[serviceName];
         if (!service) {
             conn.httpRes.statusCode = 404;
@@ -295,7 +295,7 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
      * 如配置为 `'/api/'`，则请求 URL `/api/a/b/c/Test` 将被映射到 API `a/b/c/Test`
      * 默认为 `'/'`
      */
-    jsonRootPath: string,
+    jsonUrlRoot: string,
     /**
      * 是否剔除协议中未定义的多余字段
      * 默认为 `true`
@@ -308,7 +308,7 @@ export const defaultHttpServerOptions: HttpServerOptions<any> = {
     port: 3000,
     cors: process.env['NODE_ENV'] === 'production' ? undefined : '*',
     jsonEnabled: true,
-    jsonRootPath: '/',
+    jsonUrlRoot: '/',
     jsonPrune: true
 
     // TODO: keep-alive time (to SLB)

@@ -1,10 +1,10 @@
-import { TSBuffer } from "tsbuffer";
+import { EncodeOutput, TSBuffer } from "tsbuffer";
 import { ApiReturn, BaseServiceType, Logger, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
 import { Counter } from '../../models/Counter';
 import { Flow } from "../../models/Flow";
 import { MsgHandlerManager } from "../../models/MsgHandlerManager";
 import { nodeUtf8 } from '../../models/nodeUtf8';
-import { ApiService, ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
+import { ApiService, MsgService, ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
 import { TransportDataUtil } from "../../models/TransportDataUtil";
 import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturnFlowData, CallApiFlowData, SendMsgFlowData } from "./ClientFlowData";
@@ -137,7 +137,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             pendingItem.service = service;
 
             // Encode
-            let opEncode = TransportDataUtil.encodeApiReq(this.tsbuffer, service, req, this.type === 'LONG' ? pendingItem.sn : undefined);
+            let opEncode = this._encodeApiReq(service, req, pendingItem);
             if (!opEncode.isSucc) {
                 rs({
                     isSucc: false, err: new TsrpcError(opEncode.errMsg, {
@@ -179,6 +179,10 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
         return promise;
     }
 
+    protected _encodeApiReq(service: ApiService, req: any, pendingItem: PendingApiItem): EncodeOutput {
+        return TransportDataUtil.encodeApiReq(this.tsbuffer, service, req, this.type === 'LONG' ? pendingItem.sn : undefined);
+    }
+
     /**
      * @param msgName 
      * @param msg 
@@ -216,7 +220,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             }
 
             // Encode
-            let opEncode = TransportDataUtil.encodeClientMsg(this.tsbuffer, service, msg);
+            let opEncode = this._encodeClientMsg(service, msg);
             if (!opEncode.isSucc) {
                 rs({
                     isSucc: false,
@@ -246,6 +250,10 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
         });
 
         return promise;
+    }
+
+    protected _encodeClientMsg(service: MsgService, msg: any): EncodeOutput{
+        return TransportDataUtil.encodeClientMsg(this.tsbuffer, service, msg);
     }
 
     listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: ClientMsgHandler<ServiceType['msg'][T], this>) {

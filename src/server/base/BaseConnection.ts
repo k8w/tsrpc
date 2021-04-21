@@ -55,6 +55,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
         }
 
         // Do send!
+        this.server.options.logMsg && this.logger.log('[SendMsg]', msg);
         let opSend = await this.sendBuf(opServerOutput.buf);
         if (!opSend.isSucc) {
             return opSend;

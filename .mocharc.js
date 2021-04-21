@@ -8,9 +8,10 @@ module.exports = {
     'preserve-symlinks': true,
     spec: [
         './test/cases/http.test.ts',
+        './test/cases/httpJSON.test.ts',
         './test/cases/ws.test.ts',
     ],
     parallel: false,
     // 'expose-gc': true,
-    // fgrep: 'Server conn flow'
+    // fgrep: 'Prune'
 }

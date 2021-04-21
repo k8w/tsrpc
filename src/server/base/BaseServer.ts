@@ -278,7 +278,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         call = preFlow;
 
         // MsgHandler
-        call.logger.log('[Msg]', call.msg);
+        this.options.logMsg && call.logger.log('[RecvMsg]', call.msg);
         let promises = this._msgHandlers.forEachHandler(call.service.name, call.logger, call);
         if (!promises.length) {
             this.logger.debug('[UNHANDLED_MSG]', call.service.name);
@@ -492,6 +492,11 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
      * @defaultValue `true`
      */
     logResBody: boolean;
+    /**
+     * Print send / recv msg in log
+     * @defaultValue `true`
+     */
+    logMsg: boolean;
 
     /** 
      * 为true时将在控制台debug打印buffer信息
@@ -512,6 +517,7 @@ export const defaultBaseServerOptions: BaseServerOptions<any> = {
     logger: new TerminalColorLogger,
     logReqBody: true,
     logResBody: true,
+    logMsg: true,
     returnInnerError: process.env['NODE_ENV'] !== 'production'
 }
 
