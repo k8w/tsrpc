@@ -9,8 +9,10 @@ let server = new HttpServer(serviceProto, {
 server.implementApi('a/b/c/Test', call => {
     call.logger.log('xxx', call.req);
     call.succ({
-        reply: 'xxxxxxxxxxx'
-    })
+        reply: 'xxxxxxxxxxx',
+        aasdg: 'd',
+        b: 'asdg'
+    } as any)
 });
 
 server.start();

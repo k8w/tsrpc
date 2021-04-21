@@ -29,7 +29,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         this.req = options.req;
     }
 
-    private _return?: ApiReturn<Res>;
+    protected _return?: ApiReturn<Res>;
     /**
      * Sended Response Data
      * `undefined` means it have not sendRes yet
@@ -38,7 +38,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         return this._return;
     }
 
-    private _usedTime: number | undefined;
+    protected _usedTime: number | undefined;
     /** Time from received req to send res */
     public get usedTime(): number | undefined {
         return this._usedTime;

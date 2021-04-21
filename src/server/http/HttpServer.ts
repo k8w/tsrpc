@@ -154,10 +154,12 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
         if (!service) {
             conn.httpRes.statusCode = 404;
             this._returnJSON(conn, {
-                isSucc: false, err: new TsrpcError('Service Not Found: ' + serviceName, {
+                isSucc: false,
+                err: {
+                    message: 'Service Not Found: ' + serviceName,
                     type: TsrpcErrorType.ServerError,
                     code: 'URL_ERR'
-                })
+                }
             });
             return;
         }
@@ -168,14 +170,15 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
             req = JSON.parse(jsonStr);
         }
         catch (e) {
-            conn.logger.error('Parse JSON Error: ' + e.message);
+            conn.logger.error(`Parse JSON Error: ${e.message}, jsonStr=` + JSON.stringify(jsonStr));
             conn.httpRes.statusCode = 500;
             this._returnJSON(conn, {
                 isSucc: false,
-                err: new TsrpcError('Invalid JSON', {
+                err: {
+                    message: e.message,
                     type: TsrpcErrorType.ServerError,
                     code: 'JSON_ERR'
-                })
+                }
             });
             return;
         }
@@ -187,10 +190,11 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
                 conn.httpRes.statusCode = 400;
                 this._returnJSON(conn, {
                     isSucc: false,
-                    err: new TsrpcError(opPrune.errMsg, {
+                    err: {
+                        message: opPrune.errMsg,
                         type: TsrpcErrorType.ServerError,
                         code: 'REQ_VALIDATE_ERR'
-                    })
+                    }
                 })
                 return;
             }
@@ -223,7 +227,7 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
     protected _returnJSON(conn: HttpConnection<ServiceType>, ret: ApiReturn<any>) {
         conn.httpRes.end(JSON.stringify(ret.isSucc ? ret : {
             isSucc: false,
-            err: { ...ret.err }
+            err: ret instanceof TsrpcError ? { ...ret.err } : ret.err
         }))
     }
 
