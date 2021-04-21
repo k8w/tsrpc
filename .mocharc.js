@@ -7,10 +7,10 @@ module.exports = {
     timeout: 999999,
     'preserve-symlinks': true,
     spec: [
-        // './test/cases/http.test.ts',
+        './test/cases/http.test.ts',
         './test/cases/ws.test.ts',
     ],
     parallel: false,
     // 'expose-gc': true,
-    // fgrep: 'server ApiReturn flow'
+    // fgrep: 'implement API manually'
 }
