@@ -24,16 +24,16 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
         });
     }
 
-    private _httpServer?: http.Server;
+    httpServer?: http.Server;
     start(): Promise<void> {
-        if (this._httpServer) {
+        if (this.httpServer) {
             throw new Error('Server already started');
         }
 
         return new Promise(rs => {
             this._status = ServerStatus.Opening;
             this.logger.log(`Starting HTTP server ...`);
-            this._httpServer = http.createServer((httpReq, httpRes) => {
+            this.httpServer = http.createServer((httpReq, httpRes) => {
                 if (this.status !== ServerStatus.Opened) {
                     httpRes.statusCode = 503;
                     httpRes.end();
@@ -119,10 +119,13 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
             });
 
             if (this.options.socketTimeout) {
-                this._httpServer.timeout = this.options.socketTimeout;
+                this.httpServer.timeout = this.options.socketTimeout;
+            }
+            if (this.options.keepAliveTimeout) {
+                this.httpServer.keepAliveTimeout = this.options.keepAliveTimeout;
             }
 
-            this._httpServer.listen(this.options.port, () => {
+            this.httpServer.listen(this.options.port, () => {
                 this._status = ServerStatus.Opened;
                 this.logger.log(`[ServerStart] Server started at ${this.options.port}.`);
                 rs();
@@ -131,19 +134,19 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
     }
 
     async stop(): Promise<void> {
-        if (!this._httpServer) {
+        if (!this.httpServer) {
             return;
         }
-        this.logger.log('Stopping server...');        
+        this.logger.log('Stopping server...');
 
         return new Promise<void>((rs) => {
             this._status = ServerStatus.Closing;
 
             // 立即close，不再接受新请求
             // 等所有连接都断开后rs
-            this._httpServer?.close(err => {
+            this.httpServer?.close(err => {
                 this._status = ServerStatus.Closed;
-                this._httpServer = undefined;
+                this.httpServer = undefined;
 
                 if (err) {
                     this.logger.error(err);
@@ -168,6 +171,11 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
     port: number,
     /** Socket 超时时间（毫秒） */
     socketTimeout?: number,
+    /**
+     * HTTP Socket连接 KeepAlive 超时时间（毫秒）
+     * 默认同 NodeJS 为 5000
+     */
+    keepAliveTimeout?: number,
     /** 
      * Access-Control-Allow-Origin
      * 默认：当 `NODE_ENV` 不为 `production` 时为 `*`
@@ -207,3 +215,5 @@ export const defaultHttpServerOptions: HttpServerOptions<any> = {
 
     // TODO: keep-alive time (to SLB)
 }
+
+// TODO JSON

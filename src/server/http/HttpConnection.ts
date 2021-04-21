@@ -34,7 +34,6 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
 
 
     public get status(): ConnectionStatus {
-        // TODO
         if (this.httpRes.writableFinished) {
             return ConnectionStatus.Closed;
         }
