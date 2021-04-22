@@ -252,7 +252,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
         return promise;
     }
 
-    protected _encodeClientMsg(service: MsgService, msg: any): EncodeOutput{
+    protected _encodeClientMsg(service: MsgService, msg: any): EncodeOutput {
         return TransportDataUtil.encodeClientMsg(this.tsbuffer, service, msg);
     }
 
@@ -297,7 +297,10 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
      */
     protected abstract _sendBuf(buf: Uint8Array, options: TransportOptions, serviceId: number, pendingApiItem?: PendingApiItem): Promise<{ err?: TsrpcError }>;
 
-    protected async _onRecvBuf(buf: Uint8Array, serviceId?: number, sn?: number) {
+    protected async _onRecvBuf(buf: Uint8Array, pendingApiItem?: PendingApiItem) {
+        let sn = pendingApiItem?.sn;
+        this.options.debugBuf && this.logger?.debug('[RecvBuf]' + (sn ? (' #' + sn) : ''), 'length=' + buf.length, buf);
+
         // Pre Flow
         let pre = await this.flows.preRecvBufferFlow.exec({ buf: buf, sn: sn }, this.logger);
         if (!pre) {
@@ -306,7 +309,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
         buf = pre.buf;
 
         // Parse
-        let opParsed = TransportDataUtil.parseServerOutout(this.tsbuffer, this.serviceMap, buf, serviceId);
+        let opParsed = TransportDataUtil.parseServerOutout(this.tsbuffer, this.serviceMap, buf, pendingApiItem?.service.id);
         if (opParsed.isSucc) {
             let parsed = opParsed.result;
             if (parsed.type === 'api') {

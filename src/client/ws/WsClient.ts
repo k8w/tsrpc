@@ -138,7 +138,6 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
         })
 
         ws.onmessage = e => {
-            this.options.debugBuf && this.logger?.debug('[RecvBuf]', e.data);
             if (e.data instanceof Buffer) {
                 this._onRecvBuf(e.data)
             }
@@ -146,7 +145,7 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
                 this._onRecvBuf(new Uint8Array(e.data));
             }
             else {
-                this.logger?.log('[Unresolved Data]', e.data)
+                this.logger?.log('[Unresolved Recv]', e.data)
             }
         }
 

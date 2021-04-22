@@ -97,9 +97,7 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
                     httpRes.on('end', () => {
                         let buf: Uint8Array = Buffer.concat(data);
 
-                        this.options.debugBuf && this.logger?.debug('[RecvBuf]' + (sn ? (' #' + sn) : ''), 'length=' + buf.length, buf);
-                        if (this.options.json && pendingApiItem) {
-                            let pendingItem = this._pendingApis.find(v => v.sn === sn);
+                        if (this.options.json) {
                             let retStr = buf.toString();
                             let ret: ApiReturn<any>;
                             try {
@@ -118,7 +116,7 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
                                 if (this.options.jsonPrune) {
                                     let opPrune = this.tsbuffer.prune(ret.res, pendingApiItem.service.resSchemaId);
                                     if (!opPrune.isSucc) {
-                                        pendingItem?.onReturn?.({
+                                        pendingApiItem.onReturn?.({
                                             isSucc: false,
                                             err: new TsrpcError('Invalid Server Output', {
                                                 type: TsrpcErrorType.ClientError,
@@ -133,11 +131,11 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
                             else {
                                 ret.err = new TsrpcError(ret.err);
                             }
-                            pendingItem?.onReturn?.(ret);
+                            pendingApiItem.onReturn?.(ret);
                             return;
                         }
 
-                        this._onRecvBuf(buf, serviceId, sn)
+                        this._onRecvBuf(buf, pendingApiItem)
                     })
                 } : undefined
             );
@@ -147,7 +145,6 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
                     return;
                 }
 
-                this.logger?.error('HTTP Req Error:', e);
                 rs({
                     err: new TsrpcError(e.message, {
                         type: TsrpcErrorType.NetworkError,
