@@ -23,8 +23,6 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
         this.logger?.log('TSRPC HTTP Client :', this.options.server);
     }
 
-    lastReceivedBuf?: Uint8Array;
-
     protected _encodeApiReq(service: ApiService, req: any, pendingItem: PendingApiItem): EncodeOutput {
         if (this.options.json) {
             if (this.options.jsonPrune) {
@@ -97,8 +95,7 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
                         data.push(v)
                     });
                     httpRes.on('end', () => {
-                        let buf: Uint8Array = Buffer.concat(data)
-                        this.lastReceivedBuf = buf;
+                        let buf: Uint8Array = Buffer.concat(data);
 
                         this.options.debugBuf && this.logger?.debug('[RecvBuf]' + (sn ? (' #' + sn) : ''), 'length=' + buf.length, buf);
                         if (this.options.json && pendingApiItem) {
