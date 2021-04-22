@@ -7,6 +7,8 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
 
     readonly type = 'LONG';
 
+    lastReceivedBuf?: Uint8Array;
+
     readonly options!: WsClientOptions;
     constructor(proto: ServiceProto<ServiceType>, options?: Partial<WsClientOptions>) {
         super(proto, {
@@ -140,10 +142,10 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
         ws.onmessage = e => {
             this.options.debugBuf && this.logger?.debug('[RecvBuf]', e.data);
             if (e.data instanceof Buffer) {
-                this._onRecvBuf(e.data)
+                this._onRecvBuf(this.lastReceivedBuf = e.data)
             }
             else if (e.data instanceof ArrayBuffer) {
-                this._onRecvBuf(new Uint8Array(e.data));
+                this._onRecvBuf(this.lastReceivedBuf = new Uint8Array(e.data));
             }
             else {
                 this.logger?.log('[Unresolved Data]', e.data)
