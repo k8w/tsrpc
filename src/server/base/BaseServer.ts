@@ -392,7 +392,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * By default, it will return "Input Buffer Error" .
      */
     protected _onInputBufferError(errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) {
-        conn.logger.error(`[${conn.ip}][InputBufferError] ${errMsg} length = ${buf.length}`, buf.subarray(0, 16))
+        conn.logger.error(`[InputBufferError] ${errMsg} length = ${buf.length}`, buf.subarray(0, 16))
         conn.close('Input Buffer Error');
     }
 

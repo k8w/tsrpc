@@ -50,7 +50,13 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
                 httpRes.statusCode = 200;
                 httpRes.setHeader('X-Powered-By', `TSRPC ${TSRPC_VERSION}`);
                 if (this.options.cors) {
-                    httpRes.setHeader('Access-Control-Allow-Origin', this.options.cors)
+                    httpRes.setHeader('Access-Control-Allow-Origin', this.options.cors);
+                    httpRes.setHeader('Access-Control-Allow-Headers', '*');
+                    if (httpReq.method === 'OPTIONS') {                        
+                        httpRes.writeHead(200);
+                        httpRes.end();
+                        return;
+                    }
                 };
 
                 let chunks: Buffer[] = [];

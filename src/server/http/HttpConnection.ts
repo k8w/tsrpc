@@ -75,6 +75,7 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
         if (reason) {
             this.logger.warn(`Conn closed unexpectly. method=${this.httpReq.method}, url=${this.httpReq.url}, reason=${reason}`);
         }
-        this.httpRes.end(reason);
+        reason && this.httpRes.setHeader('X-TSRPC-Close-Reason', reason);
+        this.httpRes.end();
     }
 }

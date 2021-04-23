@@ -149,7 +149,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
             }
 
             // Send Buf...
-            let promiseReturn = this._waitApiReturn(pendingItem, service, options.timeout ?? this.options.timeout);
+            let promiseReturn = this._waitApiReturn(pendingItem, options.timeout ?? this.options.timeout);
             let promiseSend = this._sendBuf(opEncode.buf, options, service.id, pendingItem);
             let opSend = await promiseSend;
             if (opSend.err) {
@@ -334,7 +334,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType> {
      * @param timeout 
      * @returns `undefined` 代表 canceled
      */
-    protected async _waitApiReturn(pendingItem: PendingApiItem, service: ApiService, timeout?: number): Promise<ApiReturn<any>> {
+    protected async _waitApiReturn(pendingItem: PendingApiItem, timeout?: number): Promise<ApiReturn<any>> {
         return new Promise<ApiReturn<any>>(rs => {
             // Timeout
             let timer: ReturnType<typeof setTimeout> | undefined;
