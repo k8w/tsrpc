@@ -85,7 +85,7 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
             return { isSucc: true };
         }
 
-        let ws = new (WebSocket as any)(this.options.server) as WebSocket;
+        let ws = new WebSocket(this.options.server);
         this.logger?.log(`Start connecting ${this.options.server}...`)
         this._promiseConnect = new Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>(rs => {
             ws.onopen = () => {
