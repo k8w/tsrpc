@@ -4053,34 +4053,6 @@
             },
             {
               "kind": "Property",
-              "canonicalReference": "tsrpc!HttpClient#lastReceivedBuf:member",
-              "docComment": "",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "lastReceivedBuf?: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Uint8Array",
-                  "canonicalReference": "!Uint8Array:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isOptional": true,
-              "releaseTag": "Public",
-              "name": "lastReceivedBuf",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isStatic": false
-            },
-            {
-              "kind": "Property",
               "canonicalReference": "tsrpc!HttpClient#options:member",
               "docComment": "",
               "excerptTokens": [

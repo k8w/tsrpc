@@ -21,7 +21,6 @@ export declare class HttpClient<ServiceType extends BaseServiceType> extends Bas
 
 |  Property | Modifiers | Type | Description |
 |  --- | --- | --- | --- |
-|  [lastReceivedBuf?](./tsrpc.httpclient.lastreceivedbuf.md) |  | Uint8Array | <i>(Optional)</i> |
 |  [options](./tsrpc.httpclient.options.md) |  | HttpClientOptions |  |
 |  [type](./tsrpc.httpclient.type.md) |  | (not declared) |  |
 
