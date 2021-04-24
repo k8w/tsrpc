@@ -9,6 +9,7 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
     readonly type = 'SHORT';
 
     private _http: typeof http | typeof https;
+    private _jsonServer: string;
 
     readonly options!: HttpClientOptions;
     constructor(proto: ServiceProto<ServiceType>, options?: Partial<HttpClientOptions>) {
@@ -17,6 +18,7 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
             ...options
         });
         this._http = this.options.server.startsWith('https://') ? https : http;
+        this._jsonServer = this.options.server + (this.options.server.endsWith('/') ? '' : '/');
         this.logger?.log('TSRPC HTTP Client :', this.options.server);
     }
 
@@ -75,7 +77,7 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
 
             let httpReq: http.ClientRequest;
             httpReq = this._http.request(
-                this.options.json ? (this.options.server + (this.options.server.endsWith('/') ? '' : '/') + this.serviceMap.id2Service[serviceId].name) : this.options.server,
+                this.options.json ? this._jsonServer + this.serviceMap.id2Service[serviceId].name : this.options.server,
                 {
                     method: 'POST',
                     agent: this.options.agent,
