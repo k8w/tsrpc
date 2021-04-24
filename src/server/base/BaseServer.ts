@@ -1,12 +1,8 @@
 import 'colors';
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
+import { Flow, MsgService, MsgHandlerManager, ServiceMapUtil, TransportDataUtil, ParsedServerInput, ServiceMap } from 'tsrpc-base-client';
 import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
-import { Flow } from '../../models/Flow';
-import { MsgHandlerManager } from '../../models/MsgHandlerManager';
-import { nodeUtf8 } from '../../models/nodeUtf8';
-import { MsgService, ServiceMap, ServiceMapUtil } from '../../models/ServiceMapUtil';
-import { ParsedServerInput, TransportDataUtil } from '../../models/TransportDataUtil';
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
 import { ApiCall } from './ApiCall';
 import { BaseConnection } from './BaseConnection';
@@ -95,8 +91,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         this.options = options;
 
         this.tsbuffer = new TSBuffer(proto.types, {
-            strictNullChecks: this.options.strictNullChecks,
-            utf8Coder: nodeUtf8
+            strictNullChecks: this.options.strictNullChecks
         });
         this.serviceMap = ServiceMapUtil.getServiceMap(proto);
         this.logger = this.options.logger;

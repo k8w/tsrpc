@@ -1,11 +1,8 @@
 import http from "http";
 import https from "https";
 import { EncodeOutput } from "tsbuffer";
+import { ApiService, BaseClient, BaseClientOptions, defaultBaseClientOptions, MsgService, PendingApiItem, TransportDataUtil, TransportOptions } from "tsrpc-base-client";
 import { ApiReturn, BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
-import { ApiService, MsgService } from "../../models/ServiceMapUtil";
-import { TransportDataUtil } from "../../models/TransportDataUtil";
-import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PendingApiItem } from "../models/BaseClient";
-import { TransportOptions } from "../models/TransportOptions";
 
 export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
 

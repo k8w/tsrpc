@@ -1,5 +1,5 @@
+import { ApiService, MsgService } from 'tsrpc-base-client';
 import { BaseServiceType, Logger } from 'tsrpc-proto';
-import { ApiService, MsgService } from '../../models/ServiceMapUtil';
 import { BaseConnection } from './BaseConnection';
 
 export interface BaseCallOptions<ServiceType extends BaseServiceType> {
@@ -27,8 +27,8 @@ export abstract class BaseCall<ServiceType extends BaseServiceType> {
     }
 
     // destroy() {
-        // for (let key in this) {
-        //     this[key] = undefined as any;
-        // }
+    // for (let key in this) {
+    //     this[key] = undefined as any;
+    // }
     // };
 }

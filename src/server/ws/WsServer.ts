@@ -1,11 +1,10 @@
 import * as http from "http";
+import { Counter, TransportDataUtil } from "tsrpc-base-client";
 import { BaseServiceType, ServiceProto } from 'tsrpc-proto';
 import * as WebSocket from 'ws';
 import { Server as WebSocketServer } from 'ws';
 import { MsgCallWs } from '../..';
-import { Counter } from '../../models/Counter';
 import { HttpUtil } from '../../models/HttpUtil';
-import { TransportDataUtil } from '../../models/TransportDataUtil';
 import { BaseServer, BaseServerOptions, defaultBaseServerOptions, ServerStatus } from '../base/BaseServer';
 import { ApiCallWs } from './ApiCallWs';
 import { WsConnection } from './WsConnection';

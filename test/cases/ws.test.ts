@@ -2,7 +2,6 @@ import { assert } from 'chai';
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { BaseServer, TerminalColorLogger } from '../../src';
-import { BaseClient } from '../../src/client/models/BaseClient';
 import { WsClient } from '../../src/client/ws/WsClient';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import { WsServer } from '../../src/server/ws/WsServer';
@@ -769,7 +768,7 @@ describe('WS Flows', function () {
             logger: serverLogger
         });
 
-        const flowExecResult: { [K in (keyof BaseClient<any>['flows'])]?: boolean } = {};
+        const flowExecResult: { [K in (keyof WsClient<any>['flows'])]?: boolean } = {};
 
         server.implementApi('Test', async call => {
             call.succ({ reply: 'xxxxxxxxxxxxxxxxxxxx' });

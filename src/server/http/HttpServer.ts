@@ -1,9 +1,8 @@
 import * as http from "http";
+import { Counter, ParsedServerInput } from "tsrpc-base-client";
 import { ApiReturn, BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { TSRPC_VERSION } from "../..";
-import { Counter } from '../../models/Counter';
 import { HttpUtil } from '../../models/HttpUtil';
-import { ParsedServerInput } from '../../models/TransportDataUtil';
 import { BaseServer, BaseServerOptions, defaultBaseServerOptions, ServerStatus } from '../base/BaseServer';
 import { ApiCallHttp } from './ApiCallHttp';
 import { HttpConnection } from './HttpConnection';

@@ -1,7 +1,6 @@
+import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PendingApiItem, TransportOptions } from "tsrpc-base-client";
 import { BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
 import WebSocket from 'ws';
-import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PendingApiItem } from '../models/BaseClient';
-import { TransportOptions } from "../models/TransportOptions";
 
 export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
 

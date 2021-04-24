@@ -3,7 +3,6 @@ import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { BaseServer, TerminalColorLogger } from '../../src';
 import { HttpClient } from '../../src/client/http/HttpClient';
-import { BaseClient } from '../../src/client/models/BaseClient';
 import { HttpServer } from '../../src/server/http/HttpServer';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
@@ -792,7 +791,7 @@ describe('HTTP Flows', function () {
             logger: serverLogger
         });
 
-        const flowExecResult: { [K in (keyof BaseClient<any>['flows'])]?: boolean } = {};
+        const flowExecResult: { [K in (keyof HttpClient<any>['flows'])]?: boolean } = {};
 
         server.implementApi('Test', async call => {
             call.succ({ reply: 'xxxxxxxxxxxxxxxxxxxx' });

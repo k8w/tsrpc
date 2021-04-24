@@ -1,5 +1,5 @@
+import { TransportDataUtil } from "tsrpc-base-client";
 import { BaseServiceType, Logger } from "tsrpc-proto";
-import { TransportDataUtil } from "../../models/TransportDataUtil";
 import { ApiCall } from "./ApiCall";
 import { BaseServer } from "./BaseServer";
 

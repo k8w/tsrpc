@@ -1,6 +1,5 @@
+import { ApiService, TransportDataUtil } from "tsrpc-base-client";
 import { ApiReturn, BaseServiceType, Logger, TsrpcError, TsrpcErrorData, TsrpcErrorType } from "tsrpc-proto";
-import { ApiService } from "../../models/ServiceMapUtil";
-import { TransportDataUtil } from "../../models/TransportDataUtil";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { BaseCall, BaseCallOptions } from "./BaseCall";
 

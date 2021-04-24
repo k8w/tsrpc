@@ -1,5 +1,5 @@
+import { MsgService } from "tsrpc-base-client";
 import { BaseServiceType, Logger } from "tsrpc-proto";
-import { MsgService } from "../../models/ServiceMapUtil";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { BaseCall, BaseCallOptions } from "./BaseCall";
 
