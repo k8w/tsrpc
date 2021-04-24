@@ -550,7 +550,7 @@
                 {
                   "kind": "Reference",
                   "text": "ApiService",
-                  "canonicalReference": "tsrpc!ApiService:interface"
+                  "canonicalReference": "tsrpc-base-client!ApiService:interface"
                 },
                 {
                   "kind": "Content",
@@ -1363,7 +1363,7 @@
                 {
                   "kind": "Reference",
                   "text": "ApiService",
-                  "canonicalReference": "tsrpc!ApiService:interface"
+                  "canonicalReference": "tsrpc-base-client!ApiService:interface"
                 },
                 {
                   "kind": "Content",
@@ -1372,7 +1372,7 @@
                 {
                   "kind": "Reference",
                   "text": "MsgService",
-                  "canonicalReference": "tsrpc!MsgService:interface"
+                  "canonicalReference": "tsrpc-base-client!MsgService:interface"
                 },
                 {
                   "kind": "Content",
@@ -2151,7 +2151,7 @@
                 {
                   "kind": "Reference",
                   "text": "ParsedServerInput",
-                  "canonicalReference": "tsrpc!ParsedServerInput:type"
+                  "canonicalReference": "tsrpc-base-client!ParsedServerInput:type"
                 },
                 {
                   "kind": "Content",
@@ -2773,7 +2773,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -2791,7 +2791,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -2809,7 +2809,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -2836,7 +2836,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -2872,7 +2872,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -2890,7 +2890,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -2917,7 +2917,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -2944,7 +2944,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -2962,7 +2962,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -2980,7 +2980,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -2998,7 +2998,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -3016,7 +3016,7 @@
                 {
                   "kind": "Reference",
                   "text": "MsgService",
-                  "canonicalReference": "tsrpc!MsgService:interface"
+                  "canonicalReference": "tsrpc-base-client!MsgService:interface"
                 },
                 {
                   "kind": "Content",
@@ -3025,7 +3025,7 @@
                 {
                   "kind": "Reference",
                   "text": "Flow",
-                  "canonicalReference": "tsrpc!Flow:class"
+                  "canonicalReference": "tsrpc-base-client!Flow:class"
                 },
                 {
                   "kind": "Content",
@@ -3043,7 +3043,7 @@
                 {
                   "kind": "Reference",
                   "text": "MsgService",
-                  "canonicalReference": "tsrpc!MsgService:interface"
+                  "canonicalReference": "tsrpc-base-client!MsgService:interface"
                 },
                 {
                   "kind": "Content",
@@ -3471,7 +3471,7 @@
                 {
                   "kind": "Reference",
                   "text": "ServiceMap",
-                  "canonicalReference": "tsrpc!ServiceMap:interface"
+                  "canonicalReference": "tsrpc-base-client!ServiceMap:interface"
                 },
                 {
                   "kind": "Content",
@@ -3717,7 +3717,7 @@
             {
               "kind": "Reference",
               "text": "BaseClient",
-              "canonicalReference": "tsrpc!BaseClient:class"
+              "canonicalReference": "tsrpc-base-client!BaseClient:class"
             },
             {
               "kind": "Content",
@@ -3752,7 +3752,7 @@
                 {
                   "kind": "Reference",
                   "text": "ApiService",
-                  "canonicalReference": "tsrpc!ApiService:interface"
+                  "canonicalReference": "tsrpc-base-client!ApiService:interface"
                 },
                 {
                   "kind": "Content",
@@ -3769,7 +3769,7 @@
                 {
                   "kind": "Reference",
                   "text": "PendingApiItem",
-                  "canonicalReference": "tsrpc!PendingApiItem:interface"
+                  "canonicalReference": "tsrpc-base-client!PendingApiItem:interface"
                 },
                 {
                   "kind": "Content",
@@ -3830,7 +3830,7 @@
                 {
                   "kind": "Reference",
                   "text": "MsgService",
-                  "canonicalReference": "tsrpc!MsgService:interface"
+                  "canonicalReference": "tsrpc-base-client!MsgService:interface"
                 },
                 {
                   "kind": "Content",
@@ -3901,7 +3901,7 @@
                 {
                   "kind": "Reference",
                   "text": "TransportOptions",
-                  "canonicalReference": "tsrpc!TransportOptions:interface"
+                  "canonicalReference": "tsrpc-base-client!TransportOptions:interface"
                 },
                 {
                   "kind": "Content",
@@ -3918,7 +3918,7 @@
                 {
                   "kind": "Reference",
                   "text": "PendingApiItem",
-                  "canonicalReference": "tsrpc!PendingApiItem:interface"
+                  "canonicalReference": "tsrpc-base-client!PendingApiItem:interface"
                 },
                 {
                   "kind": "Content",
@@ -4734,7 +4734,7 @@
                 {
                   "kind": "Reference",
                   "text": "ParsedServerInput",
-                  "canonicalReference": "tsrpc!ParsedServerInput:type"
+                  "canonicalReference": "tsrpc-base-client!ParsedServerInput:type"
                 },
                 {
                   "kind": "Content",
@@ -5587,7 +5587,7 @@
                 {
                   "kind": "Reference",
                   "text": "MsgService",
-                  "canonicalReference": "tsrpc!MsgService:interface"
+                  "canonicalReference": "tsrpc-base-client!MsgService:interface"
                 },
                 {
                   "kind": "Content",
