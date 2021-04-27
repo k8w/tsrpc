@@ -5,3 +5,4 @@ logs
 .rpt2_cache
 .nyc_output
 coverage
+docs
