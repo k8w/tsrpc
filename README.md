@@ -1,6 +1,6 @@
 # TSRPC
 
-A TypeScript RPC framework.
+A TypeScript RPC framework with runtime type checking and binary encoding.
 
 ## Features
 - Runtime type checking
@@ -12,10 +12,15 @@ A TypeScript RPC framework.
 ## Usage
 Docs and examples are coming...
 
-## Serialization
-The best TypeScript serialization algorithm ever, support advanced type in TypeScript, like union type, intersection type, mapped type, etc.
+## Serialization Algorithm
+The best TypeScript serialization algorithm ever.
+Without any 3rd-party IDL language (like protobuf), it is based on TypeScript source file. Define the protocols directly by your code.
+It is powered by [TSBuffer](https://github.com/tsbuffer), which is going to be open-source.
 
-It is powered by [TSBuffer](https://github.com/tsbuffer), this library is going to be open-source.
+TypeScript has the best type system, with some dynamic features like union type, intersection type, mapped type, etc.
+This may be the only serialization algorithm that support all of them.
+
+
 
 ## API Reference
 See [API Reference](./docs/api/tsrpc.md).
