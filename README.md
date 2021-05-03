@@ -1,4 +1,4 @@
-TSRPC 2.x
-===
+# TSRPC
+A RPC framework for TypeScript.
 
 [WIP]

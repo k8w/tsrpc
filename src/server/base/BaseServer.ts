@@ -11,7 +11,7 @@ import { MsgCall } from './MsgCall';
 /**
  * Abstract base class for TSRPC Server.
  * Implement on a transportation protocol (like HTTP WebSocket) by extend it.
- * @typeParam - `ServiceType` from generated `proto.ts`
+ * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
  */
 export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServiceType>{
 
