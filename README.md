@@ -10,7 +10,7 @@ A TypeScript RPC framework with runtime type checking and binary encoding.
 - High performance and stable, verified by billions of online users
 
 ## Usage
-Docs and examples are coming...
+Docs and examples are coming soon...
 
 ## Serialization Algorithm
 The best TypeScript serialization algorithm ever.
