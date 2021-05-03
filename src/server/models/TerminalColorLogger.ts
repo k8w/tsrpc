@@ -15,6 +15,9 @@ export interface TerminalColorLoggerOptions {
     timeFormat?: string
 }
 
+/**
+ * Print log to terminal, with color.
+ */
 export class TerminalColorLogger implements Logger {
 
     options: TerminalColorLoggerOptions = {

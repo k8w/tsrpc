@@ -5,6 +5,9 @@ export interface PrefixLoggerOptions {
     prefixs: (string | (() => string))[];
 }
 
+/**
+ * Auto add prefix using existed `Logger`
+ */
 export class PrefixLogger implements Logger {
 
     readonly logger: PrefixLoggerOptions['logger'];

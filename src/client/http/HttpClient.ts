@@ -194,12 +194,14 @@ export interface HttpClientOptions extends BaseClientOptions {
     agent?: http.Agent | https.Agent;
     /** 
      * Use JSON instead of Buffer
-     * @defaultValue false
+     * @defaultValue `false`
      */
     json: boolean;
     /**
-     * 是否剔除协议中未定义的多余字段
-     * 默认为 `true`
+     * Whether to automatically delete excess properties that not defined in the protocol.
+     * It would affect API request and response.
+     * For security reason, we strongly recommend you to set to `true`.
+     * @defaultValue `true`
      */
     jsonPrune: boolean;
 }

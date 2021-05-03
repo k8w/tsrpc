@@ -8,6 +8,9 @@ import { ApiCallHttp } from './ApiCallHttp';
 import { HttpConnection } from './HttpConnection';
 import { MsgCallHttp } from "./MsgCallHttp";
 
+/**
+ * TSRPC Server, based on HTTP connection.
+ */
 export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<ServiceType>{
     readonly ApiCallClass = ApiCallHttp;
     readonly MsgCallClass = MsgCallHttp;
@@ -28,7 +31,11 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
             : '/';
     }
 
+    /** Native `http.Server` of NodeJS */
     httpServer?: http.Server;
+    /**
+     * {@inheritDoc BaseServer.start}
+     */
     start(): Promise<void> {
         if (this.httpServer) {
             throw new Error('Server already started');
@@ -51,7 +58,7 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
                 if (this.options.cors) {
                     httpRes.setHeader('Access-Control-Allow-Origin', this.options.cors);
                     httpRes.setHeader('Access-Control-Allow-Headers', '*');
-                    if (httpReq.method === 'OPTIONS') {                        
+                    if (httpReq.method === 'OPTIONS') {
                         httpRes.writeHead(200);
                         httpRes.end();
                         return;
@@ -236,6 +243,9 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
         }))
     }
 
+    /**
+     * {@inheritDoc BaseServer.stop}
+     */
     async stop(): Promise<void> {
         if (!this.httpServer) {
             return;
@@ -270,29 +280,48 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
 }
 
 export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
-    /** 服务端口 */
+    /** Which port the HTTP server listen to */
     port: number,
-    /** Socket 超时时间（毫秒） */
+    /** 
+     * Passed to the `timeout` property to the native `http.Server` of NodeJS, in milliseconds.
+     * `0` and `undefined` will disable the socket timeout behavior.
+     * NOTICE: this `socketTimeout` be `undefined` only means disabling of the socket timeout, the `apiTimeout` is still working.
+     * `socketTimeout` should always greater than `apiTimeout`.
+     * @defaultValue `undefined`
+     * @see {@link https://nodejs.org/dist/latest-v14.x/docs/api/http.html#http_server_timeout}
+     */
     socketTimeout?: number,
     /**
-     * HTTP Socket连接 KeepAlive 超时时间（毫秒）
-     * 默认同 NodeJS 为 5000
+     * Passed to the `keepAliveTimeout` property to the native `http.Server` of NodeJS, in milliseconds.
+     * It means keep-alive timeout of HTTP socket connection.
+     * @defaultValue 5000 (from NodeJS)
+     * @see {@link https://nodejs.org/dist/latest-v14.x/docs/api/http.html#http_server_keepalivetimeout}
      */
     keepAliveTimeout?: number,
     /** 
-     * Access-Control-Allow-Origin
-     * 默认：当 `NODE_ENV` 不为 `production` 时为 `*`
+     * Response header value of `Access-Control-Allow-Origin`.
+     * If this has any value, it would also set `Access-Control-Allow-Headers` as `*`.
+     * `undefined` means no CORS header.
+     * @defaultValue When `NODE_ENV` is `production`, it is `undefined`; otherwise is `*`.
      */
     cors?: string,
 
     /**
-     * 是否启用 JSON
-     * 启用后可兼容 http JSON 方式的调用，具体方法为：
-     * 1. Header 加入：`Content-type: application/json`
-     * 2. POST /{jsonUrlPath}/a/b/c/Test
-     * 3. body 为 JSON
-     * 4. 返回亦为JSON
-     * 默认为 `false`
+     * Whether to enable JSON compatible mode.
+     * When it is true, it can be compatible with typical HTTP JSON request (like RESTful API).
+     * 
+     * @remarks
+     * The JSON request methods are:
+     * 
+     * 1. Add `Content-type: application/json` to request header.
+     * 2. HTTP request is: `POST /{jsonUrlPath}/{apiName}`.
+     * 3. POST body is JSON string.
+     * 4. The response body is JSON string also.
+     * 
+     * NOTICE: Buffer type are not supported due to JSON not support them.
+     * For security and efficient reason, we strongly recommend you use binary encoded transportation.
+     * 
+     * @defaultValue `false`
      */
     jsonEnabled: boolean,
     /**

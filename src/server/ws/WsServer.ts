@@ -9,6 +9,10 @@ import { BaseServer, BaseServerOptions, defaultBaseServerOptions, ServerStatus }
 import { ApiCallWs } from './ApiCallWs';
 import { WsConnection } from './WsConnection';
 
+/**
+ * TSRPC Server, based on WebSocket connection.
+ * It can support realtime cases.
+ */
 export class WsServer<ServiceType extends BaseServiceType = any> extends BaseServer<ServiceType> {
     readonly ApiCallClass = ApiCallWs;
     readonly MsgCallClass = MsgCallWs;
@@ -27,6 +31,10 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
     }
 
     private _wsServer?: WebSocketServer;
+
+    /**
+     * {@inheritDoc BaseServer.start}
+     */
     start(): Promise<void> {
         if (this._wsServer) {
             throw new Error('Server already started');
@@ -50,7 +58,10 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         })
     }
 
-    async stop(immediately: boolean = false): Promise<void> {
+    /**
+     * {@inheritDoc BaseServer.stop}
+     */
+    async stop(): Promise<void> {
         // Closed Already
         if (!this._wsServer) {
             throw new Error('Server has not been started')
@@ -94,8 +105,6 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         this.flows.postConnectFlow.exec(conn, conn.logger);
     };
 
-
-
     private _onClientClose = async (conn: WsConnection<ServiceType>, code: number, reason: string) => {
         conn.logger.log('[Disconnected]', `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this.connections.length}`)
         this.connections.removeOne(v => v.id === conn.id);
@@ -104,7 +113,14 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         await this.flows.postDisconnectFlow.exec({ conn: conn, reason: reason }, conn.logger);
     }
 
-    // Send Msg
+    /**
+     * Send the same message to many connections.
+     * No matter how many target connections are, the message would be only encoded once.
+     * @param msgName 
+     * @param msg - Message body
+     * @param connIds - `id` of target connections, `undefined` means broadcast to every connections.
+     * @returns Send result, `isSucc: true` means the message buffer is sent to kernel, not represents the clients received.
+     */
     async broadcastMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], connIds?: string[]): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         if (this.status !== ServerStatus.Opened) {
             return { isSucc: false, errMsg: 'Server not open' };
@@ -170,6 +186,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 }
 
 export interface WsServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
+    /** Which port the WebSocket server is listen to */
     port: number;
 };
 

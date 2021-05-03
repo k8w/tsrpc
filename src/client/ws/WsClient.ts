@@ -73,6 +73,10 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
     private _ws?: WebSocket;
 
     private _promiseConnect?: Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
+    /**
+     * Connect WebSocket.
+     * @returns The `Promise` would never reject, judge connecting result by `isSucc`.
+     */
     async connect(): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
         // 已连接中
         if (this._promiseConnect) {
@@ -153,6 +157,7 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
     }
 
     private _rsDisconnecting?: () => void;
+    /** Disconnect WebSocket immediately */
     async disconnect() {
         // 连接不存在
         if (!this._ws) {
@@ -178,9 +183,9 @@ export interface WsClientOptions extends BaseClientOptions {
     server: string;
 
     // Events
-    /** 连接状态变化事件 */
+    /** Event when connection status is changed */
     onStatusChange?: (newStatus: WsClientStatus) => void;
-    /** 掉线（非人为断开连接） */
+    /** Event when the connection is closed accidently (not manually closed). */
     onLostConnection?: () => void;
 }
 

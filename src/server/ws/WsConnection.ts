@@ -63,6 +63,9 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
         }[this.ws.readyState] || ConnectionStatus.Opened;
     }
 
+    /**
+     * {@inheritDoc BaseConnection.sendBuf}
+     */
     async sendBuf(buf: Uint8Array, call?: ApiCallWs): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         if (!this.isAlive) {
             return { isSucc: false, errMsg: 'Connection is closed already when sendBuf' };
@@ -89,6 +92,7 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
     }
 
     protected _rsClose?: () => void;
+    /** Close WebSocket connection */
     close(reason?: string): Promise<void> {
         // 已连接 Close之
         return new Promise<void>(rs => {

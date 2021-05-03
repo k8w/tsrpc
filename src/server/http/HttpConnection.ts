@@ -11,6 +11,9 @@ export interface HttpConnectionOptions<ServiceType extends BaseServiceType> exte
     server: HttpServer<ServiceType>,
     httpReq: http.IncomingMessage,
     httpRes: http.ServerResponse,
+    /**
+     * Whether the transportation of the connection is JSON encoded instead of binary encoded.
+     */
     isJSON: boolean | undefined;
 }
 
@@ -20,8 +23,15 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
     readonly httpReq: http.IncomingMessage;
     readonly httpRes: http.ServerResponse;
     readonly server!: HttpServer<ServiceType>;
+    /**
+     * Whether the transportation of the connection is JSON encoded instead of binary encoded.
+     */
     readonly isJSON: boolean | undefined;
 
+    /** 
+     * In short connection, one connection correspond one call.
+     * It may be `undefined` when the request data is not fully received yet.
+     */
     call?: ApiCallHttp | MsgCallHttp;
 
     constructor(options: HttpConnectionOptions<ServiceType>) {
@@ -48,6 +58,9 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
         }
     }
 
+    /**
+     * {@inheritDoc BaseConnection.sendBuf}
+     */
     async sendBuf(buf: Uint8Array, call?: ApiCall): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         if (!this.isAlive) {
             return { isSucc: false, errMsg: 'Connection is closed already when sendBuf' };
@@ -66,6 +79,9 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
         return { isSucc: true }
     }
 
+    /**
+     * Close the connection, the reason would be attached to response header `X-TSRPC-Close-Reason`.
+     */
     close(reason?: string) {
         if (this.status !== ConnectionStatus.Opened) {
             return;
