@@ -10,6 +10,7 @@ import { MsgCallHttp } from "./MsgCallHttp";
 
 /**
  * TSRPC Server, based on HTTP connection.
+ * @typeParam - `ServiceType` from generated `proto.ts`
  */
 export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<ServiceType>{
     readonly ApiCallClass = ApiCallHttp;

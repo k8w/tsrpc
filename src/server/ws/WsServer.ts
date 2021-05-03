@@ -12,6 +12,7 @@ import { WsConnection } from './WsConnection';
 /**
  * TSRPC Server, based on WebSocket connection.
  * It can support realtime cases.
+ * @typeParam - `ServiceType` from generated `proto.ts`
  */
 export class WsServer<ServiceType extends BaseServiceType = any> extends BaseServer<ServiceType> {
     readonly ApiCallClass = ApiCallWs;

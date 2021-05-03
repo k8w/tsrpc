@@ -3,7 +3,6 @@
  */
 {
   "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
-
   /**
    * Optionally specifies another JSON config file that this file extends from.  This provides a way for
    * standard settings to be shared across multiple projects.
@@ -17,7 +16,6 @@
    */
   // "extends": "./shared/api-extractor-base.json"
   // "extends": "my-package/include/api-extractor-base.json"
-
   /**
    * Determines the "<projectFolder>" token that can be used with other config file settings.  The project folder
    * typically contains the tsconfig.json and package.json config files, but the path is user-defined.
@@ -33,7 +31,6 @@
    * DEFAULT VALUE: "<lookup>"
    */
   // "projectFolder": "..",
-
   /**
    * (REQUIRED) Specifies the .d.ts file to be used as the starting point for analysis.  API Extractor
    * analyzes the symbols exported by this module.
@@ -46,7 +43,6 @@
    * SUPPORTED TOKENS: <projectFolder>, <packageName>, <unscopedPackageName>
    */
   "mainEntryPointFilePath": "<projectFolder>/lib/index.d.ts",
-
   /**
    * A list of NPM package names whose exports should be treated as part of this package.
    *
@@ -61,7 +57,6 @@
    * local files for library1.
    */
   "bundledPackages": [],
-
   /**
    * Determines how the TypeScript compiler engine will be invoked by API Extractor.
    */
@@ -101,7 +96,6 @@
      */
     // "skipLibCheck": true,
   },
-
   /**
    * Configures how the API report file (*.api.md) will be generated.
    */
@@ -110,7 +104,6 @@
      * (REQUIRED) Whether to generate an API report.
      */
     "enabled": false
-
     /**
      * The filename for the API report files.  It will be combined with "reportFolder" or "reportTempFolder" to produce
      * a full file path.
@@ -121,7 +114,6 @@
      * DEFAULT VALUE: "<unscopedPackageName>.api.md"
      */
     // "reportFileName": "<unscopedPackageName>.api.md",
-
     /**
      * Specifies the folder where the API report file is written.  The file name portion is determined by
      * the "reportFileName" setting.
@@ -136,7 +128,6 @@
      * DEFAULT VALUE: "<projectFolder>/etc/"
      */
     // "reportFolder": "<projectFolder>/etc/",
-
     /**
      * Specifies the folder where the temporary report file is written.  The file name portion is determined by
      * the "reportFileName" setting.
@@ -152,7 +143,6 @@
      */
     // "reportTempFolder": "<projectFolder>/temp/"
   },
-
   /**
    * Configures how the doc model file (*.api.json) will be generated.
    */
@@ -161,7 +151,6 @@
      * (REQUIRED) Whether to generate a doc model file.
      */
     "enabled": true
-
     /**
      * The output path for the doc model file.  The file extension should be ".api.json".
      *
@@ -173,7 +162,6 @@
      */
     // "apiJsonFilePath": "<projectFolder>/temp/<unscopedPackageName>.api.json"
   },
-
   /**
    * Configures how the .d.ts rollup file will be generated.
    */
@@ -182,7 +170,6 @@
      * (REQUIRED) Whether to generate the .d.ts rollup file.
      */
     "enabled": true,
-
     /**
      * Specifies the output path for a .d.ts rollup file to be generated without any trimming.
      * This file will include all declarations that are exported by the main entry point.
@@ -196,7 +183,6 @@
      * DEFAULT VALUE: "<projectFolder>/dist/<unscopedPackageName>.d.ts"
      */
     "untrimmedFilePath": "",
-
     /**
      * Specifies the output path for a .d.ts rollup file to be generated with trimming for a "beta" release.
      * This file will include only declarations that are marked as "@public" or "@beta".
@@ -208,7 +194,6 @@
      * DEFAULT VALUE: ""
      */
     // "betaTrimmedFilePath": "<projectFolder>/dist/<unscopedPackageName>-beta.d.ts",
-
     /**
      * Specifies the output path for a .d.ts rollup file to be generated with trimming for a "public" release.
      * This file will include only declarations that are marked as "@public".
@@ -222,7 +207,6 @@
      * DEFAULT VALUE: ""
      */
     "publicTrimmedFilePath": "<projectFolder>/dist/index.d.ts",
-
     /**
      * When a declaration is trimmed, by default it will be replaced by a code comment such as
      * "Excluded from this release type: exampleMember".  Set "omitTrimmingComments" to true to remove the
@@ -232,7 +216,6 @@
      */
     "omitTrimmingComments": true
   },
-
   /**
    * Configures how the tsdoc-metadata.json file will be generated.
    */
@@ -258,7 +241,6 @@
      */
     // "tsdocMetadataFilePath": "<projectFolder>/dist/tsdoc-metadata.json"
   },
-
   /**
    * Specifies what type of newlines API Extractor should use when writing output files.  By default, the output files
    * will be written with Windows-style newlines.  To use POSIX-style newlines, specify "lf" instead.
@@ -267,7 +249,6 @@
    * DEFAULT VALUE: "crlf"
    */
   // "newlineKind": "crlf",
-
   /**
    * Configures how API Extractor reports error and warning messages produced during analysis.
    *
@@ -300,7 +281,6 @@
          * DEFAULT VALUE: "warning"
          */
         "logLevel": "warning"
-
         /**
          * When addToApiReportFile is true:  If API Extractor is configured to write an API report file (.api.md),
          * then the message will be written inside that file; otherwise, the message is instead logged according to
@@ -310,7 +290,6 @@
          */
         // "addToApiReportFile": false
       }
-
       // "TS2551": {
       //   "logLevel": "warning",
       //   "addToApiReportFile": true
@@ -318,7 +297,6 @@
       //
       // . . .
     },
-
     /**
      * Configures handling of messages reported by API Extractor during its analysis.
      *
@@ -330,8 +308,10 @@
       "default": {
         "logLevel": "warning"
         // "addToApiReportFile": false
+      },
+      "ae-missing-release-tag": {
+        "logLevel": "none"
       }
-
       // "ae-extra-release-tag": {
       //   "logLevel": "warning",
       //   "addToApiReportFile": true
@@ -339,7 +319,6 @@
       //
       // . . .
     },
-
     /**
      * Configures handling of messages reported by the TSDoc parser when analyzing code comments.
      *
@@ -351,8 +330,10 @@
       "default": {
         "logLevel": "warning"
         // "addToApiReportFile": false
+      },
+      "tsdoc-param-tag-missing-hyphen": {
+        "logLevel": "none"
       }
-
       // "tsdoc-link-tag-unescaped-text": {
       //   "logLevel": "warning",
       //   "addToApiReportFile": true
