@@ -373,12 +373,12 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     // Msg 可以重复监听
     listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<ServiceType['msg'][T]>): void {
         this._msgHandlers.addHandler(msgName as string, handler);
-        this.logger.log(`Msg listened succ [${msgName}]`);
     };
-
-    unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler?: Function): void {
+    unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: Function): void {
         this._msgHandlers.removeHandler(msgName as string, handler);
-        this.logger.log(`Msg unlistened succ [${msgName}]`);
+    };
+    unlistenMsgAll<T extends keyof ServiceType['msg']>(msgName: T): void {
+        this._msgHandlers.removeAllHandlers(msgName as string);
     };
     // #endregion   
 

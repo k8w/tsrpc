@@ -245,8 +245,8 @@ describe('WS Server & Client basic', function () {
                 recvClients.push(client);
                 assert.deepStrictEqual(msg1, msg);
                 if (recvClients.some(v => v === client1) && recvClients.some(v => v === client2)) {
-                    client1.unlistenMsg('Chat');
-                    client2.unlistenMsg('Chat');
+                    client1.unlistenMsgAll('Chat');
+                    client2.unlistenMsgAll('Chat');
                     rs();
                 }
             }
