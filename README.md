@@ -18,8 +18,9 @@ Without any 3rd-party IDL language (like protobuf), it is fully based on TypeScr
 
 This is powered by [TSBuffer](https://github.com/tsbuffer), which is going to be open-source.
 
-TypeScript has the best type system, with some dynamic features like union type, intersection type, mapped type, etc.
-This may be the only serialization algorithm that support all of them.
+TypeScript has the best type system, with some unique advanced features like union type, intersection type, mapped type, etc.
+
+TSBuffer may be the only serialization algorithm that support them all.
 
 
 
