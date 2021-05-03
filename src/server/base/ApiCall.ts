@@ -4,8 +4,11 @@ import { PrefixLogger } from "../models/PrefixLogger";
 import { BaseCall, BaseCallOptions } from "./BaseCall";
 
 export interface ApiCallOptions<Req, ServiceType extends BaseServiceType> extends BaseCallOptions<ServiceType> {
+    /** Which service the Call is belong to */
     service: ApiService,
-    /** 仅长连接才有，服务器透传 */
+    /** Only exists in long connection, it is used to associate request and response.
+     * It is created by the client, and the server would return the same value in `ApiReturn`.
+     */
     sn?: number,
     /** Request Data */
     req: Req
@@ -15,6 +18,9 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
     readonly type = 'api' as const;
 
     readonly service!: ApiService;
+    /** Only exists in long connection, it is used to associate request and response.
+     * It is created by the client, and the server would return the same value in `ApiReturn`.
+     */
     readonly sn?: number;
     readonly req: Req;
 
@@ -30,19 +36,24 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
 
     protected _return?: ApiReturn<Res>;
     /**
-     * Sended Response Data
-     * `undefined` means it have not sendRes yet
+     * Response Data that sent already.
+     * `undefined` means no return data is sent yet. (Never `call.succ()` and `call.error()`)
      */
     public get return(): ApiReturn<Res> | undefined {
         return this._return;
     }
 
     protected _usedTime: number | undefined;
-    /** Time from received req to send res */
+    /** Time from received req to send return data */
     public get usedTime(): number | undefined {
         return this._usedTime;
     }
 
+    /**
+     * Send a successful `ApiReturn` with response data
+     * @param res - Response data
+     * @returns Promise resolved means the buffer is sent to kernel
+     */
     succ(res: Res): Promise<void> {
         return this._prepareReturn({
             isSucc: true,
@@ -52,6 +63,10 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
 
     error(message: string, info?: Partial<TsrpcErrorData>): Promise<void>;
     error(err: TsrpcError): Promise<void>;
+    /**
+     * Send a error `ApiReturn` with a `TsrpcError`
+     * @returns Promise resolved means the buffer is sent to kernel
+     */
     error(errOrMsg: string | TsrpcError, data?: Partial<TsrpcErrorData>): Promise<void> {
         let error: TsrpcError = typeof errOrMsg === 'string' ? new TsrpcError(errOrMsg, data) : errOrMsg;
         return this._prepareReturn({

@@ -5,13 +5,14 @@ import { BaseConnection } from './BaseConnection';
 export interface BaseCallOptions<ServiceType extends BaseServiceType> {
     /** Connection */
     conn: BaseConnection<ServiceType>,
+    /** Which service the call is belong to */
     service: ApiService | MsgService
 }
 
 export abstract class BaseCall<ServiceType extends BaseServiceType> {
     readonly conn: BaseConnection<ServiceType>;
     readonly service: ApiService | MsgService;
-    /** Time that server received the call */
+    /** Time that server created the call */
     readonly startTime: number;
     readonly logger: Logger;
 
@@ -25,10 +26,4 @@ export abstract class BaseCall<ServiceType extends BaseServiceType> {
     get server(): this['conn']['server'] {
         return this.conn.server;
     }
-
-    // destroy() {
-    // for (let key in this) {
-    //     this[key] = undefined as any;
-    // }
-    // };
 }

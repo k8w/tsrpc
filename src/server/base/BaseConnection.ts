@@ -4,17 +4,20 @@ import { ApiCall } from "./ApiCall";
 import { BaseServer } from "./BaseServer";
 
 export interface BaseConnectionOptions<ServiceType extends BaseServiceType> {
-    /** Server端自增 */
+    /** Created by server, each Call has a unique id. */
     id: string;
+    /** Client IP address */
     ip: string,
     server: BaseServer<ServiceType>
 }
 
 export abstract class BaseConnection<ServiceType extends BaseServiceType> {
-    /** Long or Short connection */
+    /** It is long connection or short connection */
     abstract readonly type: 'LONG' | 'SHORT';
 
+    /** Connection unique ID */
     readonly id: string;
+    /** Client IP address */
     readonly ip: string;
     readonly server: BaseServer<ServiceType>;
     readonly logger: Logger;
@@ -27,10 +30,18 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
     }
 
     abstract get status(): ConnectionStatus;
+    /** Close the connection */
     abstract close(reason?: string): void;
 
+    /** Send buffer (with pre-flow and post-flow) */
     abstract sendBuf(buf: Uint8Array, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
 
+    /**
+     * Send message to the client, only be available when it is long connection.
+     * @param msgName 
+     * @param msg - Message body
+     * @returns Promise resolved when the buffer is sent to kernel, it not represents the server received it.
+     */
     async sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
         if (this.type === 'SHORT') {
             return { isSucc: false, errMsg: 'Short connection cannot sendMsg' }
