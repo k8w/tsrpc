@@ -19,7 +19,7 @@ export class ApiCallHttp<Req = any, Res = any, ServiceType extends BaseServiceTy
                 let opPrune = this.server.tsbuffer.prune(ret.res, this.service.resSchemaId);
                 if (!opPrune.isSucc) {
                     this._return = undefined;
-                    this.server._onInternalServerError({ message: opPrune.errMsg }, this);
+                    this.server.onInternalServerError({ message: opPrune.errMsg }, this);
                     return opPrune;
                 }
                 ret.res = opPrune.pruneOutput;

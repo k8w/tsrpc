@@ -1,26 +1,30 @@
 import 'colors';
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
-import { Flow, MsgService, MsgHandlerManager, ServiceMapUtil, TransportDataUtil, ParsedServerInput, ServiceMap } from 'tsrpc-base-client';
+import { Flow, MsgHandlerManager, MsgService, ParsedServerInput, ServiceMap, ServiceMapUtil, TransportDataUtil } from 'tsrpc-base-client';
 import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
 import { ApiCall } from './ApiCall';
 import { BaseConnection } from './BaseConnection';
 import { MsgCall } from './MsgCall';
 
+/**
+ * Abstract base class for TSRPC Server.
+ * Implement on a transportation protocol (like HTTP WebSocket) by extend it.
+ */
 export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServiceType>{
 
     abstract readonly ApiCallClass: { new(options: any): ApiCall };
     abstract readonly MsgCallClass: { new(options: any): MsgCall };
 
     /**
-     * Start server
+     * Start the server
+     * @throws
      */
     abstract start(): Promise<void>;
 
     /**
-     * Wait all requests finished and the stop server
-     * @param immediately Stop server immediately, not waiting for the requests ending
+     * Stop server immediately, not waiting for the requests ending.
      */
     abstract stop(): Promise<void>;
 
@@ -37,31 +41,70 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     readonly logger: Logger;
 
     /** 
-     * Flows
-     * 所有 Pre Flows 可以中断后续流程
-     * 所有 Post Flows 不中断后续流程
+     * Flow is a specific concept created by TSRPC family.
+     * All pre-flow can interrupt latter behaviours.
+     * All post-flow can NOT interrupt latter behaviours.
      */
     readonly flows = {
         // Conn Flows
+        /** After the connection is created */
         postConnectFlow: new Flow<BaseConnection<ServiceType>>(),
+        /** After the connection is disconnected */
         postDisconnectFlow: new Flow<{ conn: BaseConnection<ServiceType>, reason?: string }>(),
 
         // Buffer Flows
+        /**
+         * Before processing the received buffer, usually be used to encryption / decryption.
+         * Return `null | undefined` would ignore the buffer.
+         */
         preRecvBufferFlow: new Flow<{ conn: BaseConnection<ServiceType>, buf: Uint8Array }>(),
+        /**
+         * Before send out buffer to network, usually be used to encryption / decryption.
+         * Return `null | undefined` would not send the buffer.
+         */
         preSendBufferFlow: new Flow<{ conn: BaseConnection<ServiceType>, buf: Uint8Array, call?: ApiCall }>(),
 
         // ApiCall Flows
+        /**
+         * Before a API request is send.
+         * Return `null | undefined` would cancel the request.
+         */
         preApiCallFlow: new Flow<ApiCall>(),
+        /**
+         * Before return the `ApiReturn` to the client.
+         * It may be used to change the return value, or return `null | undefined` to abort the request.
+         */
         preApiReturnFlow: new Flow<{ call: ApiCall, return: ApiReturn<any> }>(),
-        /** 不会中断后续流程 */
+        /** 
+         * After the `ApiReturn` is send.
+         * return `null | undefined` would NOT interrupt latter behaviours.
+         */
         postApiReturnFlow: new Flow<{ call: ApiCall, return: ApiReturn<any> }>(),
-        /** 不会中断后续流程 */
+        /**
+         * After the api handler is executed.
+         * return `null | undefined` would NOT interrupt latter behaviours.
+         */
         postApiCallFlow: new Flow<ApiCall>(),
 
         // MsgCall Flows
+        /**
+         * Before handle a `MsgCall`
+         */
         preMsgCallFlow: new Flow<MsgCall>(),
+        /**
+         * After handlers of a `MsgCall` are executed.
+         * return `null | undefined` would NOT interrupt latter behaviours.
+         */
         postMsgCallFlow: new Flow<MsgCall>(),
+        /**
+         * Before send out a message.
+         * return `null | undefined` would NOT interrupt latter behaviours.
+         */
         preSendMsgFlow: new Flow<{ conn: BaseConnection<ServiceType>, service: MsgService, msg: any }>(),
+        /**
+         * After send out a message.
+         * return `null | undefined` would NOT interrupt latter behaviours.
+         */
         postSendMsgFlow: new Flow<{ conn: BaseConnection<ServiceType>, service: MsgService, msg: any }>(),
     } as const;
 
@@ -71,6 +114,11 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     private _msgHandlers: MsgHandlerManager = new MsgHandlerManager();
 
     private static _isUncaughtExceptionProcessed = false;
+    /**
+     * It makes the `uncaughtException` and `unhandledRejection` not lead to the server stopping.
+     * @param logger 
+     * @returns 
+     */
     static processUncaughtException(logger: Logger) {
         if (this._isUncaughtExceptionProcessed) {
             return;
@@ -110,7 +158,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                 call.error(e)
             }
             else {
-                this._onInternalServerError(e, call)
+                this.onInternalServerError(e, call)
             }
         };
         this.flows.postApiCallFlow.onError = (e, call) => {
@@ -119,7 +167,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                     call.error(e)
                 }
                 else {
-                    this._onInternalServerError(e, call)
+                    this.onInternalServerError(e, call)
                 }
             }
             else {
@@ -132,7 +180,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                 last.call.error(e)
             }
             else {
-                this._onInternalServerError(e, last.call)
+                this.onInternalServerError(e, last.call)
             }
         }
         this.flows.postApiReturnFlow.onError = (e, last) => {
@@ -141,7 +189,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                     last.call.error(e)
                 }
                 else {
-                    this._onInternalServerError(e, last.call)
+                    this.onInternalServerError(e, last.call)
                 }
             }
         }
@@ -150,6 +198,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     protected _pendingApiCallNum = 0;
 
     // #region receive buffer process flow
+    /**
+     * Process the buffer, after the `preRecvBufferFlow`.
+     */
     async _onRecvBuffer(conn: BaseConnection<ServiceType>, buf: Buffer) {
         // 非 OPENED 状态 停止接受新的请求
         if (this.status !== ServerStatus.Opened) {
@@ -165,7 +216,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         // Parse Call
         let opInput = TransportDataUtil.parseServerInput(this.tsbuffer, this.serviceMap, buf);
         if (!opInput.isSucc) {
-            this._onInputBufferError(opInput.errMsg, conn, buf);
+            this.onInputBufferError(opInput.errMsg, conn, buf);
             return;
         }
         let call = this._makeCall(conn, opInput.result);
@@ -235,7 +286,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                     call.error(e);
                 }
                 else {
-                    this._onInternalServerError(e, call);
+                    this.onInternalServerError(e, call);
                 }
             }
         }
@@ -255,7 +306,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // Destroy call
         if (!call.return) {
-            this._onInternalServerError({ message: 'API not return anything' }, call);
+            this.onInternalServerError({ message: 'API not return anything' }, call);
         }
     }
 
@@ -288,7 +339,12 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     // #endregion    
 
     // #region Api/Msg handler register
-    // API 只能实现一次
+    /**
+     * Associate a `ApiHandler` to a specific `apiName`.
+     * So that when `ApiCall` is receiving, it can be handled correctly.
+     * @param apiName 
+     * @param handler 
+     */
     implementApi<T extends keyof ServiceType['api']>(apiName: T, handler: ApiHandler<ServiceType['api'][T]['req'], ServiceType['api'][T]['res']>): void {
         if (this._apiHandlers[apiName as string]) {
             throw new Error('Already exist handler for API: ' + apiName);
@@ -297,21 +353,19 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         this.logger.log(`API implemented succ: [${apiName}]`);
     };
 
-    async autoImplementApi(apiPath: string, apiNamePrefix?: string): Promise<{ succ: string[], fail: string[] }> {
+    /**
+     * Auto call `imeplementApi` by traverse the `apiPath` and find all matched `PtlXXX` and `ApiXXX`.
+     * It is matched by checking whether the relative path and name of an API is consistent to the service name in `serviceProto`.
+     * Notice that the name prefix of protocol is `Ptl`, of API is `Api`.
+     * For example, `protocols/a/b/c/PtlTest` is matched to `api/a/b/c/ApiTest`.
+     * @param apiPath Absolute path or relative path to `process.cwd()`.
+     * @returns 
+     */
+    async autoImplementApi(apiPath: string): Promise<{ succ: string[], fail: string[] }> {
         let apiServices = Object.values(this.serviceMap.apiName2Service) as ApiServiceDef[];
         let output: { succ: string[], fail: string[] } = { succ: [], fail: [] };
 
-        // apiNamePrefix 末尾强制加/
-        if (apiNamePrefix && !apiNamePrefix.endsWith('/')) {
-            apiNamePrefix = apiNamePrefix + '/';
-        }
-
         for (let svc of apiServices) {
-            // 限定ServiceName前缀
-            if (apiNamePrefix && !svc.name.startsWith(apiNamePrefix)) {
-                continue;
-            }
-
             //get matched Api
             let apiHandler: Function | undefined;
 
@@ -324,11 +378,6 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             }
             let handlerPath = match[1] || '';
             let handlerName = match[2];
-
-            // 移除前缀
-            if (apiNamePrefix) {
-                handlerPath = handlerPath.substr(apiNamePrefix.length);
-            }
 
             // try import
             let requireError: Error & { code: string } | undefined;
@@ -370,33 +419,44 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         return output;
     }
 
-    // Msg 可以重复监听
+    /**
+     * Add a message handler,
+     * duplicate handlers to the same `msgName` would be ignored.
+     * @param msgName
+     * @param handler
+     */
     listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<ServiceType['msg'][T]>): void {
         this._msgHandlers.addHandler(msgName as string, handler);
     };
+    /**
+     * Remove a message handler
+     */
     unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: Function): void {
         this._msgHandlers.removeHandler(msgName as string, handler);
     };
+    /**
+     * Remove all handlers from a message
+     */
     unlistenMsgAll<T extends keyof ServiceType['msg']>(msgName: T): void {
         this._msgHandlers.removeAllHandlers(msgName as string);
     };
     // #endregion   
 
     /**
-     * When the server cannot parse input buffer to api/msg call
+     * Event when the server cannot parse input buffer to api/msg call.
      * By default, it will return "Input Buffer Error" .
      */
-    protected _onInputBufferError(errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) {
+    onInputBufferError(errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) {
         conn.logger.error(`[InputBufferError] ${errMsg} length = ${buf.length}`, buf.subarray(0, 16))
         conn.close('Input Buffer Error');
     }
 
     /**
-     * On error throwed inside (not TsrpcError)
-     * By default, it will return a "Internal server error".
-     * If `returnInnerError` is `true`, an `innerError` field would be returned.
+     * Event when a uncaught error (except `TsrpcError`) is throwed.
+     * By default, it will return a `TsrpcError` with message "Internal server error".
+     * If `returnInnerError` is `true`, the original error would be returned as `innerErr` property.
      */
-    _onInternalServerError(err: { message: string, stack?: string, name?: string }, call: ApiCall) {
+    onInternalServerError(err: { message: string, stack?: string, name?: string }, call: ApiCall) {
         call.logger.error(err);
         call.error('Internal Server Error', {
             code: 'INTERNAL_ERR',
@@ -409,9 +469,10 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         rs: () => void
     };
     /**
-     * 优雅的停止
-     * 立即停止接收所有请求，直到所有现有请求都处理完，停止服务
-     * @param maxWaitTime - 最长等待时间，undefined 或 0 代表无限
+     * Stop the server gracefully.
+     * Wait all API requests finished and then stop the server.
+     * @param maxWaitTime - The max time(ms) to wait before force stop the server.
+     * `undefined` and `0` means unlimited time.
      */
     async gracefulStop(maxWaitTime?: number) {
         if (this._status !== ServerStatus.Opened) {
@@ -455,53 +516,55 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
 }
 
-/** @public */
 export interface BaseServerOptions<ServiceType extends BaseServiceType> {
     // TSBuffer相关
     /**
-     * `undefined` 和 `null` 是否可以混合编码
-     * 默认: `true`
+     * Whether to strictly distinguish between `null` and `undefined` when encoding, decoding, and type checking.
+     * @defaultValue true
      */
     strictNullChecks: boolean,
 
     /**
-     * API 超时时间（毫秒）
-     * 0 或 `undefined` 代表不限时
-     * 默认：`30000`
+     * Timeout for processing an `ApiCall`(ms)
+     * `0` and `undefined` means unlimited time
+     * @defaultValue 30000
      */
     apiTimeout: number | undefined,
 
     // LOG相关
     /**
-     * Where the log is output to
-     * @defaultValue `consoleColorLogger` (print to console with color)
+     * Logger for processing log
+     * @defaultValue `new TerminalColorLogger()` (print to console with color)
      */
     logger: Logger;
     /** 
-     * Print req body in log (may increase log size)
+     * Whethere to print API request body into log (may increase log size)
      * @defaultValue `true`
      */
     logReqBody: boolean;
     /** 
-     * Print res body in log (may increase log size)
+     * Whethere to print API response body into log (may increase log size)
      * @defaultValue `true`
      */
     logResBody: boolean;
     /**
-     * Print send / recv msg in log
+     * Whethere to print `[SendMsg]` and `[RecvMsg]` log into log
      * @defaultValue `true`
      */
     logMsg: boolean;
 
-    /** 
-     * 为true时将在控制台debug打印buffer信息
+    /**
+     * If `true`, all sent and received raw buffer would be print into the log.
+     * It may be useful when you do something for buffer encryption/decryption, and want to debug them.
      */
     debugBuf?: boolean;
 
     /**
-     * When "Internal server error" occured,
-     * whether to return `innerError` to client. 
-     * It depends on `NODE_ENV` by default. (be `false` when `NODE_ENV` is `production`, otherwise be `true`)
+     * When uncaught error throwed,
+     * whether to return the original error as a property `innerErr`. 
+     * (May include some sensitive information, suggests set to `false` in production environment.)
+     * @defaultValue It depends on environment variable `NODE_ENV`.
+     * If `NODE_ENV` equals to `production`, the default value is `false`, otherwise is `true`.
      */
     returnInnerError: boolean;
 }

@@ -105,7 +105,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         // Encode
         let opServerOutput = TransportDataUtil.encodeApiReturn(this.server.tsbuffer, this.service, ret, this.sn);;
         if (!opServerOutput.isSucc) {
-            this.server._onInternalServerError({ message: opServerOutput.errMsg, stack: '  |- TransportDataUtil.encodeApiReturn\n  |- ApiCall._sendReturn' }, this);
+            this.server.onInternalServerError({ message: opServerOutput.errMsg, stack: '  |- TransportDataUtil.encodeApiReturn\n  |- ApiCall._sendReturn' }, this);
             return opServerOutput;
         }
 
