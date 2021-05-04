@@ -60,6 +60,7 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
 
     /**
      * {@inheritDoc BaseConnection.sendBuf}
+     * @internal
      */
     async sendBuf(buf: Uint8Array, call?: ApiCall): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         if (!this.isAlive) {

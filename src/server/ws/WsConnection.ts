@@ -65,6 +65,7 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
 
     /**
      * {@inheritDoc BaseConnection.sendBuf}
+     * @internal
      */
     async sendBuf(buf: Uint8Array, call?: ApiCallWs): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         if (!this.isAlive) {
