@@ -265,7 +265,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // Pre Flow
         let preFlow = await this.flows.preApiCallFlow.exec(call, call.logger);
-        if (!preFlow || !preFlow.conn.isAlive) {
+        if (!preFlow) {
             if (timeoutTimer) {
                 clearTimeout(timeoutTimer);
                 timeoutTimer = undefined;

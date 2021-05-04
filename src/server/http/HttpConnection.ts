@@ -63,10 +63,6 @@ export class HttpConnection<ServiceType extends BaseServiceType> extends BaseCon
      * @internal
      */
     async sendBuf(buf: Uint8Array, call?: ApiCall): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
-        if (!this.isAlive) {
-            return { isSucc: false, errMsg: 'Connection is closed already when sendBuf' };
-        }
-
         // Pre Flow
         let pre = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: buf, call: call }, call?.logger || this.logger);
         if (!pre) {

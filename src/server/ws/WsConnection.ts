@@ -68,10 +68,6 @@ export class WsConnection<ServiceType extends BaseServiceType> extends BaseConne
      * @internal
      */
     async sendBuf(buf: Uint8Array, call?: ApiCallWs): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
-        if (!this.isAlive) {
-            return { isSucc: false, errMsg: 'Connection is closed already when sendBuf' };
-        }
-
         // Pre Flow
         let pre = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: buf, call: call }, call?.logger || this.logger);
         if (!pre) {

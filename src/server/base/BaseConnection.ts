@@ -78,7 +78,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
         return { isSucc: true };
     }
 
-    isAlive = true;
     destroy() {
         if (this.status === ConnectionStatus.Opened) {
             this.close('DESTROY');
