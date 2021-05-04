@@ -7,6 +7,12 @@ export interface MsgCallOptions<Msg, ServiceType extends BaseServiceType> extend
     service: MsgService,
     msg: Msg
 }
+
+/**
+ * A call request by `client.sendMsg()`
+ * @typeParam Msg - Type of the message
+ * @typeParam ServiceType - The same `ServiceType` to server, it is used for code auto hint.
+ */
 export abstract class MsgCall<Msg = any, ServiceType extends BaseServiceType = any> extends BaseCall<ServiceType> {
     readonly type = 'msg' as const;
 

@@ -14,7 +14,7 @@ export interface WsConnectionOptions<ServiceType extends BaseServiceType> extend
 }
 
 /**
- * 当前活跃的连接
+ * Connected client
  */
 export class WsConnection<ServiceType extends BaseServiceType> extends BaseConnection<ServiceType> {
     readonly type = "LONG";

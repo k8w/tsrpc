@@ -35,7 +35,7 @@
     "socket.io"
   ],
   "author": "k8w",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "devDependencies": {
     "@microsoft/api-documenter": "^7.13.5",
     "@microsoft/api-extractor": "^7.15.0",

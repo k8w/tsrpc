@@ -14,14 +14,26 @@ export interface ApiCallOptions<Req, ServiceType extends BaseServiceType> extend
     req: Req
 }
 
+/**
+ * A call request by `client.callApi()`
+ * @typeParam Req - Type of request
+ * @typeParam Res - Type of response
+ * @typeParam ServiceType - The same `ServiceType` to server, it is used for code auto hint.
+ */
 export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServiceType = any> extends BaseCall<ServiceType> {
     readonly type = 'api' as const;
 
+    /**
+     * Which `ApiService` the request is calling for
+     */
     readonly service!: ApiService;
     /** Only exists in long connection, it is used to associate request and response.
      * It is created by the client, and the server would return the same value in `ApiReturn`.
      */
     readonly sn?: number;
+    /**
+     * Request data from the client, type of it is checked by the framework already.
+     */
     readonly req: Req;
 
     constructor(options: ApiCallOptions<Req, ServiceType>, logger?: Logger) {
@@ -61,12 +73,12 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         })
     }
 
-    error(message: string, info?: Partial<TsrpcErrorData>): Promise<void>;
-    error(err: TsrpcError): Promise<void>;
     /**
      * Send a error `ApiReturn` with a `TsrpcError`
      * @returns Promise resolved means the buffer is sent to kernel
      */
+    error(message: string, info?: Partial<TsrpcErrorData>): Promise<void>;
+    error(err: TsrpcError): Promise<void>;
     error(errOrMsg: string | TsrpcError, data?: Partial<TsrpcErrorData>): Promise<void> {
         let error: TsrpcError = typeof errOrMsg === 'string' ? new TsrpcError(errOrMsg, data) : errOrMsg;
         return this._prepareReturn({
