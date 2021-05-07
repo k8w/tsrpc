@@ -110,7 +110,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     } as const;
 
     // Handlers
-    private _apiHandlers: { [apiName: string]: ((call: ApiCall) => any) | undefined } = {};
+    private _apiHandlers: { [apiName: string]: ApiHandler<any> | undefined } = {};
     // 多个Handler将异步并行执行
     private _msgHandlers: MsgHandlerManager = new MsgHandlerManager();
 
@@ -346,7 +346,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @param apiName 
      * @param handler 
      */
-    implementApi<T extends keyof ServiceType['api']>(apiName: T, handler: ApiHandler<ServiceType['api'][T]['req'], ServiceType['api'][T]['res']>): void {
+    implementApi<Api extends keyof ServiceType['api'], Call extends ApiCall<ServiceType['api'][Api]['req'], ServiceType['api'][Api]['res']>>(apiName: Api, handler: ApiHandler<Call>): void {
         if (this._apiHandlers[apiName as string]) {
             throw new Error('Already exist handler for API: ' + apiName);
         }
@@ -426,19 +426,19 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @param msgName
      * @param handler
      */
-    listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<ServiceType['msg'][T]>): void {
+    listenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: MsgHandler<Call>): void {
         this._msgHandlers.addHandler(msgName as string, handler);
     };
     /**
      * Remove a message handler
      */
-    unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: Function): void {
+    unlistenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: Function): void {
         this._msgHandlers.removeHandler(msgName as string, handler);
     };
     /**
      * Remove all handlers from a message
      */
-    unlistenMsgAll<T extends keyof ServiceType['msg']>(msgName: T): void {
+    unlistenMsgAll<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg): void {
         this._msgHandlers.removeAllHandlers(msgName as string);
     };
     // #endregion   
@@ -580,8 +580,8 @@ export const defaultBaseServerOptions: BaseServerOptions<any> = {
     returnInnerError: process.env['NODE_ENV'] !== 'production'
 }
 
-export type ApiHandler<Req = any, Res = any> = (call: ApiCall<Req, Res>) => void | Promise<void>;
-export type MsgHandler<Msg = any> = (msg: MsgCall<Msg>) => void | Promise<void>;
+export type ApiHandler<Call extends ApiCall = ApiCall> = (call: Call) => void | Promise<void>;
+export type MsgHandler<Call extends MsgCall = MsgCall> = (call: Call) => void | Promise<void>;
 
 export enum ServerStatus {
     Opening = 'OPENING',

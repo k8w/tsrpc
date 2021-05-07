@@ -1,7 +1,7 @@
 import { assert } from 'chai';
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
-import { BaseServer, TerminalColorLogger } from '../../src';
+import { BaseServer, TerminalColorLogger, WsConnection } from '../../src';
 import { WsClient } from '../../src/client/ws/WsClient';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import { WsServer } from '../../src/server/ws/WsServer';
@@ -121,6 +121,22 @@ describe('WS Server & Client basic', function () {
         await testApi(server, client);
 
         await server.stop();
+    })
+
+    it('extend conn', function () {
+        let server = new WsServer(getProto(), {
+            logger: serverLogger,
+            debugBuf: true
+        });
+        type MyConn = WsConnection<any> & {
+            sessionData: {
+                value: string;
+            }
+        }
+        server.flows.postConnectFlow.push((conn: MyConn) => {
+            conn.sessionData.value = 'zxcdv';
+            return conn;
+        })
     })
 
     it('autoImplementApi', async function () {

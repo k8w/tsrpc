@@ -1,13 +1,14 @@
 import { assert } from 'chai';
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
-import { BaseServer, TerminalColorLogger } from '../../src';
+import { ApiCall, BaseServer, HttpConnection, MsgCall, TerminalColorLogger } from '../../src';
 import { HttpClient } from '../../src/client/http/HttpClient';
 import { HttpServer } from '../../src/server/http/HttpServer';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
 import { ApiTest } from '../api/ApiTest';
 import { MsgChat } from '../proto/MsgChat';
+import { ReqTest, ResTest } from '../proto/PtlTest';
 import { serviceProto, ServiceType } from '../proto/serviceProto';
 
 const serverLogger = new PrefixLogger({
@@ -105,6 +106,68 @@ describe('HTTP Server & Client basic', function () {
         await testApi(server, client);
 
         await server.stop();
+    })
+
+    it('extend call in handler', function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger,
+            debugBuf: true
+        });
+
+        type MyApiCall<Req, Res> = ApiCall<Req, Res> & {
+            value1?: string;
+            value2: string;
+        }
+        type MyMsgCall<Msg> = MsgCall<Msg> & {
+            value1?: string;
+            value2: string;
+        }
+
+        server.implementApi('Test', (call: MyApiCall<ReqTest, ResTest>) => {
+            call.value1 = 'xxx';
+            call.value2 = 'xxx';
+        });
+        server.listenMsg('Chat', (call: MyMsgCall<MsgChat>) => {
+            call.msg.content;
+            call.value1 = 'xxx';
+            call.value2 = 'xxx';
+        })
+    })
+
+    it('extend call in flow', function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger,
+            debugBuf: true
+        });
+
+        type MyApiCall<Req, Res> = ApiCall<Req, Res> & {
+            value1?: string;
+            value2: string;
+        }
+        type MyMsgCall<Msg> = MsgCall<Msg> & {
+            value1?: string;
+            value2: string;
+        }
+        type MyConn = HttpConnection<any> & {
+            currentUser: {
+                uid: string,
+                nickName: string
+            }
+        }
+
+        server.flows.postConnectFlow.push((conn: MyConn) => {
+            conn.currentUser.nickName = 'asdf';
+            return conn;
+        });
+        server.flows.postConnectFlow.exec(null as MyConn, console);
+        server.flows.preApiCallFlow.push((call: MyApiCall<any, any>) => {
+            call.value2 = 'x';
+            return call;
+        });
+        server.flows.preSendMsgFlow.push((call: MyMsgCall<any>) => {
+            call.value2 = 'f';
+            return call;
+        })
     })
 
     it('autoImplementApi', async function () {
