@@ -368,7 +368,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         for (let svc of apiServices) {
             //get matched Api
-            let apiHandler: Function | undefined;
+            let apiHandler: ApiHandler<any> | undefined;
 
             // get api last name
             let match = svc.name.match(/^(.+\/)*(.+)$/);
@@ -413,7 +413,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                 continue;
             }
 
-            this.implementApi(svc.name, apiHandler as any);
+            this.implementApi(svc.name, apiHandler);
             output.succ.push(svc.name);
         }
 
