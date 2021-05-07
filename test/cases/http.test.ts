@@ -159,7 +159,7 @@ describe('HTTP Server & Client basic', function () {
             conn.currentUser.nickName = 'asdf';
             return conn;
         });
-        server.flows.postConnectFlow.exec(null as MyConn, console);
+        server.flows.postConnectFlow.exec(null as any as MyConn, console);
         server.flows.preApiCallFlow.push((call: MyApiCall<any, any>) => {
             call.value2 = 'x';
             return call;
