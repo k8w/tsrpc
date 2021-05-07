@@ -253,6 +253,87 @@ describe('HTTP Server & Client basic', function () {
         await server.stop();
     });
 
+    it('abortByKey', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+        await server.start();
+
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        })
+
+        let result: any | undefined;
+        let result1: any | undefined;
+
+        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
+        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
+        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
+        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
+        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
+
+        client.callApi('Test', { name: 'bbbbbb' }).then(v => { result1 = v; });
+
+        setTimeout(() => {
+            client.abortByKey('XXX')
+        }, 10);
+
+        await new Promise<void>(rs => {
+            setTimeout(() => {
+                assert.strictEqual(result, undefined);
+                assert.deepStrictEqual(result1, {
+                    isSucc: true,
+                    res: {
+                        reply: 'Test reply: bbbbbb'
+                    }
+                })
+                rs();
+            }, 150)
+        })
+
+        await server.stop();
+    })
+
+    it('abortAll', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+        await server.start();
+
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        })
+
+        let result: any | undefined;
+        let result1: any | undefined;
+
+        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
+        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
+        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
+        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
+        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
+
+        client.callApi('Test', { name: 'bbbbbb' }).then(v => { result1 = v; });
+
+        setTimeout(() => {
+            client.abortAll()
+        }, 10);
+
+        await new Promise<void>(rs => {
+            setTimeout(() => {
+                assert.strictEqual(result, undefined);
+                assert.strictEqual(result1, undefined);
+                rs();
+            }, 150)
+        })
+
+        await server.stop();
+    })
+
     it('pendingApis', async function () {
         let server = new HttpServer(getProto(), {
             logger: serverLogger

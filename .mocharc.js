@@ -13,5 +13,5 @@ module.exports = {
     ],
     parallel: false,
     // 'expose-gc': true,
-    // fgrep: 'Prune'
+    // fgrep: 'abort'
 }

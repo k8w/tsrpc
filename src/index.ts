@@ -1,5 +1,6 @@
 import 'k8w-extend-native';
 // Common
+export * from 'tsrpc-base-client';
 export * from 'tsrpc-proto';
 export * from './client/http/HttpClient';
 export * from './server/base/ApiCall';
