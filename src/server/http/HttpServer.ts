@@ -332,8 +332,9 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
      */
     jsonHostPath: string,
     /**
-     * Whether to prune excess property automatically from JSON.
-     * Recommended is `true` for the security.
+     * Whether to automatically delete excess properties that not defined in the protocol.
+     * It would affect API request and response.
+     * For security reason, it is strongly recommend you to set to `true`.
      * @defaultValue `true`
      * @internal
      */

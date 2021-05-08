@@ -2,6 +2,10 @@ import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PendingApiItem
 import { BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
 import WebSocket from 'ws';
 
+/**
+ * Client for TSRPC WebSocket Server.
+ * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
+ */
 export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
 
     readonly type = 'LONG';

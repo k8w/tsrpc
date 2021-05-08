@@ -1,13 +1,14 @@
 # TSRPC
 
-A TypeScript RPC framework with runtime type checking and binary encoding.
+A TypeScript RPC framework with runtime type checking and binary serialization.
 
 ## Features
 - Runtime type checking
-- Binary encoding based on TypeScript type definition
-- HTTP, WebSocket, and more protocols supported
-- JSON compatible, prune excess properties automatically
-- High performance and stable, verified by billions of online users
+- Binary serialization
+- Pure TypeScript, without any decorater or other language
+- HTTP / WebSocket / and more protocols...
+- Optional backward-compatibility to JSON
+- High performance and reliable, verified by services over 100,000,000 users
 
 ## Usage
 Docs and examples are coming soon...

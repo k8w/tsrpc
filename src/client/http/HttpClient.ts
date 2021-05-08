@@ -4,6 +4,11 @@ import { EncodeOutput } from "tsbuffer";
 import { ApiService, BaseClient, BaseClientOptions, defaultBaseClientOptions, MsgService, PendingApiItem, TransportDataUtil, TransportOptions } from "tsrpc-base-client";
 import { ApiReturn, BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
 
+/**
+ * Client for TSRPC HTTP Server.
+ * It uses native http module of NodeJS.
+ * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
+ */
 export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
 
     readonly type = 'SHORT';
@@ -198,9 +203,7 @@ export interface HttpClientOptions extends BaseClientOptions {
      */
     json: boolean;
     /**
-     * Whether to automatically delete excess properties that not defined in the protocol.
-     * It would affect API request and response.
-     * For security reason, we strongly recommend you to set to `true`.
+     * {@inheritDoc HttpServerOptions.jsonPrune}
      * @defaultValue `true`
      * @internal
      */
