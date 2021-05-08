@@ -381,7 +381,7 @@ describe('HTTP Server & Client basic', function () {
         let server = new HttpServer(getProto(), {
             jsonEnabled: true,
             jsonPrune: false,
-            jsonUrlRoot: '/api/123/',
+            jsonHostPath: '/api/123/',
             logger: serverLogger,
             debugBuf: true
         });
