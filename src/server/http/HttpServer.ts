@@ -326,14 +326,16 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
      */
     jsonEnabled: boolean,
     /**
-     * JSON 服务根目录
-     * 如配置为 `'/api/'`，则请求 URL `/api/a/b/c/Test` 将被映射到 API `a/b/c/Test`
-     * 默认为 `'/'`
+     * Actual URL path is `${jsonHostPath}/${apiName}`.
+     * For example, if `jsonHostPath` is `'/api'`, then you can send `POST /api/a/b/c/Test` to call API `a/b/c/Test`.
+     * @defaultValue `'/'`
      */
     jsonHostPath: string,
     /**
-     * 是否剔除协议中未定义的多余字段
-     * 默认为 `true`
+     * Whether to prune excess property automatically from JSON.
+     * Recommended is `true` for the security.
+     * @defaultValue `true`
+     * @internal
      */
     jsonPrune: boolean
 }

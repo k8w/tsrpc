@@ -202,6 +202,7 @@ export interface HttpClientOptions extends BaseClientOptions {
      * It would affect API request and response.
      * For security reason, we strongly recommend you to set to `true`.
      * @defaultValue `true`
+     * @internal
      */
     jsonPrune: boolean;
 }
