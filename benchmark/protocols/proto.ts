@@ -2,11 +2,11 @@ import { ServiceProto } from 'tsrpc-proto';
 import { ReqTest, ResTest } from './PtlTest'
 
 export interface ServiceType {
-    req: {
-        "Test": ReqTest
-    },
-    res: {
-        "Test": ResTest
+    api: {
+        "Test": {
+            req: ReqTest,
+            res: ResTest
+        }
     },
     msg: {
 
@@ -18,9 +18,7 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 0,
             "name": "Test",
-            "type": "api",
-            "req": "PtlTest/ReqTest",
-            "res": "PtlTest/ResTest"
+            "type": "api"
         }
     ],
     "types": {

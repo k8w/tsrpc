@@ -1,11 +1,11 @@
 import 'colors';
-import { benchmarkConfig } from "../config/BenchmarkConfig";
-import { TsrpcError } from "tsrpc-proto";
 import * as http from "http";
 import * as https from "https";
-import { TsrpcClientErrorUtil } from '../../src/client/TsrpcClientErrorUtil';
-import { serviceProto } from '../protocols/proto';
+import 'k8w-extend-native';
+import { TsrpcError, TsrpcErrorType } from "tsrpc-proto";
 import { HttpClient } from '../../src/client/http/HttpClient';
+import { benchmarkConfig } from "../config/BenchmarkConfig";
+import { serviceProto } from '../protocols/proto';
 
 export interface HttpRunnerConfig {
     total: number;
@@ -178,7 +178,7 @@ export class HttpRunner {
             ++this._apiStat[apiName].succ;
             return res;
         }).catch((e: TsrpcError) => {
-            if (TsrpcClientErrorUtil.isNetworkError(e)) {
+            if (e.type === TsrpcErrorType.NetworkError) {
                 ++this._apiStat[apiName].networkError;
             }
             else {
@@ -236,9 +236,8 @@ export class HttpRunner {
     }
 }
 
-export const benchmarkClient = new HttpClient({
+export const benchmarkClient = new HttpClient(serviceProto, {
     server: benchmarkConfig.server,
-    proto: serviceProto,
     logger: {
         debug: function () { },
         log: function () { },

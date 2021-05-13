@@ -1,16 +1,14 @@
-import { serviceProto } from "../protocols/proto";
 import { HttpServer } from '../../src/server/http/HttpServer';
+import { serviceProto } from "../protocols/proto";
 
 async function main() {
-    let server = new HttpServer({
-        proto: serviceProto,
+    let server = new HttpServer(serviceProto, {
         logger: {
             debug: () => { },
             log: () => { },
             error: console.error.bind(console),
             warn: console.warn.bind(console)
-        },
-        enablePool: true
+        }
     });
 
     server.implementApi('Test', call => {
