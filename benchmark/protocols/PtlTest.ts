@@ -1,3 +1,4 @@
+import { uint } from '../../src/index';
 export interface ReqTest {
     a?: uint;
     b?: string;
