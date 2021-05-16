@@ -127,7 +127,7 @@ export class HttpRunner {
                 [{ text: 'Api' + key + ' '.repeat(this._maxApiNameLength - key.length), color: 'green' }, 'Send', 'Succ', 'QPS', 'NetErr', 'ApiErr', 'AVG  ', 'P95  ', 'P99  '],
                 ['', '' + send,
                     { text: '' + succ, color: 'green' },
-                    { text: '' + (succ / (stat.lastSuccTime - stat.startTime) * 1000 | 0), color: 'green' },
+                    { text: '' + (succ / (stat.last.succTime - stat.startTime) * 1000 | 0), color: 'green' },
                     netErr ? { text: '' + netErr, color: 'red' } : '0',
                     apiErr ? { text: '' + apiErr, color: 'red' } : '0',
                     { text: avg ? avg + 'ms' : '-', color: 'yellow' },
@@ -146,7 +146,15 @@ export class HttpRunner {
             networkError: number,
             otherError: number,
             startTime: number,
-            lastSuccTime: number
+            last: {
+                sendReq: number,
+                resTime: number[],
+                succ: number,
+                networkError: number,
+                otherError: number,
+                startTime: number,
+                succTime: number
+            }
         }
     } = {};
 
@@ -165,24 +173,37 @@ export class HttpRunner {
                 networkError: 0,
                 otherError: 0,
                 startTime: Date.now(),
-                lastSuccTime: 0
+                last: {
+                    sendReq: 0,
+                    resTime: [],
+                    succ: 0,
+                    networkError: 0,
+                    otherError: 0,
+                    startTime: Date.now(),
+                    succTime: 0
+                }
             };
         }
 
         ++this._apiStat[apiName].sendReq;
+        ++this._apiStat[apiName].last.sendReq;
 
         let startTime = Date.now();
         return benchmarkClient.callApi(apiName, req).then(res => {
-            this._apiStat[apiName].lastSuccTime = Date.now();
+            this._apiStat[apiName].last.succTime = Date.now();
             this._apiStat[apiName].resTime.push(Date.now() - startTime);
+            this._apiStat[apiName].last.resTime.push(Date.now() - startTime);
             ++this._apiStat[apiName].succ;
+            ++this._apiStat[apiName].last.succ;
             return res;
         }).catch((e: TsrpcError) => {
             if (e.type === TsrpcErrorType.NetworkError) {
                 ++this._apiStat[apiName].networkError;
+                ++this._apiStat[apiName].last.networkError;
             }
             else {
                 ++this._apiStat[apiName].otherError;
+                ++this._apiStat[apiName].last.otherError;
             }
 
             throw e;
@@ -196,20 +217,29 @@ export class HttpRunner {
         for (let key in this._apiStat) {
             let stat = this._apiStat[key];
 
-            let send = stat.sendReq;
-            let succ = stat.resTime.length;
-            let netErr = stat.networkError;
-            let apiErr = stat.otherError;
+            let send = stat.last.sendReq;
+            let succ = stat.last.resTime.length;
+            let netErr = stat.last.networkError;
+            let apiErr = stat.last.otherError;
 
             this._logTable([
                 [{ text: 'Api' + key + ' '.repeat(this._maxApiNameLength - key.length), color: 'green' }, 'Send', 'Succ', 'QPS', 'NetErr', 'ApiErr'],
                 ['', '' + send,
                     { text: '' + succ, color: 'green' },
-                    { text: '' + (succ / (stat.lastSuccTime - stat.startTime) * 1000 | 0), color: 'green' },
+                    { text: '' + (succ / (stat.last.succTime - stat.last.startTime) * 1000 | 0), color: 'green' },
                     netErr ? { text: '' + netErr, color: 'red' } : '0',
                     apiErr ? { text: '' + apiErr, color: 'red' } : '0'
                 ]
             ])
+
+            Object.assign(stat.last, {
+                sendReq: 0,
+                resTime: [],
+                succ: 0,
+                networkError: 0,
+                otherError: 0,
+                startTime: Date.now(),
+            })
         }
     }
 
