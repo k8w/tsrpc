@@ -16,7 +16,7 @@ export interface WsConnectionOptions<ServiceType extends BaseServiceType> extend
 /**
  * Connected client
  */
-export class WsConnection<ServiceType extends BaseServiceType> extends BaseConnection<ServiceType> {
+export class WsConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
     readonly type = "LONG";
 
     readonly ws: WebSocket;

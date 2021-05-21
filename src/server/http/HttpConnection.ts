@@ -17,7 +17,7 @@ export interface HttpConnectionOptions<ServiceType extends BaseServiceType> exte
     isJSON: boolean | undefined;
 }
 
-export class HttpConnection<ServiceType extends BaseServiceType> extends BaseConnection<ServiceType> {
+export class HttpConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
     readonly type = 'SHORT';
 
     readonly httpReq: http.IncomingMessage;
