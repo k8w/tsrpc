@@ -1,4 +1,4 @@
-import { ApiReturn, BaseServiceType, TsrpcErrorType } from 'tsrpc-proto';
+import { ApiReturn, BaseServiceType } from 'tsrpc-proto';
 import { ApiCall, ApiCallOptions } from '../base/ApiCall';
 import { HttpConnection } from './HttpConnection';
 

@@ -1,5 +1,6 @@
 import { ApiService, MsgService } from 'tsrpc-base-client';
-import { BaseServiceType, Logger } from 'tsrpc-proto';
+import { BaseServiceType } from 'tsrpc-proto';
+import { PrefixLogger } from '../models/PrefixLogger';
 import { BaseConnection } from './BaseConnection';
 
 export interface BaseCallOptions<ServiceType extends BaseServiceType> {
@@ -14,9 +15,9 @@ export abstract class BaseCall<ServiceType extends BaseServiceType> {
     readonly service: ApiService | MsgService;
     /** Time that server created the call */
     readonly startTime: number;
-    readonly logger: Logger;
+    readonly logger: PrefixLogger;
 
-    constructor(options: BaseCallOptions<ServiceType>, logger: Logger) {
+    constructor(options: BaseCallOptions<ServiceType>, logger: PrefixLogger) {
         this.conn = options.conn;
         this.service = options.service;
         this.startTime = Date.now();

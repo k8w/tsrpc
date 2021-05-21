@@ -1,5 +1,6 @@
 import { TransportDataUtil } from "tsrpc-base-client";
-import { BaseServiceType, Logger } from "tsrpc-proto";
+import { BaseServiceType } from "tsrpc-proto";
+import { PrefixLogger } from "../models/PrefixLogger";
 import { ApiCall } from "./ApiCall";
 import { BaseServer } from "./BaseServer";
 
@@ -20,9 +21,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
     /** Client IP address */
     readonly ip: string;
     readonly server: BaseServer<ServiceType>;
-    readonly logger: Logger;
+    readonly logger: PrefixLogger;
 
-    constructor(options: BaseConnectionOptions<ServiceType>, logger: Logger) {
+    constructor(options: BaseConnectionOptions<ServiceType>, logger: PrefixLogger) {
         this.id = options.id;
         this.ip = options.ip;
         this.server = options.server;

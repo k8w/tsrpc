@@ -1,5 +1,5 @@
 import { ApiService, TransportDataUtil } from "tsrpc-base-client";
-import { ApiReturn, BaseServiceType, Logger, TsrpcError, TsrpcErrorData, TsrpcErrorType } from "tsrpc-proto";
+import { ApiReturn, BaseServiceType, TsrpcError, TsrpcErrorData, TsrpcErrorType } from "tsrpc-proto";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { BaseCall, BaseCallOptions } from "./BaseCall";
 
@@ -36,7 +36,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
      */
     readonly req: Req;
 
-    constructor(options: ApiCallOptions<Req, ServiceType>, logger?: Logger) {
+    constructor(options: ApiCallOptions<Req, ServiceType>, logger?: PrefixLogger) {
         super(options, logger ?? new PrefixLogger({
             logger: options.conn.logger,
             prefixs: [`[Api|${options.service.name}]${options.sn !== undefined ? ` SN=${options.sn}` : ''}`]
