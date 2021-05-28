@@ -124,18 +124,21 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
      */
     async broadcastMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], connIds?: string[]): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         if (this.status !== ServerStatus.Opened) {
+            this.logger.warn('[BroadcastMsgErr]', 'Server not open');
             return { isSucc: false, errMsg: 'Server not open' };
         }
 
         // GetService
         let service = this.serviceMap.msgName2Service[msgName as string];
         if (!service) {
+            this.logger.warn('[BroadcastMsgErr]', 'Invalid msg name: ' + msgName);
             return { isSucc: false, errMsg: 'Invalid msg name: ' + msgName };
         }
 
         // Encode
         let opEncode = TransportDataUtil.encodeServerMsg(this.tsbuffer, service, msg);
         if (!opEncode.isSucc) {
+            this.logger.warn('[BroadcastMsgErr]', opEncode.errMsg);
             return opEncode;
         }
 
