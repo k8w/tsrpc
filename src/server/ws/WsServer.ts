@@ -122,7 +122,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
      * @param connIds - `id` of target connections, `undefined` means broadcast to every connections.
      * @returns Send result, `isSucc: true` means the message buffer is sent to kernel, not represents the clients received.
      */
-    async broadcastMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], connIds?: string[]): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+    async broadcastMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], conns?: WsConnection<ServiceType>[]): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         if (this.status !== ServerStatus.Opened) {
             this.logger.warn('[BroadcastMsgErr]', 'Server not open');
             return { isSucc: false, errMsg: 'Server not open' };
@@ -143,15 +143,10 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         }
 
         let errMsgs: string[] = [];
-        let conns = (connIds ? connIds.map(v => {
-            let conn = this._id2Conn[v];
-            if (!conn) {
-                errMsgs.push(`Error connId '${v}'`);
-            }
-            return conn;
-        }).filter(v => !!v) : this.connections) as WsConnection<ServiceType>[];
-
-        this.options.logMsg && this.logger.log('[BroadcastMsg]', connIds ? connIds.join(',') : '*', msg);
+        this.options.logMsg && this.logger.log('[BroadcastMsg]', conns ? conns.map(v => v.id).join(',') : '*', msg);
+        if (!conns) {
+            conns = this.connections;
+        }
 
         // Batch send
         return Promise.all(conns.map(async conn => {

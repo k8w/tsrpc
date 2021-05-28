@@ -287,7 +287,7 @@ describe('WS Server & Client basic', function () {
             client1.listenMsg('Chat', msgHandler);
             client2.listenMsg('Chat', msgHandler);
 
-            server.broadcastMsg('Chat', msg, server.connections.map(v => v.id));
+            server.broadcastMsg('Chat', msg, server.connections.slice());
         })
     })
 
