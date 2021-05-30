@@ -196,11 +196,11 @@ export enum WsClientStatus {
 }
 
 export interface WsClientEventData {
-    // When connection status changed
+    /** When connection status changed */
     StatusChange: {
         newStatus: WsClientStatus
     },
 
-    // When connection comes to closed from opened (not manually).
+    /** When connection comes to closed from opened (not manually) */
     LostConnection: undefined
 }
