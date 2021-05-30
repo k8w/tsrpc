@@ -121,7 +121,7 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
                 ws.onopen = ws.onclose = ws.onmessage = ws.onerror = undefined as any;
                 this._ws = undefined;
 
-                let isConnecting = !!this._promiseConnect;
+                let isFromConnecting = !!this._promiseConnect;
                 if (this._promiseConnect) {
                     this._promiseConnect = undefined;
                     rs({
@@ -138,7 +138,7 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
                     this.logger?.log('Disconnected succ', `code=${e.code} reason=${e.reason}`);
                 }
                 // 已连接上 非主动关闭 触发掉线
-                else if (!isConnecting) {
+                else if (!isFromConnecting) {
                     this.logger?.log(`Lost connection to ${this.options.server}`, `code=${e.code} reason=${e.reason}`);
                     this.emit('LostConnection', undefined);
                 }
