@@ -99,35 +99,28 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
                 this._promiseConnect = undefined;
                 ws.onopen = undefined as any;
                 this._ws = ws;
-                this.logger?.log('Connected succ');
+                this.logger?.log('WebSocket connection to server successful');
                 rs({ isSucc: true });
                 this.flows.postConnectFlow.exec({}, this.logger);
             };
 
             ws.onerror = e => {
                 this.logger?.error('[WebSocket Error]', e.message);
-                // 还在连接中，则连接失败
-                if (this._promiseConnect) {
-                    this._promiseConnect = undefined;
-                    rs({
-                        isSucc: false,
-                        errMsg: e.message
-                    });
-                }
             }
 
             ws.onclose = e => {
+                let isConnected = !!this._ws;
+
                 // 清空WebSocket Listener
                 ws.onopen = ws.onclose = ws.onmessage = ws.onerror = undefined as any;
                 this._ws = undefined;
 
                 // 连接中，返回连接失败
-                let isConnecting = !!this._promiseConnect;
                 if (this._promiseConnect) {
                     this._promiseConnect = undefined;
                     rs({
                         isSucc: false,
-                        errMsg: e.reason ? `Error: ${e.reason}` : 'Network Error'
+                        errMsg: 'WebSocket connection to server failed'
                     });
                 }
 
@@ -139,12 +132,12 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
                     this.logger?.log('Disconnected succ', `code=${e.code} reason=${e.reason}`);
                 }
                 // 非 disconnect 中，意外断开
-                else if (!isConnecting) {
+                else if (isConnected) {
                     this.logger?.log(`Lost connection to ${this.options.server}`, `code=${e.code} reason=${e.reason}`);
                 }
 
-                // postDisconnectFlow，仅从连接状态断开时触发，所以 isConnecting 不触发
-                if (!isConnecting) {
+                // postDisconnectFlow，仅从连接状态断开时触发
+                if (isConnected) {
                     this.flows.postDisconnectFlow.exec({
                         reason: e.reason,
                         isByClient: isDisconnecting
