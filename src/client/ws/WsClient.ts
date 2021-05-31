@@ -92,6 +92,17 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
             return { isSucc: true };
         }
 
+        // Pre Flow
+        let pre = await this.flows.preConnectFlow.exec({}, this.logger);
+        // Pre return
+        if (pre?.return) {
+            return pre.return;
+        }
+        // Canceled
+        if (!pre) {
+            return new Promise(rs => { });
+        }
+
         let ws = new WebSocket(this.options.server);
         this.logger?.log(`Start connecting ${this.options.server}...`)
         this._promiseConnect = new Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>(rs => {
@@ -125,7 +136,7 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
                 }
 
                 // disconnect中，返回成功
-                let isDisconnecting = !!this._rsDisconnecting;
+                let isManual = !!this._rsDisconnecting;
                 if (this._rsDisconnecting) {
                     this._rsDisconnecting();
                     this._rsDisconnecting = undefined;
@@ -140,7 +151,7 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
                 if (isConnected) {
                     this.flows.postDisconnectFlow.exec({
                         reason: e.reason,
-                        isByClient: isDisconnecting
+                        isManual: isManual
                     }, this.logger);
                 }
             };
