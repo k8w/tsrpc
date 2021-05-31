@@ -8,3 +8,4 @@ coverage
 docs
 temp
 lib
+.ds_store
