@@ -3,6 +3,7 @@ import 'k8w-extend-native';
 export * from 'tsrpc-base-client';
 export * from 'tsrpc-proto';
 export * from './client/http/HttpClient';
+export * from './client/ws/WsClient';
 export * from './server/base/ApiCall';
 // Base
 export * from './server/base/BaseCall';
