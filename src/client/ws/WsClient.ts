@@ -1,6 +1,7 @@
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PendingApiItem, TransportOptions } from "tsrpc-base-client";
 import { BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
 import WebSocket from 'ws';
+import { TerminalColorLogger } from "../../server/models/TerminalColorLogger";
 
 /**
  * Client for TSRPC WebSocket Server.
@@ -190,12 +191,13 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
 
 const defaultWsClientOptions: WsClientOptions = {
     ...defaultBaseClientOptions,
-    server: 'ws://localhost:3000'
+    server: 'ws://localhost:3000',
+    logger: new TerminalColorLogger(),
 }
 
 export interface WsClientOptions extends BaseClientOptions {
     /** Server URL */
-    server: string;
+    server: string,
 }
 
 export enum WsClientStatus {

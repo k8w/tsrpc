@@ -1,6 +1,6 @@
 {
   "name": "tsrpc",
-  "version": "3.0.0-dev.14",
+  "version": "3.0.0-dev.15",
   "description": "TSRPC 3.x (both support HTTP and WebSocket)",
   "main": "index.cjs",
   "exports": {

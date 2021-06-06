@@ -3,6 +3,7 @@ import https from "https";
 import { EncodeOutput } from "tsbuffer";
 import { ApiService, BaseClient, BaseClientOptions, defaultBaseClientOptions, MsgService, PendingApiItem, TransportDataUtil, TransportOptions } from "tsrpc-base-client";
 import { ApiReturn, BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
+import { TerminalColorLogger } from "../../server/models/TerminalColorLogger";
 
 /**
  * Client for TSRPC HTTP Server.
@@ -188,6 +189,7 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
 const defaultHttpClientOptions: HttpClientOptions = {
     ...defaultBaseClientOptions,
     server: 'http://localhost:3000',
+    logger: new TerminalColorLogger(),
     json: false,
     jsonPrune: true
 }
