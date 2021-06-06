@@ -57,10 +57,13 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
     }
 
     get status(): ConnectionStatus {
-        return {
-            [WebSocket.CLOSED]: ConnectionStatus.Closed,
-            [WebSocket.CLOSING]: ConnectionStatus.Closing
-        }[this.ws.readyState] || ConnectionStatus.Opened;
+        if (this.ws.readyState === WebSocket.CLOSED) {
+            return ConnectionStatus.Closed;
+        }
+        if (this.ws.readyState === WebSocket.CLOSING) {
+            return ConnectionStatus.Closing;
+        }
+        return ConnectionStatus.Opened;
     }
 
     /**
