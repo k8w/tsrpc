@@ -208,6 +208,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             return;
         }
 
+        this.options.debugBuf && conn.logger.debug('[RecvBuf]', `length=${buf.length}`, buf);
+
         // postRecvBufferFlow
         let opPreRecvBuffer = await this.flows.preRecvBufferFlow.exec({ conn: conn, buf: buf }, conn.logger);
         if (!opPreRecvBuffer) {
