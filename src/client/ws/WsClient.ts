@@ -192,7 +192,7 @@ export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<Se
 const defaultWsClientOptions: WsClientOptions = {
     ...defaultBaseClientOptions,
     server: 'ws://localhost:3000',
-    logger: new TerminalColorLogger(),
+    // logger: new TerminalColorLogger(),
 }
 
 export interface WsClientOptions extends BaseClientOptions {

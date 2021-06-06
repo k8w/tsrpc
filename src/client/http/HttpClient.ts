@@ -189,7 +189,7 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<
 const defaultHttpClientOptions: HttpClientOptions = {
     ...defaultBaseClientOptions,
     server: 'http://localhost:3000',
-    logger: new TerminalColorLogger(),
+    // logger: new TerminalColorLogger(),
     json: false,
     jsonPrune: true
 }
