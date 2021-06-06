@@ -1,6 +1,6 @@
 {
   "name": "tsrpc",
-  "version": "3.0.0-dev.12",
+  "version": "3.0.0-dev.13",
   "description": "TSRPC 3.x (both support HTTP and WebSocket)",
   "main": "index.cjs",
   "exports": {
@@ -57,7 +57,7 @@
   "dependencies": {
     "colors": "^1.3.3",
     "tsbuffer": "^2.0.2-dev.3",
-    "tsrpc-base-client": "^1.0.2-dev.25",
+    "tsrpc-base-client": "^1.0.2-dev.26",
     "tsrpc-proto": "^1.3.3-dev.3",
     "uuid": "^3.4.0",
     "ws": "^7.4.6"
