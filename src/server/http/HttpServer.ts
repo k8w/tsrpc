@@ -345,7 +345,7 @@ export const defaultHttpServerOptions: HttpServerOptions<any> = {
     ...defaultBaseServerOptions,
     port: 3000,
     cors: process.env['NODE_ENV'] === 'production' ? undefined : '*',
-    jsonEnabled: true,
+    jsonEnabled: false,
     jsonHostPath: '/',
     jsonPrune: true
 
