@@ -86,7 +86,7 @@ export class HttpConnection<ServiceType extends BaseServiceType = any> extends B
 
         // 有Reason代表是异常关闭
         if (reason) {
-            this.logger.warn(`Conn closed unexpectly. method=${this.httpReq.method}, url=${this.httpReq.url}, reason=${reason}`);
+            this.logger.warn(this.httpReq.method, this.httpReq.url, reason);
         }
         reason && this.httpRes.setHeader('X-TSRPC-Close-Reason', reason);
         this.httpRes.end();

@@ -450,7 +450,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * By default, it will return "Input Buffer Error" .
      */
     onInputBufferError(errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) {
-        conn.logger.error(`[InputBufferError] ${errMsg} length = ${buf.length}`, buf.subarray(0, 16))
+        this.options.debugBuf && conn.logger.error(`[InputBufferError] ${errMsg} length = ${buf.length}`, buf.subarray(0, 16))
         conn.close('Input Buffer Error');
     }
 
