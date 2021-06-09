@@ -4,7 +4,7 @@ import { PrefixLogger } from "../models/PrefixLogger";
 import { ApiCall } from "./ApiCall";
 import { BaseServer } from "./BaseServer";
 
-export interface BaseConnectionOptions<ServiceType extends BaseServiceType> {
+export interface BaseConnectionOptions<ServiceType extends BaseServiceType = any> {
     /** Created by server, each Call has a unique id. */
     id: string;
     /** Client IP address */
