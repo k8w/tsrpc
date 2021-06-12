@@ -1,13 +1,12 @@
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PendingApiItem, TransportOptions } from "tsrpc-base-client";
 import { BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
 import WebSocket from 'ws';
-import { TerminalColorLogger } from "../../server/models/TerminalColorLogger";
 
 /**
  * Client for TSRPC WebSocket Server.
  * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
  */
-export class WsClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
+export class WsClient<ServiceType extends BaseServiceType = any> extends BaseClient<ServiceType> {
 
     readonly type = 'LONG';
 

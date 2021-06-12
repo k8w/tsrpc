@@ -3,14 +3,13 @@ import https from "https";
 import { EncodeOutput } from "tsbuffer";
 import { ApiService, BaseClient, BaseClientOptions, defaultBaseClientOptions, MsgService, PendingApiItem, TransportDataUtil, TransportOptions } from "tsrpc-base-client";
 import { ApiReturn, BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
-import { TerminalColorLogger } from "../../server/models/TerminalColorLogger";
 
 /**
  * Client for TSRPC HTTP Server.
  * It uses native http module of NodeJS.
  * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
  */
-export class HttpClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
+export class HttpClient<ServiceType extends BaseServiceType = any> extends BaseClient<ServiceType> {
 
     readonly type = 'SHORT';
 
