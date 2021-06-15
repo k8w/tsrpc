@@ -10,7 +10,7 @@ export class WsClient<ServiceType extends BaseServiceType = any> extends BaseWsC
 
     readonly options!: Readonly<WsClientOptions>;
 
-    constructor(proto: ServiceProto<ServiceType>, options?: Partial<BaseWsClientOptions>) {
+    constructor(proto: ServiceProto<ServiceType>, options?: Partial<WsClientOptions>) {
         let wsp = new WebSocketProxy();
         super(proto, wsp, {
             ...defaultWsClientOptions,

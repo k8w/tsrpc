@@ -13,7 +13,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> extends BaseH
 
     readonly options!: Readonly<HttpClientOptions>;
 
-    constructor(proto: ServiceProto<ServiceType>, options?: Partial<BaseHttpClientOptions>) {
+    constructor(proto: ServiceProto<ServiceType>, options?: Partial<HttpClientOptions>) {
         let httpProxy = new HttpProxy;
         super(proto, httpProxy, {
             ...defaultHttpClientOptions,
