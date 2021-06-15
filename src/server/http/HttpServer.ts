@@ -140,8 +140,6 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     if (conn) {
                         await this.flows.postDisconnectFlow.exec({ conn: conn }, conn.logger)
                     }
-
-                    conn?.destroy();
                 });
             });
 

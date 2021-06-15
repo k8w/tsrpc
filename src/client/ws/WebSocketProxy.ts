@@ -2,6 +2,9 @@ import { IWebSocketProxy } from "tsrpc-base-client";
 import { Logger, TsrpcError } from "tsrpc-proto";
 import WebSocket from 'ws';
 
+/**
+ * @internal
+ */
 export class WebSocketProxy implements IWebSocketProxy {
 
     options!: {

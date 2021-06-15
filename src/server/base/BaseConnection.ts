@@ -81,16 +81,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
 
         return { isSucc: true };
     }
-
-    destroy() {
-        if (this.status === ConnectionStatus.Opened) {
-            this.close('DESTROY');
-        }
-
-        for (let key in this) {
-            this[key] = undefined as any;
-        }
-    };
 }
 
 export enum ConnectionStatus {

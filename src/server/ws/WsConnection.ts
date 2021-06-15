@@ -35,7 +35,6 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
         this.ws.onclose = async e => {
             await options.onClose(this, e.code, e.reason);
             this._rsClose?.();
-            this.destroy();
         };
         this.ws.onerror = e => { this.logger.warn('[ClientErr]', e.error) };
         this.ws.onmessage = e => {
