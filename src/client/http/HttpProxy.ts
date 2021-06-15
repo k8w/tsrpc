@@ -30,7 +30,7 @@ export class HttpProxy implements IHttpProxy {
             });
             httpRes.on('end', () => {
                 let buf: Uint8Array = Buffer.concat(data);
-                if (typeof options.data === 'string') {
+                if (options.responseType === 'text') {
                     rs({
                         isSucc: true,
                         res: buf.toString()
