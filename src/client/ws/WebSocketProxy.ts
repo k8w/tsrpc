@@ -1,5 +1,5 @@
 import { IWebSocketProxy } from "tsrpc-base-client";
-import { Logger, TsrpcError } from "tsrpc-proto";
+import { TsrpcError } from "tsrpc-proto";
 import WebSocket from 'ws';
 
 /**
@@ -7,13 +7,7 @@ import WebSocket from 'ws';
  */
 export class WebSocketProxy implements IWebSocketProxy {
 
-    options!: {
-        onOpen: () => void;
-        onClose: (code: number, reason: string) => void;
-        onError: (e: Error) => void;
-        onMessage: (data: Uint8Array | string) => void;
-        logger?: Logger;
-    }
+    options!: IWebSocketProxy['options']
 
     private _ws?: WebSocket;
     connect(server: string): void {
@@ -21,6 +15,7 @@ export class WebSocketProxy implements IWebSocketProxy {
         this._ws.onopen = this.options.onOpen;
         this._ws.onclose = e => {
             this.options.onClose(e.code, e.reason);
+            this._ws = undefined;
         }
         this._ws.onerror = e => {
             this.options.onError(e.error);
@@ -38,7 +33,8 @@ export class WebSocketProxy implements IWebSocketProxy {
         }
     }
     close(code?: number, reason?: string): void {
-        this._ws?.close(code, reason)
+        this._ws?.close(code, reason);
+        this._ws = undefined;
     }
     send(data: string | Uint8Array): Promise<{ err?: TsrpcError | undefined; }> {
         return new Promise(rs => {
