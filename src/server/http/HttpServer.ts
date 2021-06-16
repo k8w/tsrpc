@@ -301,7 +301,7 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
      * Response header value of `Access-Control-Allow-Origin`.
      * If this has any value, it would also set `Access-Control-Allow-Headers` as `*`.
      * `undefined` means no CORS header.
-     * @defaultValue When `NODE_ENV` is `production`, it is `undefined`; otherwise is `*`.
+     * @defaultValue `*`
      */
     cors?: string,
 
@@ -342,7 +342,7 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
 export const defaultHttpServerOptions: HttpServerOptions<any> = {
     ...defaultBaseServerOptions,
     port: 3000,
-    cors: process.env['NODE_ENV'] === 'production' ? undefined : '*',
+    cors: '*',
     jsonEnabled: false,
     jsonHostPath: '/',
     jsonPrune: true
