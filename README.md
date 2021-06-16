@@ -1,6 +1,10 @@
 # TSRPC
 
+EN / [中文](https://tsrpc.cn/docs/introduction)
+
 A TypeScript RPC framework with runtime type checking and binary serialization.
+
+Official site: https://tsrpc.cn
 
 ## Features
 - Runtime type checking
@@ -10,8 +14,41 @@ A TypeScript RPC framework with runtime type checking and binary serialization.
 - Optional backward-compatibility to JSON
 - High performance and reliable, verified by services over 100,000,000 users
 
+## Create Project Quickly
+```
+npx create-tsrpc-app <project-name>
+```
+
 ## Usage
-Docs and examples are coming soon...
+
+### Define Protocol (Shared)
+```ts
+export interface ReqHello {
+  name: string;
+}
+
+export interface ResHello {
+  reply: string;
+}
+```
+
+### Implement API (Server)
+```ts
+import { ApiCall } from "tsrpc";
+
+export async function ApiHello(call: ApiCall<ReqHello, ResHello>) {
+  call.succ({
+    reply: 'Hello, ' + call.req.name
+  });
+}
+```
+
+### Call API (Client)
+```ts
+let ret = await client.callApi('Hello', {
+    name: 'World'
+});
+```
 
 ## Serialization Algorithm
 The best TypeScript serialization algorithm ever.
