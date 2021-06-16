@@ -1,6 +1,5 @@
 import { BaseServiceType } from "tsrpc-proto";
-import { MsgCall } from "../..";
-import { MsgCallOptions } from "../base/MsgCall";
+import { MsgCall, MsgCallOptions } from "../base/MsgCall";
 import { WsConnection } from "./WsConnection";
 
 export interface MsgCallWsOptions<Msg, ServiceType extends BaseServiceType> extends MsgCallOptions<Msg, ServiceType> {

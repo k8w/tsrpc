@@ -4,6 +4,7 @@ export * from 'tsrpc-base-client';
 export * from 'tsrpc-proto';
 export * from './client/http/HttpClient';
 export * from './client/ws/WsClient';
+export * from './models/version';
 export * from './server/base/ApiCall';
 // Base
 export * from './server/base/BaseCall';
@@ -22,6 +23,3 @@ export * from './server/ws/ApiCallWs';
 export * from './server/ws/MsgCallWs';
 export * from './server/ws/WsConnection';
 export * from './server/ws/WsServer';
-
-/** Version of TSRPC */
-export const TSRPC_VERSION = '__TSRPC_VERSION__';
