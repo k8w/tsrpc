@@ -58,7 +58,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 httpRes.setHeader('X-Powered-By', `TSRPC ${TSRPC_VERSION}`);
                 if (this.options.cors) {
                     httpRes.setHeader('Access-Control-Allow-Origin', this.options.cors);
-                    httpRes.setHeader('Access-Control-Allow-Headers', '*');
+                    httpRes.setHeader('Access-Control-Allow-Headers', 'Content-Type,*');
                     if (httpReq.method === 'OPTIONS') {
                         httpRes.writeHead(200);
                         httpRes.end();
