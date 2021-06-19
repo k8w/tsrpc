@@ -4,7 +4,7 @@ EN / [中文](https://tsrpc.cn/docs/introduction)
 
 A TypeScript RPC framework with runtime type checking and binary serialization.
 
-Official site: https://tsrpc.cn
+Official site: https://tsrpc.cn (English version is on the way)
 
 ## Features
 - Runtime type checking
@@ -14,7 +14,7 @@ Official site: https://tsrpc.cn
 - Optional backward-compatibility to JSON
 - High performance and reliable, verified by services over 100,000,000 users
 
-## Create Project Quickly
+## Create Project Quickly and Interactively
 ```
 npx create-tsrpc-app <project-name>
 ```
@@ -49,6 +49,10 @@ let ret = await client.callApi('Hello', {
     name: 'World'
 });
 ```
+
+## Examples
+
+https://github.com/k8w/tsrpc-examples
 
 ## Serialization Algorithm
 The best TypeScript serialization algorithm ever.
