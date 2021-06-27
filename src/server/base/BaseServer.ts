@@ -428,8 +428,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @param msgName
      * @param handler
      */
-    listenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: MsgHandler<Call>): void {
+    listenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: MsgHandler<Call>): MsgHandler<Call> {
         this._msgHandlers.addHandler(msgName as string, handler);
+        return handler;
     };
     /**
      * Remove a message handler
