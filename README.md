@@ -16,7 +16,7 @@ Official site: https://tsrpc.cn (English version is on the way)
 
 ## Create Project Quickly and Interactively
 ```
-npx create-tsrpc-app <project-name>
+npx create-tsrpc-app@latest <project-name>
 ```
 
 ## Usage
