@@ -14,9 +14,9 @@ Official site: https://tsrpc.cn (English version is on the way)
 - Optional backward-compatibility to JSON
 - High performance and reliable, verified by services over 100,000,000 users
 
-## Create Project Quickly and Interactively
+## Create Full-stack Project
 ```
-npx create-tsrpc-app@latest <project-name>
+npx create-tsrpc-app@latest
 ```
 
 ## Usage
