@@ -45,13 +45,13 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
      */
     async sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
         if (this.type === 'SHORT') {
-            this.logger.warn('[SendMsgErr]', 'Short connection cannot sendMsg');
+            this.logger.warn('[SendMsgErr]', `[${msgName}]`, 'Short connection cannot sendMsg');
             return { isSucc: false, errMsg: 'Short connection cannot sendMsg' }
         }
 
         let service = this.server.serviceMap.msgName2Service[msgName as string];
         if (!service) {
-            this.logger.warn('[SendMsgErr]', `Invalid msg name: ${msgName}`);
+            this.logger.warn('[SendMsgErr]', `[${msgName}]`, `Invalid msg name: ${msgName}`);
             return { isSucc: false, errMsg: `Invalid msg name: ${msgName}` }
         }
 
@@ -65,12 +65,12 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType> {
         // Encode
         let opServerOutput = TransportDataUtil.encodeServerMsg(this.server.tsbuffer, service, msg);
         if (!opServerOutput.isSucc) {
-            this.logger.warn('[SendMsgErr]', opServerOutput.errMsg);
+            this.logger.warn('[SendMsgErr]', `[${msgName}]`, opServerOutput.errMsg);
             return opServerOutput;
         }
 
         // Do send!
-        this.server.options.logMsg && this.logger.log('[SendMsg]', msg);
+        this.server.options.logMsg && this.logger.log('[SendMsg]', `[${msgName}]`, msg);
         let opSend = await this.sendBuf(opServerOutput.buf);
         if (!opSend.isSucc) {
             return opSend;
