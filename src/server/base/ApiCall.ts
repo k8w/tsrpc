@@ -106,7 +106,9 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         this._return = ret;
         let opSend = await (sendReturn ? sendReturn(ret) : this._sendReturn(ret));
         if (!opSend.isSucc) {
-            this.logger.log('[SendReturnErr]', opSend.errMsg, ret);
+            this.logger.error('[SendReturnErr]', opSend.errMsg, ret);
+            this._return = undefined;
+            this.server.onInternalServerError({ message: opSend.errMsg, name: 'SendReturnErr' }, this)
             return;
         }
 
