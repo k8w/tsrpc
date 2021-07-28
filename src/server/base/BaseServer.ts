@@ -296,7 +296,6 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         // 未找到ApiHandler，且未进行任何输出
         else {
             call.error(`Unhandled API: ${call.service.name}`, { code: 'UNHANDLED_API', type: TsrpcErrorType.ServerError });
-
         }
 
         // Post Flow
@@ -308,9 +307,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
 
         // Destroy call
-        if (!call.return) {
-            this.onInternalServerError({ message: 'API not return anything' }, call);
-        }
+        // if (!call.return) {
+        //     this.onInternalServerError({ message: 'API not return anything' }, call);
+        // }
     }
 
     protected async _onMsgCall(call: MsgCall) {
