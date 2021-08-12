@@ -107,8 +107,10 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         let opSend = await (sendReturn ? sendReturn(ret) : this._sendReturn(ret));
         if (!opSend.isSucc) {
             this.logger.error('[SendReturnErr]', opSend.errMsg, ret);
-            this._return = undefined;
-            this.server.onInternalServerError({ message: opSend.errMsg, name: 'SendReturnErr' }, this)
+            if (ret.isSucc || ret.err.type === TsrpcErrorType.ApiError) {
+                this._return = undefined;
+                this.server.onInternalServerError({ message: opSend.errMsg, name: 'SendReturnErr' }, this)
+            }
             return;
         }
 
