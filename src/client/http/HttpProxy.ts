@@ -54,7 +54,9 @@ export class HttpProxy implements IHttpProxy {
                 })
             });
         });
-        httpReq.end(options.data);
+
+        let buf = options.data;
+        httpReq.end(typeof buf === 'string' ? buf : Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
 
         let abort = httpReq.abort.bind(httpReq);
 
