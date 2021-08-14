@@ -226,6 +226,41 @@ describe('WS Server & Client basic', function () {
         })
     });
 
+    it('listen msg by regexp', async function () {
+        let server = new WsServer(getProto(), {
+            port: 3001,
+            logger: serverLogger,
+            // debugBuf: true
+        });
+
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            // debugBuf: true
+        });
+        await client.connect();
+
+        return new Promise(rs => {
+            let msg: MsgChat = {
+                channel: 123,
+                userName: 'fff',
+                content: '666',
+                time: Date.now()
+            };
+
+            client.listenMsg(/.*/, async (msg1, msgName: string) => {
+                assert.deepStrictEqual(msg1, msg);
+                assert.deepStrictEqual(msgName, 'Chat');
+                await server.stop();
+                rs();
+            });
+
+            server.connections[0].sendMsg('Chat', msg);
+        })
+    });
+
     it('server broadcast msg', async function () {
         let server = new WsServer(getProto(), {
             port: 3001,
@@ -257,9 +292,10 @@ describe('WS Server & Client basic', function () {
 
         await new Promise<void>(rs => {
             let recvClients: WsClient<any>[] = [];
-            let msgHandler = async (msg1: MsgChat, client: WsClient<any>) => {
+            let msgHandler = async (msg1: MsgChat, msgName: string, client: WsClient<any>) => {
                 recvClients.push(client);
                 assert.deepStrictEqual(msg1, msg);
+                assert.deepStrictEqual(msgName, 'Chat')
                 if (recvClients.some(v => v === client1) && recvClients.some(v => v === client2)) {
                     client1.unlistenMsgAll('Chat');
                     client2.unlistenMsgAll('Chat');
@@ -275,9 +311,10 @@ describe('WS Server & Client basic', function () {
 
         await new Promise<void>(rs => {
             let recvClients: WsClient<any>[] = [];
-            let msgHandler = async (msg1: MsgChat, client: WsClient<any>) => {
+            let msgHandler = async (msg1: MsgChat, msgName: string, client: WsClient<any>) => {
                 recvClients.push(client);
                 assert.deepStrictEqual(msg1, msg);
+                assert.deepStrictEqual(msgName, 'Chat');
                 if (recvClients.some(v => v === client1) && recvClients.some(v => v === client2)) {
                     await server.stop();
                     rs();
