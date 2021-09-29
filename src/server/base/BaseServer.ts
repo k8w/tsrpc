@@ -1,8 +1,8 @@
-import 'colors';
+import chalk from "chalk";
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
 import { Flow, MsgHandlerManager, MsgService, ParsedServerInput, ServiceMap, ServiceMapUtil, TransportDataUtil } from 'tsrpc-base-client';
-import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
+import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, ServerOutputData, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
 import { ApiCall } from './ApiCall';
 import { BaseConnection } from './BaseConnection';
@@ -284,7 +284,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             try {
                 await handler(call);
             }
-            catch (e) {
+            catch (e: any) {
                 if (e instanceof TsrpcError) {
                     call.error(e);
                 }
@@ -389,13 +389,13 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                 // ApiName同名
                 apiHandler = handlerModule['Api' + handlerName] || handlerModule.default;
             }
-            catch (e) {
+            catch (e: any) {
                 requireError = e;
             }
 
             if (!apiHandler) {
                 output.fail.push(svc.name);
-                let errMsg = `Auto implement api fail: [${svc.name}]`;
+                let errMsg = `Implement ${chalk.cyan(`Api${svc.name}`)} failed:`;
 
                 // Fail info
                 if (requireError) {
@@ -416,6 +416,10 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
             this.implementApi(svc.name, apiHandler);
             output.succ.push(svc.name);
+        }
+
+        if (output.fail.length) {
+            this.logger.error(`${output.fail.length} API implemented failed:\n` + output.fail.map(v => `  × ${v}`))
         }
 
         return output;
@@ -449,8 +453,31 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * Event when the server cannot parse input buffer to api/msg call.
      * By default, it will return "Input Buffer Error" .
      */
-    onInputBufferError(errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) {
+    async onInputBufferError(errMsg: string, conn: BaseConnection<ServiceType>, buf: Uint8Array) {
         this.options.debugBuf && conn.logger.error(`[InputBufferError] ${errMsg} length = ${buf.length}`, buf.subarray(0, 16))
+
+        // Short conn, send apiReturn with error
+        if (conn.type === 'SHORT') {
+            // Encode
+            let serverOutputData: ServerOutputData = {
+                error: {
+                    message: 'Invalid input buffer, please check the version of service proto.',
+                    /**
+                     * @defaultValue ApiError
+                     */
+                    type: TsrpcErrorType.ServerError,
+                    code: 'INPUT_BUF_ERR'
+                }
+            };
+            let opEncode = TransportDataUtil.tsbuffer.encode(serverOutputData, 'ServerOutputData');
+            if (opEncode.isSucc) {
+                let opSend = await conn.sendBuf(opEncode.buf);
+                if (opSend.isSucc) {
+                    return;
+                }
+            }
+        }
+
         conn.close('Input Buffer Error');
     }
 

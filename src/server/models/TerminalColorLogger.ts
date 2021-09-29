@@ -1,4 +1,4 @@
-import 'colors';
+import chalk from "chalk";
 import { Logger } from "tsrpc-proto";
 
 export interface TerminalColorLoggerOptions {
@@ -36,19 +36,19 @@ export class TerminalColorLogger implements Logger {
     }
 
     debug(...args: any[]) {
-        console.debug.call(console, `${this._pid}${this._time()}`.gray, '[DEBUG]'.cyan, ...args);
+        console.debug.call(console, chalk.gray(`${this._pid}${this._time()}`), chalk.cyan('[DEBUG]'), ...args);
     }
 
     log(...args: any[]) {
-        console.log.call(console, `${this._pid}${this._time()}`.gray, '[INFO]'.green, ...args);
+        console.log.call(console, chalk.gray(`${this._pid}${this._time()}`), chalk.green('[INFO]'), ...args);
     }
 
     warn(...args: any[]) {
-        console.warn.call(console, `${this._pid}${this._time()}`.gray, '[WARN]'.yellow, ...args);
+        console.warn.call(console, chalk.gray(`${this._pid}${this._time()}`), chalk.yellow('[WARN]'), ...args);
     }
 
     error(...args: any[]) {
-        console.error.call(console, `${this._pid}${this._time()}`.gray, '[ERROR]'.red, ...args);
+        console.error.call(console, chalk.gray(`${this._pid}${this._time()}`), chalk.red('[ERROR]'), ...args);
     }
 
 }

@@ -1,4 +1,5 @@
 import { assert } from 'chai';
+import chalk from 'chalk';
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { BaseServer, TerminalColorLogger } from '../../src';
@@ -11,11 +12,11 @@ import { MsgChat } from '../proto/MsgChat';
 import { serviceProto, ServiceType } from '../proto/serviceProto';
 
 const serverLogger = new PrefixLogger({
-    prefixs: [' Server '.bgGreen.white],
+    prefixs: [chalk.bgGreen.white(' Server ')],
     logger: new TerminalColorLogger({ pid: 'Server' })
 });
 const clientLogger = new PrefixLogger({
-    prefixs: [' Client '.bgBlue.white],
+    prefixs: [chalk.bgBlue.white(' Client ')],
     logger: new TerminalColorLogger({ pid: 'Client' })
 })
 

@@ -1,4 +1,5 @@
 import { assert } from 'chai';
+import chalk from 'chalk';
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { BaseServer, TerminalColorLogger, WsConnection } from '../../src';
@@ -11,11 +12,11 @@ import { MsgChat } from '../proto/MsgChat';
 import { serviceProto, ServiceType } from '../proto/serviceProto';
 
 const serverLogger = new PrefixLogger({
-    prefixs: [' Server '.bgGreen.white],
+    prefixs: [chalk.bgGreen.white(' Server ')],
     logger: new TerminalColorLogger({ pid: 'Server' })
 });
 const clientLogger = new PrefixLogger({
-    prefixs: [' Client '.bgBlue.white],
+    prefixs: [chalk.bgBlue.white(' Client ')],
     logger: new TerminalColorLogger({ pid: 'Client' })
 })
 
@@ -292,7 +293,7 @@ describe('WS Server & Client basic', function () {
 
         await new Promise<void>(rs => {
             let recvClients: WsClient<any>[] = [];
-            let msgHandler = async (msg1: MsgChat, msgName: string, client: WsClient<any>) => {
+            let msgHandler = async (client: WsClient<any>, msg1: MsgChat, msgName: string) => {
                 recvClients.push(client);
                 assert.deepStrictEqual(msg1, msg);
                 assert.deepStrictEqual(msgName, 'Chat')
@@ -303,15 +304,15 @@ describe('WS Server & Client basic', function () {
                 }
             }
 
-            client1.listenMsg('Chat', msgHandler);
-            client2.listenMsg('Chat', msgHandler);
+            client1.listenMsg('Chat', msgHandler.bind(null, client1));
+            client2.listenMsg('Chat', msgHandler.bind(null, client2));
 
             server.broadcastMsg('Chat', msg);
         })
 
         await new Promise<void>(rs => {
             let recvClients: WsClient<any>[] = [];
-            let msgHandler = async (msg1: MsgChat, msgName: string, client: WsClient<any>) => {
+            let msgHandler = async (client: WsClient<any>, msg1: MsgChat, msgName: string) => {
                 recvClients.push(client);
                 assert.deepStrictEqual(msg1, msg);
                 assert.deepStrictEqual(msgName, 'Chat');
@@ -321,8 +322,8 @@ describe('WS Server & Client basic', function () {
                 }
             }
 
-            client1.listenMsg('Chat', msgHandler);
-            client2.listenMsg('Chat', msgHandler);
+            client1.listenMsg('Chat', msgHandler.bind(null, client1));
+            client2.listenMsg('Chat', msgHandler.bind(null, client2));
 
             server.broadcastMsg('Chat', msg, server.connections.slice());
         })
@@ -888,4 +889,30 @@ describe('WS Flows', function () {
 
         await server.stop();
     });
+
+    it('onInputBufferError', async function () {
+        let server = new WsServer(getProto(), {
+            logger: serverLogger
+        });
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            logger: clientLogger
+        });
+        await client.connect();
+        client.flows.preSendBufferFlow.push(v => {
+            for (let i = 0; i < v.buf.length; ++i) {
+                v.buf[i] += 1;
+            }
+            return v;
+        });
+
+        let ret = await client.callApi('Test', { name: 'XXX' });
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError('Lost connection to server', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
+        })
+
+        await server.stop();
+    })
 })

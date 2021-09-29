@@ -1,4 +1,5 @@
 import { assert } from 'chai';
+import chalk from 'chalk';
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { ApiCall, BaseServer, HttpConnection, MsgCall, TerminalColorLogger } from '../../src';
@@ -12,11 +13,11 @@ import { ReqTest, ResTest } from '../proto/PtlTest';
 import { serviceProto, ServiceType } from '../proto/serviceProto';
 
 const serverLogger = new PrefixLogger({
-    prefixs: [' Server '.bgGreen.white],
+    prefixs: [chalk.bgGreen.white(' Server ')],
     logger: new TerminalColorLogger({ pid: 'Server' })
 });
 const clientLogger = new PrefixLogger({
-    prefixs: [' Client '.bgBlue.white],
+    prefixs: [chalk.bgBlue.white(' Client ')],
     logger: new TerminalColorLogger({ pid: 'Client' })
 })
 
@@ -846,4 +847,32 @@ describe('HTTP Flows', function () {
 
         await server.stop();
     });
+
+    it('onInputBufferError', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        });
+        client.flows.preSendBufferFlow.push(v => {
+            for (let i = 0; i < v.buf.length; ++i) {
+                v.buf[i] += 1;
+            }
+            return v;
+        });
+
+        let ret = await client.callApi('Test', { name: 'XXX' });
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError('Invalid input buffer, please check the version of service proto.', {
+                type: TsrpcErrorType.ServerError,
+                code: 'INPUT_BUF_ERR'
+            })
+        })
+
+        await server.stop();
+    })
 })

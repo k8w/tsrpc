@@ -180,7 +180,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
         try {
             req = JSON.parse(jsonStr);
         }
-        catch (e) {
+        catch (e: any) {
             conn.logger.error(`Parse JSON Error: ${e.message}, jsonStr=` + JSON.stringify(jsonStr));
             conn.httpRes.statusCode = 500;
             this._returnJSON(conn, {

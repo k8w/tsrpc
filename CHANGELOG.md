@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.0.6-dev.0]
+### Added
+- "Server started at ..." 前增加 "ERROR：X API registered failed."
+### Changed
+- `HttpServer.onInputBufferError` 改为 `call.error('InputBufferError')`
+- 替换 `colors` 为 `chalk`
+
 ## [3.0.5] - 2021-08-14
 ### Added
 - Optimize log for `sendMsg` and `broadcastMsg`
