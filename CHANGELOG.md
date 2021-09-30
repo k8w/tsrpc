@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [3.0.6-dev.0]
+## [3.0.6] - 2021-09-30
 ### Added
 - "Server started at ..." 前增加 "ERROR：X API registered failed."
 ### Changed
