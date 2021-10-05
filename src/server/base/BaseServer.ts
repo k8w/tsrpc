@@ -419,7 +419,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
 
         if (output.fail.length) {
-            this.logger.error(`${output.fail.length} API implemented failed:\n` + output.fail.map(v => `  × ${v}`))
+            this.logger.error(chalk.red(`${output.fail.length} API implemented failed:\n` + output.fail.map(v => `  × ${v}`).join('\n')))
         }
 
         return output;

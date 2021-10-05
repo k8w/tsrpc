@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.0.7] - 2021-10-06
+### Added
+- Optimize log color
 ## [3.0.6] - 2021-09-30
 ### Added
 - "Server started at ..." 前增加 "ERROR：X API registered failed."
