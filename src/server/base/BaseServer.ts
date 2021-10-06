@@ -374,7 +374,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             // get api last name
             let match = svc.name.match(/^(.+\/)*(.+)$/);
             if (!match) {
-                this.logger.warn('Invalid apiName: ' + svc.name);
+                this.logger.error('Invalid apiName: ' + svc.name);
                 output.fail.push(svc.name);
                 continue;
             }
@@ -395,7 +395,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
             if (!apiHandler) {
                 output.fail.push(svc.name);
-                let errMsg = `Implement ${chalk.cyan(`Api${svc.name}`)} failed:`;
+                let errMsg = chalk.red(`Implement ${chalk.cyan.underline(`Api${svc.name}`)} failed:`);
 
                 // Fail info
                 if (requireError) {
@@ -410,7 +410,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                     errMsg += `\n  |- Cannot find export { ${'Api' + handlerName} } at: ${modulePath}`;
                 }
 
-                this.logger.warn(errMsg);
+                this.logger.error(errMsg);
                 continue;
             }
 
@@ -419,7 +419,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
 
         if (output.fail.length) {
-            this.logger.error(chalk.red(`${output.fail.length} API implemented failed:\n` + output.fail.map(v => `  × ${v}`).join('\n')))
+            this.logger.error(chalk.red(`${output.fail.length} API implemented failed: ` + output.fail.map(v => chalk.cyan.underline(v)).join(' ')))
         }
 
         return output;

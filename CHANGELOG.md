@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.0.8] - 2021-10-06
+### Added
+- Optimize log level
+
 ## [3.0.7] - 2021-10-06
 ### Added
 - Optimize log color
