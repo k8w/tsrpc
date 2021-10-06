@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.0.9] - 2021-10-06
+### Changed
+- `strictNullChecks` 默认改为 `false`
+
 ## [3.0.8] - 2021-10-06
 ### Added
 - Optimize log level

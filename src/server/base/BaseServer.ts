@@ -550,7 +550,7 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
     // TSBuffer相关
     /**
      * Whether to strictly distinguish between `null` and `undefined` when encoding, decoding, and type checking.
-     * @defaultValue true
+     * @defaultValue false
      */
     strictNullChecks: boolean,
 
@@ -600,7 +600,7 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
 }
 
 export const defaultBaseServerOptions: BaseServerOptions<any> = {
-    strictNullChecks: true,
+    strictNullChecks: false,
     apiTimeout: 30000,
     logger: new TerminalColorLogger,
     logReqBody: true,
