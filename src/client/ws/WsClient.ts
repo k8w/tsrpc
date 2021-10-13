@@ -6,7 +6,7 @@ import { WebSocketProxy } from "./WebSocketProxy";
  * Client for TSRPC WebSocket Server.
  * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
  */
-export class WsClient<ServiceType extends BaseServiceType = any> extends BaseWsClient<ServiceType> {
+export class WsClient<ServiceType extends BaseServiceType> extends BaseWsClient<ServiceType> {
 
     readonly options!: Readonly<WsClientOptions>;
 

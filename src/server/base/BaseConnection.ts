@@ -12,7 +12,7 @@ export interface BaseConnectionOptions<ServiceType extends BaseServiceType = any
     server: BaseServer<ServiceType>
 }
 
-export abstract class BaseConnection<ServiceType extends BaseServiceType> {
+export abstract class BaseConnection<ServiceType extends BaseServiceType = any> {
     /** It is long connection or short connection */
     abstract readonly type: 'LONG' | 'SHORT';
 

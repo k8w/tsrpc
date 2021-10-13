@@ -5,7 +5,7 @@ export default [
         input: './src/index.ts',
         output: [{
             format: 'cjs',
-            file: './dist/index.cjs',
+            file: './dist/index.js',
             banner: require('./scripts/copyright')
         }],
         plugins: [

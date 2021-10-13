@@ -9,9 +9,9 @@ const path = require('path');
     fs.writeFileSync(path.resolve(__dirname, '../dist/index.d.ts'), content, 'utf-8');
 })();
 
-// replace __TSRPC_VERSION__from index.cjs/mjs
+// replace __TSRPC_VERSION__from index.js/mjs
 [
-    path.resolve(__dirname, '../dist/index.cjs'),
+    path.resolve(__dirname, '../dist/index.js'),
     path.resolve(__dirname, '../dist/index.mjs')
 ].forEach(filepath => {
     let content = fs.readFileSync(filepath, 'utf-8');

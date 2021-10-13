@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.0.10] - 2021-10-13
+- `BaseConnection` 泛型参数默认为 `any`，便于扩展类型
+- `HttpClient` and `WsClient` no longer have default type param
+
 ## [3.0.9] - 2021-10-06
 ### Changed
 - `strictNullChecks` 默认改为 `false`
