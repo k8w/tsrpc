@@ -1,6 +1,6 @@
 {
   "name": "tsrpc",
-  "version": "3.0.10",
+  "version": "3.0.11-dev.0",
   "description": "A TypeScript RPC Framework, with runtime type checking and built-in serialization, support both HTTP and WebSocket.",
   "main": "index.js",
   "exports": {
@@ -13,6 +13,7 @@
   },
   "scripts": {
     "test": "npx mocha",
+    "genTestProto": "npx tsrpc-cli@latest proto --input test/proto --output test/proto/serviceProto.ts",
     "coverage": "nyc mocha test/**/*.test.ts && start coverage\\index.html",
     "build": "npm run build:js && npm run build:dts && npm run build:doc && node scripts/postBuild && cp package.json LICENSE README.md dist/",
     "build:js": "rm -rf dist && npx rollup -c",
@@ -37,15 +38,15 @@
   "author": "k8w",
   "license": "MIT",
   "devDependencies": {
-    "@microsoft/api-documenter": "^7.13.62",
-    "@microsoft/api-extractor": "^7.18.15",
+    "@microsoft/api-documenter": "^7.13.63",
+    "@microsoft/api-extractor": "^7.18.16",
     "@types/chai": "^4.2.22",
     "@types/mocha": "^8.2.3",
     "@types/node": "^15.14.9",
     "@types/uuid": "^8.3.1",
     "@types/ws": "^7.4.7",
     "chai": "^4.3.4",
-    "mocha": "^9.1.2",
+    "mocha": "^9.1.3",
     "nyc": "^15.1.0",
     "rollup": "^2.58.0",
     "rollup-plugin-typescript2": "^0.30.0",
@@ -54,11 +55,10 @@
   },
   "dependencies": {
     "chalk": "^4.1.2",
-    "tsbuffer": "~2.0.4",
-    "tsrpc-base-client": "~1.0.14",
-    "tsrpc-proto": "~1.3.4",
+    "tsrpc-base-client": "~1.0.15-dev.4",
     "uuid": "^8.3.2",
-    "ws": "^7.5.5"
+    "ws": "^7.5.5",
+    "bson": "*"
   },
   "nyc": {
     "extension": [

@@ -1,3 +1,4 @@
+import { ObjectId } from 'bson';
 import { assert } from 'chai';
 import chalk from 'chalk';
 import * as path from "path";
@@ -636,7 +637,9 @@ describe('HTTP Flows', function () {
         });
 
         client.flows.preCallApiFlow.push(v => {
-            v.req.name = 'Changed'
+            if (v.apiName !== 'ObjId') {
+                v.req.name = 'Changed'
+            }
             return v;
         });
 
@@ -680,7 +683,9 @@ describe('HTTP Flows', function () {
         });
 
         client.flows.preCallApiFlow.push(v => {
-            v.req.name = 'Changed'
+            if (v.apiName !== 'ObjId') {
+                v.req.name = 'Changed'
+            }
             return v;
         });
 
@@ -723,7 +728,9 @@ describe('HTTP Flows', function () {
         });
 
         client.flows.preCallApiFlow.push(v => {
-            v.req.name = 'Changed'
+            if (v.apiName !== 'ObjId') {
+                v.req.name = 'Changed'
+            }
             return v;
         });
 

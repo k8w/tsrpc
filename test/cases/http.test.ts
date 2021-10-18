@@ -1,3 +1,4 @@
+import { ObjectId } from 'bson';
 import { assert } from 'chai';
 import chalk from 'chalk';
 import * as path from "path";
@@ -633,7 +634,9 @@ describe('HTTP Flows', function () {
         });
 
         client.flows.preCallApiFlow.push(v => {
-            v.req.name = 'Changed'
+            if (v.apiName !== 'ObjId') {
+                v.req.name = 'Changed'
+            }
             return v;
         });
 
@@ -675,7 +678,9 @@ describe('HTTP Flows', function () {
         });
 
         client.flows.preCallApiFlow.push(v => {
-            v.req.name = 'Changed'
+            if (v.apiName !== 'ObjId') {
+                v.req.name = 'Changed'
+            }
             return v;
         });
 
@@ -716,7 +721,9 @@ describe('HTTP Flows', function () {
         });
 
         client.flows.preCallApiFlow.push(v => {
-            v.req.name = 'Changed'
+            if (v.apiName !== 'ObjId') {
+                v.req.name = 'Changed'
+            }
             return v;
         });
 
@@ -872,6 +879,28 @@ describe('HTTP Flows', function () {
                 code: 'INPUT_BUF_ERR'
             })
         })
+
+        await server.stop();
+    })
+
+    it('ObjectId', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger
+        });
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            logger: clientLogger
+        });
+
+        // ObjectId
+        let objId1 = new ObjectId();
+        let ret = await client.callApi('ObjId', {
+            id1: objId1
+        });
+        assert.strictEqual(ret.isSucc, true, ret.err?.message);
+        assert.strictEqual(objId1.toString(), ret.res!.id2.toString());
 
         await server.stop();
     })

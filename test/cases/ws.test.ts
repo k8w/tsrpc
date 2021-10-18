@@ -1,3 +1,4 @@
+import { ObjectId } from 'bson';
 import { assert } from 'chai';
 import chalk from 'chalk';
 import * as path from "path";
@@ -671,7 +672,9 @@ describe('WS Flows', function () {
         await client.connect();
 
         client.flows.preCallApiFlow.push(v => {
-            v.req.name = 'Changed'
+            if (v.apiName !== 'ObjId') {
+                v.req.name = 'Changed'
+            }
             return v;
         });
 
@@ -714,7 +717,9 @@ describe('WS Flows', function () {
         await client.connect();
 
         client.flows.preCallApiFlow.push(v => {
-            v.req.name = 'Changed'
+            if (v.apiName !== 'ObjId') {
+                v.req.name = 'Changed'
+            }
             return v;
         });
 
@@ -756,7 +761,9 @@ describe('WS Flows', function () {
         await client.connect();
 
         client.flows.preCallApiFlow.push(v => {
-            v.req.name = 'Changed'
+            if (v.apiName !== 'ObjId') {
+                v.req.name = 'Changed'
+            }
             return v;
         });
 
@@ -912,6 +919,29 @@ describe('WS Flows', function () {
             isSucc: false,
             err: new TsrpcError('Lost connection to server', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
         })
+
+        await server.stop();
+    })
+
+    it('ObjectId', async function () {
+        let server = new WsServer(getProto(), {
+            logger: serverLogger
+        });
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            logger: clientLogger
+        });
+        await client.connect();
+
+        // ObjectId
+        let objId1 = new ObjectId();
+        let ret = await client.callApi('ObjId', {
+            id1: objId1
+        });
+        assert.strictEqual(ret.isSucc, true, ret.err?.message);
+        assert.strictEqual(objId1.toString(), ret.res!.id2.toString());
 
         await server.stop();
     })

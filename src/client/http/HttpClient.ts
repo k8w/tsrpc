@@ -1,3 +1,4 @@
+import { ObjectId } from "bson";
 import http from "http";
 import https from "https";
 import { BaseHttpClient, BaseHttpClientOptions, defaultBaseHttpClientOptions } from "tsrpc-base-client";
@@ -16,6 +17,7 @@ export class HttpClient<ServiceType extends BaseServiceType> extends BaseHttpCli
     constructor(proto: ServiceProto<ServiceType>, options?: Partial<HttpClientOptions>) {
         let httpProxy = new HttpProxy;
         super(proto, httpProxy, {
+            customObjectIdClass: ObjectId,
             ...defaultHttpClientOptions,
             ...options
         });

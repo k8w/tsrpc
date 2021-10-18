@@ -1,13 +1,18 @@
 import { ServiceProto } from 'tsrpc-proto';
-import { ReqTest, ResTest } from './a/b/c/PtlTest'
-import { MsgChat } from './MsgChat'
-import { ReqTest as ReqTest_1, ResTest as ResTest_1 } from './PtlTest'
+import { ReqTest, ResTest } from './a/b/c/PtlTest';
+import { MsgChat } from './MsgChat';
+import { ReqObjId, ResObjId } from './PtlObjId';
+import { ReqTest as ReqTest_1, ResTest as ResTest_1 } from './PtlTest';
 
 export interface ServiceType {
     api: {
         "a/b/c/Test": {
             req: ReqTest,
             res: ResTest
+        },
+        "ObjId": {
+            req: ReqObjId,
+            res: ResObjId
         },
         "Test": {
             req: ReqTest_1,
@@ -33,6 +38,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
         },
         {
             "id": 2,
+            "name": "ObjId",
+            "type": "api"
+        },
+        {
+            "id": 3,
             "name": "Test",
             "type": "api"
         }
@@ -100,6 +110,32 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "time",
                     "type": {
                         "type": "Number"
+                    }
+                }
+            ]
+        },
+        "PtlObjId/ReqObjId": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "id1",
+                    "type": {
+                        "type": "Reference",
+                        "target": "?mongodb/ObjectId"
+                    }
+                }
+            ]
+        },
+        "PtlObjId/ResObjId": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "id2",
+                    "type": {
+                        "type": "Reference",
+                        "target": "?mongodb/ObjectId"
                     }
                 }
             ]
