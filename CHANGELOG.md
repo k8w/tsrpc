@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [3.0.11-dev.0] - 2021-10-18
+## [3.0.11] - 2021-10-18
 ### Added
 - 增加对 `mongodb/ObjectId` 的支持
 
