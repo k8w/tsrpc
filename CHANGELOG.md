@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.0.12] - 2021-10-19
+### Fixed
+- 修复 `WsServer` 客户端断开连接后，日志显示的 `ActiveConn` 总是比实际多 1 的 BUG
+
 ## [3.0.11] - 2021-10-18
 ### Added
 - 增加对 `mongodb/ObjectId` 的支持
