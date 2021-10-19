@@ -108,7 +108,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 
     private _onClientClose = async (conn: WsConnection<ServiceType>, code: number, reason: string) => {
         this.connections.removeOne(v => v.id === conn.id);
-        this._id2Conn[conn.id] = undefined;
+        delete this._id2Conn[conn.id];
         conn.logger.log('[Disconnected]', `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this.connections.length}`)
 
         await this.flows.postDisconnectFlow.exec({ conn: conn, reason: reason }, conn.logger);
