@@ -22,7 +22,7 @@ export abstract class MsgCall<Msg = any, ServiceType extends BaseServiceType = a
     constructor(options: MsgCallOptions<Msg, ServiceType>, logger?: PrefixLogger) {
         super(options, logger ?? new PrefixLogger({
             logger: options.conn.logger,
-            prefixs: [`[Msg|${options.service.name}]`]
+            prefixs: [`[Msg:${options.service.name}]`]
         }));
 
         this.msg = options.msg;

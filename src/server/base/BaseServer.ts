@@ -2,8 +2,10 @@ import { ObjectId } from "bson";
 import chalk from "chalk";
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
-import { Flow, getCustomObjectIdTypes, MsgHandlerManager, MsgService, ParsedServerInput, ServiceMap, ServiceMapUtil, TransportDataUtil } from 'tsrpc-base-client';
+import { Counter, Flow, getCustomObjectIdTypes, MsgHandlerManager, MsgService, ParsedServerInput, ServiceMap, ServiceMapUtil, TransportDataUtil } from 'tsrpc-base-client';
 import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, ServerOutputData, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
+import { ApiCallInner } from "../inner/ApiCallInner";
+import { InnerConnection } from "../inner/InnerConnection";
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
 import { ApiCall } from './ApiCall';
 import { BaseConnection } from './BaseConnection';
@@ -41,6 +43,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     readonly tsbuffer: TSBuffer;
     readonly serviceMap: ServiceMap;
     readonly logger: Logger;
+
+    protected _connIdCounter = new Counter(1);
 
     /** 
      * Flow is a specific concept created by TSRPC family.
@@ -230,11 +234,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         let call = this._makeCall(conn, opInput.result);
 
         if (call.type === 'api') {
-            ++this._pendingApiCallNum;
-            await this._onApiCall(call);
-            if (--this._pendingApiCallNum === 0) {
-                this._gracefulStop?.rs();
-            }
+            await this._handleApiCall(call);
         }
         else {
             await this._onMsgCall(call);
@@ -256,6 +256,14 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                 service: input.service,
                 msg: input.msg
             })
+        }
+    }
+
+    protected async _handleApiCall(call: ApiCall) {
+        ++this._pendingApiCallNum;
+        await this._onApiCall(call);
+        if (--this._pendingApiCallNum === 0) {
+            this._gracefulStop?.rs();
         }
     }
 
@@ -549,6 +557,38 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         })
     }
 
+    /**
+     * Execute API function through the inner connection.
+     * It is useful when you want to customize your transport method.
+     * @param apiName 
+     * @param req 
+     * @param options 
+     */
+    callApi<T extends keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req']): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
+        return new Promise(rs => {
+            // 确认是哪个Service
+            let service = this.serviceMap.apiName2Service[apiName as string];
+            if (!service) {
+                let errMsg = `Cannot find service: ${apiName}`;
+                this.logger.warn(`[callApi]`, errMsg);
+                rs({ isSucc: false, err: new TsrpcError(errMsg, { type: TsrpcErrorType.ServerError, code: 'ERR_API_NAME' }) });
+                return;
+            }
+
+            let conn = new InnerConnection({
+                server: this,
+                id: '' + this._connIdCounter.getNext(),
+                ip: '',
+                rs: rs
+            });
+            let call = new ApiCallInner({
+                conn: conn,
+                req: req,
+                service: service
+            });
+            this._handleApiCall(call);
+        })
+    }
 }
 
 export interface BaseServerOptions<ServiceType extends BaseServiceType> {

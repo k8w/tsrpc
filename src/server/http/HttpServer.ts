@@ -16,8 +16,6 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     readonly ApiCallClass = ApiCallHttp;
     readonly MsgCallClass = MsgCallHttp;
 
-    private _connCounter = new Counter(1);
-
     readonly options!: HttpServerOptions<ServiceType>;
 
     constructor(proto: ServiceProto<ServiceType>, options?: Partial<HttpServerOptions<ServiceType>>) {
@@ -77,7 +75,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                         && httpReq.method === 'POST' && httpReq.url?.startsWith(this.options.jsonHostPath);
                     conn = new HttpConnection({
                         server: this,
-                        id: '' + this._connCounter.getNext(),
+                        id: '' + this._connIdCounter.getNext(),
                         ip: ip,
                         httpReq: httpReq,
                         httpRes: httpRes,

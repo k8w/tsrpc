@@ -22,7 +22,6 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 
     readonly connections: WsConnection<ServiceType>[] = [];
     private readonly _id2Conn: { [connId: string]: WsConnection<ServiceType> | undefined } = {};
-    private _connIdCounter = new Counter(1);
 
     constructor(proto: ServiceProto<ServiceType>, options?: Partial<WsServerOptions<ServiceType>>) {
         super(proto, {

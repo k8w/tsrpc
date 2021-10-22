@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.0.13] - 2021-10-22
+### Added
+- 增加 `server.callApi` 的支持，以更方便的适配 Serverless 云函数等自定义传输场景。
+
 ## [3.0.12] - 2021-10-22
 ### Fixed
 - 修复 `WsServer` 客户端断开连接后，日志显示的 `ActiveConn` 总是比实际多 1 的 BUG

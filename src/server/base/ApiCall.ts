@@ -39,7 +39,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
     constructor(options: ApiCallOptions<Req, ServiceType>, logger?: PrefixLogger) {
         super(options, logger ?? new PrefixLogger({
             logger: options.conn.logger,
-            prefixs: [`[Api|${options.service.name}]${options.sn !== undefined ? ` SN=${options.sn}` : ''}`]
+            prefixs: [`[Api:${options.service.name}]${options.sn !== undefined ? ` SN=${options.sn}` : ''}`]
         }));
 
         this.sn = options.sn;
