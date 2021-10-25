@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.0.14-dev.0] - 2021-10-25
+### Added
+- 增加 `server.autoImplementApi` 第二个参数 `delay`，用于延迟自动协议注册，加快冷启动速度。
 ## [3.0.13] - 2021-10-22
 ### Added
 - 增加 `server.callApi` 的支持，以更方便的适配 Serverless 云函数等自定义传输场景。

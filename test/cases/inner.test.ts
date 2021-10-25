@@ -173,6 +173,17 @@ describe('HTTP Server & Client basic', function () {
         await testApi(server);
     });
 
+    it('autoImplementApi delay', async function () {
+        let server = new HttpServer(getProto(), {
+            logger: serverLogger,
+            apiTimeout: 5000
+        });
+
+        server.autoImplementApi(path.resolve(__dirname, '../api'), true)
+
+        await testApi(server);
+    });
+
     it('error', async function () {
         let server = new HttpServer(getProto(), {
             logger: serverLogger
@@ -265,7 +276,7 @@ describe('HTTP Flows', function () {
             assert.strictEqual(call.req.name, 'Changed')
             call.error('You need login');
             return call;
-        });        
+        });
 
         let ret = await server.callApi('Test', { name: 'xxx' });
         assert.deepStrictEqual(ret, {

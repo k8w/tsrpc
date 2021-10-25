@@ -291,7 +291,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // exec ApiCall
         call.logger.log('[ApiReq]', this.options.logReqBody ? call.req : '');
-        let handler = this._apiHandlers[call.service.name];
+        let { handler } = await this.getApiHandler(call.service, this._delayImplementApiPath, call.logger);
         // exec API handler
         if (handler) {
             try {
@@ -368,6 +368,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         this.logger.log(`API implemented succ: [${apiName}]`);
     };
 
+    /** 用于延迟注册 API */
+    protected _delayImplementApiPath?: string;
+
     /**
      * Auto call `imeplementApi` by traverse the `apiPath` and find all matched `PtlXXX` and `ApiXXX`.
      * It is matched by checking whether the relative path and name of an API is consistent to the service name in `serviceProto`.
@@ -376,58 +379,28 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @param apiPath Absolute path or relative path to `process.cwd()`.
      * @returns 
      */
-    async autoImplementApi(apiPath: string): Promise<{ succ: string[], fail: string[] }> {
+    async autoImplementApi(apiPath: string, delay?: boolean): Promise<{ succ: string[], fail: string[] }> {
         let apiServices = Object.values(this.serviceMap.apiName2Service) as ApiServiceDef[];
         let output: { succ: string[], fail: string[] } = { succ: [], fail: [] };
 
+        if (delay) {
+            this._delayImplementApiPath = apiPath;
+            return output;
+        }
+
         for (let svc of apiServices) {
-            //get matched Api
-            let apiHandler: ApiHandler<any> | undefined;
+            //get api handler
+            let { handler, errMsg } = await this.getApiHandler(svc, apiPath, this.logger)
 
-            // get api last name
-            let match = svc.name.match(/^(.+\/)*(.+)$/);
-            if (!match) {
-                this.logger.error('Invalid apiName: ' + svc.name);
+            if (!handler) {
                 output.fail.push(svc.name);
-                continue;
-            }
-            let handlerPath = match[1] || '';
-            let handlerName = match[2];
-
-            // try import
-            let requireError: Error & { code: string } | undefined;
-            let modulePath = path.resolve(apiPath, handlerPath, 'Api' + handlerName);
-            try {
-                let handlerModule = await import(modulePath);
-                // ApiName同名
-                apiHandler = handlerModule['Api' + handlerName] || handlerModule.default;
-            }
-            catch (e: any) {
-                requireError = e;
-            }
-
-            if (!apiHandler) {
-                output.fail.push(svc.name);
-                let errMsg = chalk.red(`Implement ${chalk.cyan.underline(`Api${svc.name}`)} failed:`);
-
-                // Fail info
-                if (requireError) {
-                    if (requireError.code === 'MODULE_NOT_FOUND') {
-                        errMsg += `\n  |- Module not found: ${modulePath}`;
-                    }
-                    else {
-                        errMsg += '\n  |- ' + requireError.message;
-                    }
-                }
-                else {
-                    errMsg += `\n  |- Cannot find export { ${'Api' + handlerName} } at: ${modulePath}`;
-                }
-
-                this.logger.error(errMsg);
+                let logMsg = chalk.red(`Implement ${chalk.cyan.underline(`Api${svc.name}`)} failed:`);
+                logMsg += '\n  |- ' + errMsg;
+                this.logger.error(logMsg);
                 continue;
             }
 
-            this.implementApi(svc.name, apiHandler);
+            this.implementApi(svc.name, handler);
             output.succ.push(svc.name);
         }
 
@@ -436,6 +409,47 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
 
         return output;
+    }
+
+    async getApiHandler(svc: ApiServiceDef, apiPath?: string, logger?: Logger): Promise<{ handler: ApiHandler, errMsg?: undefined } | { handler?: undefined, errMsg: string }> {
+        if (this._apiHandlers[svc.name]) {
+            return { handler: this._apiHandlers[svc.name]! };
+        }
+
+        if (!apiPath) {
+            return { errMsg: `Api not implemented: ${svc.name}` };
+        }
+
+        // get api last name
+        let match = svc.name.match(/^(.+\/)*(.+)$/);
+        if (!match) {
+            logger?.error('Invalid apiName: ' + svc.name);
+            return { errMsg: `Invalid api name: ${svc.name}` };
+        }
+        let handlerPath = match[1] || '';
+        let handlerName = match[2];
+
+        // try import
+        let modulePath = path.resolve(apiPath, handlerPath, 'Api' + handlerName);
+        try {
+            let handlerModule = await import(modulePath);
+            // 优先 default，其次 ApiName 同名
+            let handler = handlerModule.default ?? handlerModule['Api' + handlerName];
+            if (handler) {
+                return { handler: handler };
+            }
+            else {
+                return { errMsg: `Cannot find export { ${'Api' + handlerName} } at: ${modulePath}` }
+            }
+        }
+        catch (e: any) {
+            if (e.code === 'MODULE_NOT_FOUND') {
+                return { errMsg: `Module not found: ${modulePath}` };
+            }
+            else {
+                return { errMsg: e.message }
+            }
+        }
     }
 
     /**
