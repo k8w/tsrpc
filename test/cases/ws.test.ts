@@ -584,10 +584,11 @@ describe('WS Flows', function () {
 
     it('Buffer enc/dec flow', async function () {
         let server = new WsServer(getProto(), {
-            logger: serverLogger
+            logger: serverLogger,
+            debugBuf: true
         });
 
-        const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+        const flowExecResult: { [key: string]: boolean } = {};
 
         server.implementApi('Test', async call => {
             call.succ({ reply: 'Enc&Dec' });
@@ -617,6 +618,7 @@ describe('WS Flows', function () {
         await client.connect();
 
         client.flows.preSendBufferFlow.push(v => {
+            flowExecResult.client_preSendBufferFlow = true;
             for (let i = 0; i < v.buf.length; ++i) {
                 v.buf[i] ^= 128;
             }
@@ -624,6 +626,7 @@ describe('WS Flows', function () {
         });
 
         client.flows.preRecvBufferFlow.push(v => {
+            flowExecResult.client_preRecvBufferFlow = true;
             for (let i = 0; i < v.buf.length; ++i) {
                 v.buf[i] ^= 128;
             }
@@ -631,6 +634,8 @@ describe('WS Flows', function () {
         });
 
         let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.strictEqual(flowExecResult.client_preSendBufferFlow, true);
+        assert.strictEqual(flowExecResult.client_preRecvBufferFlow, true);
         assert.strictEqual(flowExecResult.preRecvBufferFlow, true);
         assert.strictEqual(flowExecResult.preSendBufferFlow, true);
         assert.deepStrictEqual(ret, {
@@ -917,7 +922,7 @@ describe('WS Flows', function () {
         let ret = await client.callApi('Test', { name: 'XXX' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: new TsrpcError('Lost connection to server', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
+            err: new TsrpcError('Invalid input buffer, please check the version of service proto.', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
         })
 
         await server.stop();

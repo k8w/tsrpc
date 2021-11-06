@@ -11,10 +11,6 @@ export interface HttpConnectionOptions<ServiceType extends BaseServiceType> exte
     server: HttpServer<ServiceType>,
     httpReq: http.IncomingMessage,
     httpRes: http.ServerResponse,
-    /**
-     * Whether the transportation of the connection is JSON encoded instead of binary encoded.
-     */
-    isJSON: boolean | undefined;
 }
 
 export class HttpConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
@@ -42,7 +38,6 @@ export class HttpConnection<ServiceType extends BaseServiceType = any> extends B
 
         this.httpReq = options.httpReq;
         this.httpRes = options.httpRes;
-        this.isJSON = options.isJSON;
     }
 
 
@@ -62,17 +57,8 @@ export class HttpConnection<ServiceType extends BaseServiceType = any> extends B
      * {@inheritDoc BaseConnection.sendBuf}
      * @internal
      */
-    async sendBuf(buf: Uint8Array, call?: ApiCall): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
-        // Pre Flow
-        let pre = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: buf, call: call }, call?.logger || this.logger);
-        if (!pre) {
-            return { isSucc: false, errMsg: 'preSendBufferFlow Error' };
-        }
-        buf = pre.buf;
-
-        this.server.options.debugBuf && this.logger.debug('[SendBuf]', buf);
-        this.httpRes.end(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
-
+    protected async _sendData(data: string | Uint8Array, call?: ApiCall): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+        this.httpRes.end(typeof data === 'string' ? data : Buffer.from(data.buffer, data.byteOffset, data.byteLength));
         return { isSucc: true }
     }
 

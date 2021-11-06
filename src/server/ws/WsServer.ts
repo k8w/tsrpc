@@ -1,5 +1,5 @@
 import * as http from "http";
-import { Counter, TransportDataUtil } from "tsrpc-base-client";
+import { TransportDataUtil } from "tsrpc-base-client";
 import { BaseServiceType, ServiceProto } from 'tsrpc-proto';
 import * as WebSocket from 'ws';
 import { Server as WebSocketServer } from 'ws';
@@ -96,7 +96,8 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             server: this,
             ws: ws,
             httpReq: httpReq,
-            onClose: this._onClientClose
+            onClose: this._onClientClose,
+            dataType: this.options.dataType ?? (this.options.jsonEnabled ? 'text' : 'buffer')
         });
         this.connections.push(conn);
         this._id2Conn[conn.id] = conn;
@@ -135,7 +136,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         }
 
         // Encode
-        let opEncode = TransportDataUtil.encodeServerMsg(this.tsbuffer, service, msg);
+        let opEncode = TransportDataUtil.encodeServerMsg(this.tsbuffer, service, msg, this.options.dataType ?? (this.options.jsonEnabled ? 'text' : 'buffer'), 'LONG');
         if (!opEncode.isSucc) {
             this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${conns ? conns.map(v => v.id).join(',') : '*'}]`, opEncode.errMsg);
             return opEncode;
@@ -157,7 +158,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             msg = pre.msg;
 
             // Do send!
-            let opSend = await conn.sendBuf(opEncode.buf!);
+            let opSend = await conn.sendData(opEncode.output!);
             if (!opSend.isSucc) {
                 return opSend;
             }
@@ -186,6 +187,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 export interface WsServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
     /** Which port the WebSocket server is listen to */
     port: number;
+    dataType?: 'buffer' | 'text';
 };
 
 const defaultWsServerOptions: WsServerOptions<any> = {

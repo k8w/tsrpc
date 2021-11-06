@@ -12,7 +12,8 @@ module.exports = {
         './test/cases/ws.test.ts',
         './test/cases/inner.test.ts',
     ],
-    parallel: false,
+    // parallel: false,
+
     // 'expose-gc': true,
-    // fgrep: 'ObjectId'
+    // fgrep: 'implement API manually'
 }

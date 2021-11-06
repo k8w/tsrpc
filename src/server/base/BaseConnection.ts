@@ -9,7 +9,8 @@ export interface BaseConnectionOptions<ServiceType extends BaseServiceType = any
     id: string;
     /** Client IP address */
     ip: string,
-    server: BaseServer<ServiceType>
+    server: BaseServer<ServiceType>,
+    dataType: 'text' | 'buffer'
 }
 
 export abstract class BaseConnection<ServiceType extends BaseServiceType = any> {
@@ -22,12 +23,14 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     readonly ip: string;
     readonly server: BaseServer<ServiceType>;
     readonly logger: PrefixLogger;
+    readonly dataType: BaseConnectionOptions['dataType'];
 
     constructor(options: BaseConnectionOptions<ServiceType>, logger: PrefixLogger) {
         this.id = options.id;
         this.ip = options.ip;
         this.server = options.server;
         this.logger = logger;
+        this.dataType = options.dataType;
     }
 
     abstract get status(): ConnectionStatus;
@@ -35,7 +38,27 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     abstract close(reason?: string): void;
 
     /** Send buffer (with pre-flow and post-flow) */
-    abstract sendBuf(buf: Uint8Array, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
+    async sendData(data: string | Uint8Array, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>{
+        // Pre Flow
+        let pre = await this.server.flows.preSendDataFlow.exec({ conn: this, data: data, call: call }, call?.logger || this.logger);
+        if (!pre) {
+            return { isSucc: false, errMsg: 'preSendBufferFlow Error' };
+        }
+        data = pre.data;
+
+        // @deprecated Pre Buffer Flow
+        if (typeof data !== 'string') {
+            let preBuf = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: data, call: call }, call?.logger || this.logger);
+            if (!preBuf) {
+                return { isSucc: false, errMsg: 'preSendBufferFlow Error' };
+            }
+            data = preBuf.buf;
+        }
+
+        this.server.options.debugBuf && this.logger.debug(typeof data === 'string' ? '[SendText]' : '[SendBuf]', data);
+        return this._sendData(data, call);
+    }
+    protected abstract _sendData(data: string | Uint8Array, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
 
     /**
      * Send message to the client, only be available when it is long connection.
@@ -63,7 +86,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         msg = pre.msg;
 
         // Encode
-        let opServerOutput = TransportDataUtil.encodeServerMsg(this.server.tsbuffer, service, msg);
+        let opServerOutput = TransportDataUtil.encodeServerMsg(this.server.tsbuffer, service, msg, this.dataType, this.type);
         if (!opServerOutput.isSucc) {
             this.logger.warn('[SendMsgErr]', `[${msgName}]`, opServerOutput.errMsg);
             return opServerOutput;
@@ -71,7 +94,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Do send!
         this.server.options.logMsg && this.logger.log('[SendMsg]', `[${msgName}]`, msg);
-        let opSend = await this.sendBuf(opServerOutput.buf);
+        let opSend = await this.sendData(opServerOutput.output);
         if (!opSend.isSucc) {
             return opSend;
         }

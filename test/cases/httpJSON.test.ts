@@ -379,55 +379,9 @@ describe('HTTP Server & Client basic', function () {
         assert.strictEqual(succNum, 10);
     })
 
-    it('No Prune', async function () {
-        let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
-            jsonPrune: false,
-            jsonHostPath: '/api/123/',
-            logger: serverLogger,
-            debugBuf: true
-        });
-        await server.start();
-
-        server.implementApi('a/b/c/Test', call => {
-            assert.deepStrictEqual(call.req, {
-                name: 'Peter',
-                asdf: 'asdf'
-            } as any)
-            call.succ({
-                reply: 'Hello123, ' + call.req.name,
-                aa: 'aaa',
-                bbb: 'bbb'
-            } as any)
-        });
-
-        let client = new HttpClient(getProto(), {
-            json: true,
-            jsonPrune: false,
-            server: 'http://localhost:3000/api/123',
-            logger: clientLogger,
-            debugBuf: true
-        });
-        let ret = await client.callApi('a/b/c/Test', {
-            name: 'Peter',
-            asdf: 'asdf'
-        } as any);
-        assert.deepStrictEqual(ret, {
-            isSucc: true,
-            res: {
-                reply: 'Hello123, Peter',
-                aa: 'aaa',
-                bbb: 'bbb'
-            } as any
-        })
-
-        await server.stop();
-    })
-
     it('Server Prune', async function () {
         let server = new HttpServer(getProto(), {
             jsonEnabled: true,
-            jsonPrune: true,
             logger: serverLogger,
             debugBuf: true
         });
@@ -446,7 +400,7 @@ describe('HTTP Server & Client basic', function () {
 
         let client = new HttpClient(getProto(), {
             json: true,
-            jsonPrune: false,
+            // jsonPrune: false,
             logger: clientLogger,
             debugBuf: true
         });
@@ -467,7 +421,7 @@ describe('HTTP Server & Client basic', function () {
     it('Client Prune', async function () {
         let server = new HttpServer(getProto(), {
             jsonEnabled: true,
-            jsonPrune: false,
+            // jsonPrune: false,
             logger: serverLogger,
             debugBuf: true
         });

@@ -43,7 +43,7 @@ export class InnerConnection<ServiceType extends BaseServiceType = any> extends 
         this._status = ConnectionStatus.Closed;
     }
 
-    sendBuf(): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
-        throw new Error("Cannot sendBuf in the InnerConnection.");
+    protected _sendData(): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+        throw new Error("Cannot sendData in the InnerConnection.");
     }
 }

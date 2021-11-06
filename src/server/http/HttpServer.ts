@@ -1,5 +1,5 @@
 import * as http from "http";
-import { Counter, ParsedServerInput } from "tsrpc-base-client";
+import { ParsedServerInput } from "tsrpc-base-client";
 import { ApiReturn, BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { HttpUtil } from '../../models/HttpUtil';
 import { TSRPC_VERSION } from "../../models/version";
@@ -79,17 +79,18 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                         ip: ip,
                         httpReq: httpReq,
                         httpRes: httpRes,
-                        isJSON: isJSON
+                        dataType: isJSON ? 'text' : 'buffer'
                     });
                     await this.flows.postConnectFlow.exec(conn, conn.logger);
 
                     let buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
 
                     if (isJSON) {
-                        this._onRecvJSON(conn, chunks.toString())
+                        let serviceName = conn.httpReq.url!.substr(this.options.jsonHostPath.length);
+                        this._onRecvData(conn, buf.toString(), serviceName);
                     }
                     else {
-                        this._onRecvBuffer(conn, buf);
+                        this._onRecvData(conn, buf);
                     }
                 });
 
@@ -156,90 +157,6 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
         });
     }
 
-    protected async _onRecvJSON(conn: HttpConnection<ServiceType>, jsonStr: string) {
-        // 1. 根据 URL 判断 service
-        let serviceName = conn.httpReq.url!.substr(this.options.jsonHostPath.length);
-        let service = this.serviceMap.apiName2Service[serviceName] ?? this.serviceMap.msgName2Service[serviceName];
-        if (!service) {
-            conn.httpRes.statusCode = 404;
-            this._returnJSON(conn, {
-                isSucc: false,
-                err: {
-                    message: 'Service Not Found: ' + serviceName,
-                    type: TsrpcErrorType.ServerError,
-                    code: 'URL_ERR'
-                }
-            });
-            return;
-        }
-
-        // 2. 解析 JSON 字符串
-        let req: any;
-        try {
-            req = JSON.parse(jsonStr);
-        }
-        catch (e: any) {
-            conn.logger.error(`Parse JSON Error: ${e.message}, jsonStr=` + JSON.stringify(jsonStr));
-            conn.httpRes.statusCode = 500;
-            this._returnJSON(conn, {
-                isSucc: false,
-                err: {
-                    message: e.message,
-                    type: TsrpcErrorType.ServerError,
-                    code: 'JSON_ERR'
-                }
-            });
-            return;
-        }
-
-        // 3. Prune
-        if (this.options.jsonPrune) {
-            let opPrune = this.tsbuffer.prune(req, service.type === 'api' ? service.reqSchemaId : service.msgSchemaId);
-            if (!opPrune.isSucc) {
-                conn.httpRes.statusCode = 400;
-                this._returnJSON(conn, {
-                    isSucc: false,
-                    err: {
-                        message: opPrune.errMsg,
-                        type: TsrpcErrorType.ServerError,
-                        code: 'REQ_VALIDATE_ERR'
-                    }
-                })
-                return;
-            }
-            req = opPrune.pruneOutput;
-        }
-
-        // 4. MakeCall
-        let call = this._makeCall(conn, service.type === 'api' ? {
-            type: 'api',
-            service: service,
-            req: req
-        } : {
-            type: 'msg',
-            service: service,
-            msg: req
-        });
-
-        // 5. onApi / onMsg
-        if (call.type === 'api') {
-            ++this._pendingApiCallNum;
-            await this._onApiCall(call);
-            if (--this._pendingApiCallNum === 0) {
-                this._gracefulStop?.rs();
-            }
-        }
-        else {
-            await this._onMsgCall(call);
-        }
-    }
-    protected _returnJSON(conn: HttpConnection<ServiceType>, ret: ApiReturn<any>) {
-        conn.httpRes.end(JSON.stringify(ret.isSucc ? ret : {
-            isSucc: false,
-            err: ret instanceof TsrpcError ? { ...ret.err } : ret.err
-        }))
-    }
-
     /**
      * {@inheritDoc BaseServer.stop}
      */
@@ -302,48 +219,20 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
      * @defaultValue `*`
      */
     cors?: string,
-
-    /**
-     * Whether to enable JSON compatible mode.
-     * When it is true, it can be compatible with typical HTTP JSON request (like RESTful API).
-     * 
-     * @remarks
-     * The JSON request methods are:
-     * 
-     * 1. Add `Content-type: application/json` to request header.
-     * 2. HTTP request is: `POST /{jsonUrlPath}/{apiName}`.
-     * 3. POST body is JSON string.
-     * 4. The response body is JSON string also.
-     * 
-     * NOTICE: Buffer type are not supported due to JSON not support them.
-     * For security and efficient reason, we strongly recommend you use binary encoded transportation.
-     * 
-     * @defaultValue `false`
-     */
-    jsonEnabled: boolean,
+    
     /**
      * Actual URL path is `${jsonHostPath}/${apiName}`.
      * For example, if `jsonHostPath` is `'/api'`, then you can send `POST /api/a/b/c/Test` to call API `a/b/c/Test`.
      * @defaultValue `'/'`
      */
-    jsonHostPath: string,
-    /**
-     * Whether to automatically delete excess properties that not defined in the protocol.
-     * It would affect API request and response.
-     * For security reason, it is strongly recommend you to set to `true`.
-     * @defaultValue `true`
-     * @internal
-     */
-    jsonPrune: boolean
+    jsonHostPath: string
 }
 
 export const defaultHttpServerOptions: HttpServerOptions<any> = {
     ...defaultBaseServerOptions,
     port: 3000,
     cors: '*',
-    jsonEnabled: false,
     jsonHostPath: '/',
-    jsonPrune: true
 
     // TODO: keep-alive time (to SLB)
 }

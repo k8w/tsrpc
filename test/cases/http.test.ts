@@ -876,7 +876,7 @@ describe('HTTP Flows', function () {
             isSucc: false,
             err: new TsrpcError('Invalid input buffer, please check the version of service proto.', {
                 type: TsrpcErrorType.ServerError,
-                code: 'INPUT_BUF_ERR'
+                code: 'INPUT_DATA_ERR'
             })
         })
 

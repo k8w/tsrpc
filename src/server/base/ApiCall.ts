@@ -1,5 +1,6 @@
+import { TSBuffer } from 'TSBuffer';
 import { ApiService, TransportDataUtil } from "tsrpc-base-client";
-import { ApiReturn, BaseServiceType, TsrpcError, TsrpcErrorData, TsrpcErrorType } from "tsrpc-proto";
+import { ApiReturn, BaseServiceType, ServerOutputData, TsrpcError, TsrpcErrorData, TsrpcErrorType } from "tsrpc-proto";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { BaseCall, BaseCallOptions } from "./BaseCall";
 
@@ -134,18 +135,72 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
 
     protected async _sendReturn(ret: ApiReturn<Res>): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
         // Encode
-        let opServerOutput = TransportDataUtil.encodeApiReturn(this.server.tsbuffer, this.service, ret, this.sn);;
+        let opServerOutput = ApiCall.encodeApiReturn(this.server.tsbuffer, this.service, ret, this.conn.dataType, this.sn);;
         if (!opServerOutput.isSucc) {
             this.server.onInternalServerError({ message: opServerOutput.errMsg, stack: '  |- TransportDataUtil.encodeApiReturn\n  |- ApiCall._sendReturn' }, this);
             return opServerOutput;
         }
 
-        let opSend = await this.conn.sendBuf(opServerOutput.buf);
+        let opSend = await this.conn.sendData(opServerOutput.output);
         if (!opSend.isSucc) {
             return opSend;
         }
         return opSend;
     }
+
+    static encodeApiReturn(tsbuffer: TSBuffer, service: ApiService, apiReturn: ApiReturn<any>, type: 'text', sn?: number): EncodeApiReturnOutput<string>
+    static encodeApiReturn(tsbuffer: TSBuffer, service: ApiService, apiReturn: ApiReturn<any>, type: 'buffer', sn?: number): EncodeApiReturnOutput<Uint8Array>
+    static encodeApiReturn(tsbuffer: TSBuffer, service: ApiService, apiReturn: ApiReturn<any>, type: 'text' | 'buffer', sn?: number): EncodeApiReturnOutput<Uint8Array> | EncodeApiReturnOutput<string>;
+    static encodeApiReturn(tsbuffer: TSBuffer, service: ApiService, apiReturn: ApiReturn<any>, type: 'text' | 'buffer', sn?: number): EncodeApiReturnOutput<Uint8Array> | EncodeApiReturnOutput<string> {
+        if (type === 'buffer') {
+            let serverOutputData: ServerOutputData = {
+                sn: sn,
+                serviceId: sn !== undefined ? service.id : undefined
+            };
+            if (apiReturn.isSucc) {
+                let op = tsbuffer.encode(apiReturn.res, service.resSchemaId);
+                if (!op.isSucc) {
+                    return op;
+                }
+                serverOutputData.buffer = op.buf;
+            }
+            else {
+                serverOutputData.error = apiReturn.err;
+            }
+
+            let op = TransportDataUtil.tsbuffer.encode(serverOutputData, 'ServerOutputData');
+            return op.isSucc ? { isSucc: true, output: op.buf } : { isSucc: false, errMsg: op.errMsg };
+        }
+        else {
+            apiReturn = { ...apiReturn };
+            if (apiReturn.isSucc) {
+                let op = tsbuffer.encodeJSON(apiReturn.res, service.resSchemaId);
+                if (!op.isSucc) {
+                    return op;
+                }
+                apiReturn.res = op.json;
+            }
+            else {
+                apiReturn.err = {
+                    ...apiReturn.err
+                }
+            }
+            let text = JSON.stringify(sn == undefined ? apiReturn : [service.name, apiReturn, sn]);
+            return { isSucc: true, output: text };
+        }
+    }
 }
 
 export type SendReturnMethod<Res> = (ret: ApiReturn<Res>) => Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
+
+export declare type EncodeApiReturnOutput<T> = {
+    isSucc: true;
+    /** Encoded binary buffer */
+    output: T;
+    errMsg?: undefined;
+} | {
+    isSucc: false;
+    /** Error message */
+    errMsg: string;
+    output?: undefined;
+};

@@ -39,10 +39,6 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
         this.ws.onerror = e => { this.logger.warn('[ClientErr]', e.error) };
         this.ws.onmessage = e => {
             let data = e.data;
-            if (typeof data === 'string') {
-                this.logger.log('[RecvStr]', this.server.options.logReqBody ? data : (data.length > 100 ? `${data.substr(0, 100)}... (length=${data.length})` : data))
-                return;
-            }
             if (data instanceof ArrayBuffer) {
                 data = Buffer.from(data);
             }
@@ -50,8 +46,10 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
                 data = Buffer.concat(data)
             }
             if (Buffer.isBuffer(data)) {
-                this.server._onRecvBuffer(this, data)
+                data = new Uint8Array(data)
             }
+            
+            this.server._onRecvData(this, data as string | Uint8Array)
         };
     }
 
@@ -69,17 +67,10 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
      * {@inheritDoc BaseConnection.sendBuf}
      * @internal
      */
-    async sendBuf(buf: Uint8Array, call?: ApiCallWs): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
-        // Pre Flow
-        let pre = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: buf, call: call }, call?.logger || this.logger);
-        if (!pre) {
-            return { isSucc: false, errMsg: 'preSendBufferFlow Error' };
-        }
-        buf = pre.buf;
-
-        this.server.options.debugBuf && this.logger.debug('[SendBuf]', buf);
+    protected async _sendData(data: string | Uint8Array, call?: ApiCallWs): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+        this.server.options.debugBuf && this.logger.debug(typeof data === 'string' ? '[SendText]' : '[SendBuf]', `length=${data.length}`, data);
         let opSend = await new Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>((rs) => {
-            this.ws.send(buf, e => {
+            this.ws.send(data, e => {
                 e ? rs({ isSucc: false, errMsg: e.message || 'Send buffer error' }) : rs({ isSucc: true });
             })
         });

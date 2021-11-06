@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.1.0-dev.0] - 2021-11-06
+### Added
+- WebSocket 支持 JSON 格式传输
+- JSON 格式传输支持 `ArrayBuffer`、`Date`、`ObjectId`，自动根据协议编解码为 `string`
+
 ## [3.0.14-dev.0] - 2021-10-25
 ### Added
 - 增加 `server.autoImplementApi` 第二个参数 `delay`，用于延迟自动协议注册，加快冷启动速度。
