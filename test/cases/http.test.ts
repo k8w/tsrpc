@@ -874,7 +874,7 @@ describe('HTTP Flows', function () {
         let ret = await client.callApi('Test', { name: 'XXX' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: new TsrpcError('Invalid input buffer, please check the version of service proto.', {
+            err: new TsrpcError('Invalid request buffer, please check the version of service proto.', {
                 type: TsrpcErrorType.ServerError,
                 code: 'INPUT_DATA_ERR'
             })

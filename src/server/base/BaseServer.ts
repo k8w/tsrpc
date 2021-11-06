@@ -507,7 +507,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             }
         }
 
-        const message = `Invalid input ${typeof data === 'string' ? 'data format.' : 'buffer, please check the version of service proto.'}`;
+        const message = `Invalid ${typeof data === 'string' ? 'request format.' : 'request buffer, please check the version of service proto.'}`;
 
         // Short conn, send apiReturn with error
         if (conn.type === 'SHORT') {
@@ -634,7 +634,6 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         })
     }
 
-    // TODO
     protected _parseServerInput(tsbuffer: TSBuffer, serviceMap: ServiceMap, data: string | Uint8Array, serviceName?: string): { isSucc: true, result: ParsedServerInput } | { isSucc: false, errMsg: string } {
         if (typeof data === 'string') {
             let json: any;
@@ -651,7 +650,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             let service: ApiService | MsgService | undefined;
             if (serviceName == undefined) {
                 if (!Array.isArray(json)) {
-                    return { isSucc: false, errMsg: `Invalid input data format` };
+                    return { isSucc: false, errMsg: `Invalid request format` };
                 }
                 serviceName = json[0] as string;
                 body = json[1];

@@ -10,6 +10,7 @@ module.exports = {
         './test/cases/http.test.ts',
         './test/cases/httpJSON.test.ts',
         './test/cases/ws.test.ts',
+        './test/cases/wsJSON.test.ts',
         './test/cases/inner.test.ts',
     ],
     // parallel: false,

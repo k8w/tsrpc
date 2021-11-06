@@ -38,7 +38,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     abstract close(reason?: string): void;
 
     /** Send buffer (with pre-flow and post-flow) */
-    async sendData(data: string | Uint8Array, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>{
+    async sendData(data: string | Uint8Array, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
         // Pre Flow
         let pre = await this.server.flows.preSendDataFlow.exec({ conn: this, data: data, call: call }, call?.logger || this.logger);
         if (!pre) {
@@ -55,7 +55,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             data = preBuf.buf;
         }
 
-        this.server.options.debugBuf && this.logger.debug(typeof data === 'string' ? '[SendText]' : '[SendBuf]', data);
+        this.server.options.debugBuf && this.logger.debug(typeof data === 'string' ? '[SendText]' : '[SendBuf]', `length=${data.length}`, data);
         return this._sendData(data, call);
     }
     protected abstract _sendData(data: string | Uint8Array, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;

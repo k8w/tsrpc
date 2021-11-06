@@ -97,7 +97,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             ws: ws,
             httpReq: httpReq,
             onClose: this._onClientClose,
-            dataType: this.options.dataType ?? (this.options.jsonEnabled ? 'text' : 'buffer')
+            dataType: this.options.jsonEnabled ? 'text' : 'buffer'
         });
         this.connections.push(conn);
         this._id2Conn[conn.id] = conn;
@@ -136,7 +136,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         }
 
         // Encode
-        let opEncode = TransportDataUtil.encodeServerMsg(this.tsbuffer, service, msg, this.options.dataType ?? (this.options.jsonEnabled ? 'text' : 'buffer'), 'LONG');
+        let opEncode = TransportDataUtil.encodeServerMsg(this.tsbuffer, service, msg, this.options.jsonEnabled ? 'text' : 'buffer', 'LONG');
         if (!opEncode.isSucc) {
             this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${conns ? conns.map(v => v.id).join(',') : '*'}]`, opEncode.errMsg);
             return opEncode;
@@ -187,7 +187,6 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 export interface WsServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
     /** Which port the WebSocket server is listen to */
     port: number;
-    dataType?: 'buffer' | 'text';
 };
 
 const defaultWsServerOptions: WsServerOptions<any> = {

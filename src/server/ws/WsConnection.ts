@@ -39,6 +39,9 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
         this.ws.onerror = e => { this.logger.warn('[ClientErr]', e.error) };
         this.ws.onmessage = e => {
             let data = e.data;
+            if (this.server.options.jsonEnabled) {
+                data = data.toString();
+            }
             if (data instanceof ArrayBuffer) {
                 data = Buffer.from(data);
             }
@@ -48,7 +51,7 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
             if (Buffer.isBuffer(data)) {
                 data = new Uint8Array(data)
             }
-            
+
             this.server._onRecvData(this, data as string | Uint8Array)
         };
     }
@@ -68,7 +71,6 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
      * @internal
      */
     protected async _sendData(data: string | Uint8Array, call?: ApiCallWs): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
-        this.server.options.debugBuf && this.logger.debug(typeof data === 'string' ? '[SendText]' : '[SendBuf]', `length=${data.length}`, data);
         let opSend = await new Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>((rs) => {
             this.ws.send(data, e => {
                 e ? rs({ isSucc: false, errMsg: e.message || 'Send buffer error' }) : rs({ isSucc: true });

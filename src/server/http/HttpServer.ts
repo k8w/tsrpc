@@ -236,5 +236,3 @@ export const defaultHttpServerOptions: HttpServerOptions<any> = {
 
     // TODO: keep-alive time (to SLB)
 }
-
-// TODO JSON

@@ -56,7 +56,7 @@
   "dependencies": {
     "bson": "*",
     "chalk": "^4.1.2",
-    "tsrpc-base-client": "~1.1.0-dev.9",
+    "tsrpc-base-client": "~1.1.0-dev.11",
     "uuid": "^8.3.2",
     "ws": "^7.5.5"
   },

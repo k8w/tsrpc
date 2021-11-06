@@ -922,7 +922,7 @@ describe('WS Flows', function () {
         let ret = await client.callApi('Test', { name: 'XXX' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: new TsrpcError('Invalid input buffer, please check the version of service proto.', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
+            err: new TsrpcError('Invalid request buffer, please check the version of service proto.', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
         })
 
         await server.stop();
