@@ -227,6 +227,12 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         this.options.debugBuf && conn.logger.debug((typeof data === 'string' ? '[RecvText]' : '[RecvBuf]'), `length=${data.length}`, data);
 
+        // jsonEnabled 未启用，不支持文本请求
+        if (typeof data === 'string' && !this.options.jsonEnabled) {
+            this.onInputDataError('JSON mode is not enabled, please use binary instead.', conn, data);
+            return;
+        }
+
         let pre = await this.flows.preRecvDataFlow.exec({ conn: conn, data: data }, conn.logger);
         if (!pre) {
             return;
