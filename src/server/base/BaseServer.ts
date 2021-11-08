@@ -152,6 +152,11 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         this.proto = proto;
         this.options = options;
 
+        // @deprecated jsonEnabled
+        if (this.options.jsonEnabled) {
+            this.options.json = true;
+        }
+
         this.tsbuffer = new TSBuffer({
             ...proto.types,
             // Support mongodb/ObjectId
@@ -763,7 +768,9 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
      * 
      * @defaultValue `false`
      */
-    jsonEnabled: boolean,
+    json: boolean,
+    /** @deprecated Use `json` instead. */
+    jsonEnabled?: boolean,
 
     // TSBuffer相关
     /**
@@ -818,7 +825,7 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
 }
 
 export const defaultBaseServerOptions: BaseServerOptions<any> = {
-    jsonEnabled: false,
+    json: false,
     strictNullChecks: false,
     apiTimeout: 30000,
     logger: new TerminalColorLogger,

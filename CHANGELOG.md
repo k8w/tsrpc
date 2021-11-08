@@ -1,9 +1,11 @@
 # CHANGELOG
 
-## [3.1.0-dev.2] - 2021-11-07
+## [3.1.0-dev.4] - 2021-11-07
 ### Added
 - WebSocket 支持 JSON 格式传输
 - JSON 格式传输支持 `ArrayBuffer`、`Date`、`ObjectId`，自动根据协议编解码为 `string`
+### Changed
+- `jsonEnabled` -> `json`
 
 ## [3.0.14-dev.0] - 2021-10-25
 ### Added
