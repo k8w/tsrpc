@@ -153,8 +153,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         this.options = options;
 
         // @deprecated jsonEnabled
-        if (this.options.jsonEnabled) {
-            this.options.json = true;
+        if (this.options.json) {
+            this.options.jsonEnabled = true;
         }
 
         this.tsbuffer = new TSBuffer({
