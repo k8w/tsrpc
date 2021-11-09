@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.1.1-dev.0] - 2021-11-09
+### Added
+- HTTP Text 传输模式下，区分 HTTP 状态码返回，不再统一返回 200
+
 ## [3.1.0] - 2021-11-08
 ### Added
 - WebSocket 支持 JSON 格式传输
