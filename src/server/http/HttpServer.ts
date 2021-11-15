@@ -1,21 +1,15 @@
 import * as http from "http";
-import { ParsedServerInput } from "tsrpc-base-client";
-import { ApiReturn, BaseServiceType, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
+import { BaseServiceType, ServiceProto } from 'tsrpc-proto';
 import { HttpUtil } from '../../models/HttpUtil';
 import { TSRPC_VERSION } from "../../models/version";
 import { BaseServer, BaseServerOptions, defaultBaseServerOptions, ServerStatus } from '../base/BaseServer';
-import { ApiCallHttp } from './ApiCallHttp';
 import { HttpConnection } from './HttpConnection';
-import { MsgCallHttp } from "./MsgCallHttp";
 
 /**
  * TSRPC Server, based on HTTP connection.
  * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
  */
 export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<ServiceType>{
-    readonly ApiCallClass = ApiCallHttp;
-    readonly MsgCallClass = MsgCallHttp;
-
     readonly options!: HttpServerOptions<ServiceType>;
 
     constructor(proto: ServiceProto<ServiceType>, options?: Partial<HttpServerOptions<ServiceType>>) {
@@ -184,13 +178,6 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
         })
 
     }
-
-    // HTTP Server 一个conn只有一个call，对应关联之
-    protected _makeCall(conn: HttpConnection<ServiceType>, input: ParsedServerInput): ApiCallHttp | MsgCallHttp {
-        let call = super._makeCall(conn, input) as ApiCallHttp | MsgCallHttp;
-        conn.call = call;
-        return call;
-    }
 }
 
 export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
@@ -219,7 +206,7 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
      * @defaultValue `*`
      */
     cors?: string,
-    
+
     /**
      * Actual URL path is `${jsonHostPath}/${apiName}`.
      * For example, if `jsonHostPath` is `'/api'`, then you can send `POST /api/a/b/c/Test` to call API `a/b/c/Test`.

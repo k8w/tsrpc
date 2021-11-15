@@ -14,16 +14,18 @@ export class ApiCallInner<Req = any, Res = any, ServiceType extends BaseServiceT
     }
 
     protected async _sendReturn(ret: ApiReturn<Res>): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
-        // Validate Res
-        if (ret.isSucc) {
-            let resValidate = this.server.tsbuffer.validate(ret.res, this.service.resSchemaId);
-            if (!resValidate.isSucc) {
-                return resValidate;
+        if (this.conn.return.type === 'raw') {
+            // Validate Res
+            if (ret.isSucc) {
+                let resValidate = this.server.tsbuffer.validate(ret.res, this.service.resSchemaId);
+                if (!resValidate.isSucc) {
+                    return resValidate;
+                }
             }
+            return this.conn.sendData(ret);
         }
 
-        this.conn.sendReturn(ret);
-        return { isSucc: true };
+        return super._sendReturn(ret);
     }
 
 }

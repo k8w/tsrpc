@@ -150,8 +150,9 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
 
     static encodeApiReturn(tsbuffer: TSBuffer, service: ApiService, apiReturn: ApiReturn<any>, type: 'text', sn?: number): EncodeApiReturnOutput<string>
     static encodeApiReturn(tsbuffer: TSBuffer, service: ApiService, apiReturn: ApiReturn<any>, type: 'buffer', sn?: number): EncodeApiReturnOutput<Uint8Array>
-    static encodeApiReturn(tsbuffer: TSBuffer, service: ApiService, apiReturn: ApiReturn<any>, type: 'text' | 'buffer', sn?: number): EncodeApiReturnOutput<Uint8Array> | EncodeApiReturnOutput<string>;
-    static encodeApiReturn(tsbuffer: TSBuffer, service: ApiService, apiReturn: ApiReturn<any>, type: 'text' | 'buffer', sn?: number): EncodeApiReturnOutput<Uint8Array> | EncodeApiReturnOutput<string> {
+    static encodeApiReturn(tsbuffer: TSBuffer, service: ApiService, apiReturn: ApiReturn<any>, type: 'json', sn?: number): EncodeApiReturnOutput<object>
+    static encodeApiReturn(tsbuffer: TSBuffer, service: ApiService, apiReturn: ApiReturn<any>, type: 'text' | 'buffer' | 'json', sn?: number): EncodeApiReturnOutput<Uint8Array> | EncodeApiReturnOutput<string> | EncodeApiReturnOutput<object>;
+    static encodeApiReturn(tsbuffer: TSBuffer, service: ApiService, apiReturn: ApiReturn<any>, type: 'text' | 'buffer' | 'json', sn?: number): EncodeApiReturnOutput<Uint8Array> | EncodeApiReturnOutput<string> | EncodeApiReturnOutput<object> {
         if (type === 'buffer') {
             let serverOutputData: ServerOutputData = {
                 sn: sn,
@@ -185,8 +186,8 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
                     ...apiReturn.err
                 }
             }
-            let text = JSON.stringify(sn == undefined ? apiReturn : [service.name, apiReturn, sn]);
-            return { isSucc: true, output: text };
+            let json = sn == undefined ? apiReturn : [service.name, apiReturn, sn];
+            return { isSucc: true, output: type === 'json' ? json : JSON.stringify(json) };
         }
     }
 }

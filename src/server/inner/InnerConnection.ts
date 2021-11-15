@@ -1,9 +1,16 @@
 import { ApiReturn, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
-import { BaseConnection, BaseServiceType, PrefixLogger } from "../..";
+import { ApiCall, BaseConnection, BaseServiceType, PrefixLogger, TransportDataUtil } from "../..";
 import { BaseConnectionOptions, ConnectionStatus } from "../base/BaseConnection";
+import { ApiCallInner } from "./ApiCallInner";
 
 export interface InnerConnectionOptions<ServiceType extends BaseServiceType> extends BaseConnectionOptions<ServiceType> {
-    rs: (ret: ApiReturn<any>) => void;
+    return: {
+        type: 'raw' | 'json',
+        rs: (ret: ApiReturn<any>) => void;
+    } | {
+        type: 'buffer',
+        rs: (ret: Uint8Array) => void;
+    }
 }
 
 /**
@@ -11,7 +18,11 @@ export interface InnerConnectionOptions<ServiceType extends BaseServiceType> ext
  */
 export class InnerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
     readonly type = 'SHORT';
-    rs?: (ret: ApiReturn<any>) => void;
+
+    protected readonly ApiCallClass = ApiCallInner;
+    protected readonly MsgCallClass = null as any;
+
+    return!: InnerConnectionOptions<any>['return'];
 
     constructor(options: InnerConnectionOptions<ServiceType>) {
         super(options, new PrefixLogger({
@@ -19,7 +30,7 @@ export class InnerConnection<ServiceType extends BaseServiceType = any> extends 
             prefixs: [`Inner #${options.id}`]
         }));
 
-        this.rs = options.rs;
+        this.return = options.return;
     }
 
     private _status: ConnectionStatus = ConnectionStatus.Opened;
@@ -28,22 +39,41 @@ export class InnerConnection<ServiceType extends BaseServiceType = any> extends 
     }
 
     close(reason?: string): void {
-        this.sendReturn({
+        this._sendData({
             isSucc: false,
             err: new TsrpcError(reason ?? 'Internal Server Error', {
                 type: TsrpcErrorType.ServerError,
-                code: 'CONN_CLOSED'
+                code: 'CONN_CLOSED',
+                reason: reason
             })
         });
     }
 
-    sendReturn(ret: ApiReturn<any>) {
-        this.rs?.(ret);
-        this.rs = undefined;
+    protected async _sendData(data: Uint8Array | ApiReturn<any>, call?: ApiCall): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         this._status = ConnectionStatus.Closed;
-    }
 
-    protected _sendData(): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
-        throw new Error("Cannot sendData in the InnerConnection.");
+        if (this.return.type === 'buffer') {
+            if (!(data instanceof Uint8Array)) {
+                // encode tsrpc error
+                if (!data.isSucc) {
+                    let op = TransportDataUtil.tsbuffer.encode({
+                        error: data.err
+                    }, 'ServerOutputData');
+                    if (op.isSucc) {
+                        return this._sendData(op.buf, call);
+                    }
+                }
+                return { isSucc: false, errMsg: 'Error data type' };
+            }
+            this.return.rs(data);
+            return { isSucc: true }
+        }
+        else {
+            if (data instanceof Uint8Array) {
+                return { isSucc: false, errMsg: 'Error data type' };
+            }
+            this.return.rs(data);
+            return { isSucc: true }
+        }
     }
 }

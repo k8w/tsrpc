@@ -1,6 +1,11 @@
 # CHANGELOG
 
-## [3.1.1-dev.0] - 2021-11-09
+## [3.1.2-dev.0] - 2021-11-15
+### Added
+- `server.inputJSON` and `server.inputBuffer`
+- Add new dataType `json`
+
+## [3.1.1] - 2021-11-09
 ### Added
 - HTTP Text 传输模式下，区分 HTTP 状态码返回，不再统一返回 200
 

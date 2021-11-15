@@ -17,10 +17,6 @@ import { MsgCall } from './MsgCall';
  * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
  */
 export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServiceType>{
-
-    abstract readonly ApiCallClass: { new(options: any): ApiCall };
-    abstract readonly MsgCallClass: { new(options: any): MsgCall };
-
     /**
      * Start the server
      * @throws
@@ -63,12 +59,12 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
          * Before processing the received data, usually be used to encryption / decryption.
          * Return `null | undefined` would ignore the buffer.
          */
-        preRecvDataFlow: new Flow<{ conn: BaseConnection<ServiceType>, data: string | Uint8Array }>(),
+        preRecvDataFlow: new Flow<{ conn: BaseConnection<ServiceType>, data: string | Uint8Array | object }>(),
         /**
          * Before send out data to network, usually be used to encryption / decryption.
          * Return `null | undefined` would not send the buffer.
          */
-        preSendDataFlow: new Flow<{ conn: BaseConnection<ServiceType>, data: string | Uint8Array, call?: ApiCall }>(),
+        preSendDataFlow: new Flow<{ conn: BaseConnection<ServiceType>, data: string | Uint8Array | object, call?: ApiCall }>(),
         /**
          * @deprecated Use `preRecvDataFlow` instead.
          */
@@ -224,13 +220,24 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     /**
      * Process the buffer, after the `preRecvBufferFlow`.
      */
-    async _onRecvData(conn: BaseConnection<ServiceType>, data: string | Uint8Array, serviceName?: string) {
+    async _onRecvData(conn: BaseConnection<ServiceType>, data: string | Uint8Array | object, serviceName?: string) {
         // 非 OPENED 状态 停止接受新的请求
-        if (this.status !== ServerStatus.Opened) {
+        if (!(conn instanceof InnerConnection) && this.status !== ServerStatus.Opened) {
             return;
         }
 
-        this.options.debugBuf && conn.logger.debug((typeof data === 'string' ? '[RecvText]' : '[RecvBuf]'), `length=${data.length}`, data);
+        // debugBuf log
+        if (this.options.debugBuf) {
+            if (typeof data === 'string') {
+                conn.logger?.debug(`[RecvText] length=${data.length}`, data);
+            }
+            else if (data instanceof Uint8Array) {
+                conn.logger?.debug(`[RecvBuf] length=${data.length}`, data);
+            }
+            else {
+                conn.logger?.debug('[RecvJSON]', data);
+            }
+        }
 
         // jsonEnabled 未启用，不支持文本请求
         if (typeof data === 'string' && !this.options.jsonEnabled) {
@@ -245,7 +252,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         data = pre.data;
 
         // @deprecated preRecvBuffer
-        if (typeof data !== 'string') {
+        if (data instanceof Uint8Array) {
             let preBuf = await this.flows.preRecvBufferFlow.exec({ conn: conn, buf: data }, conn.logger);
             if (!preBuf) {
                 return;
@@ -259,31 +266,13 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             this.onInputDataError(opInput.errMsg, conn, data);
             return;
         }
-        let call = this._makeCall(conn, opInput.result);
+        let call = conn.makeCall(opInput.result);
 
         if (call.type === 'api') {
             await this._handleApiCall(call);
         }
         else {
             await this._onMsgCall(call);
-        }
-    }
-
-    protected _makeCall(conn: BaseConnection<ServiceType>, input: ParsedServerInput): ApiCall | MsgCall {
-        if (input.type === 'api') {
-            return new this.ApiCallClass({
-                conn: conn,
-                service: input.service,
-                req: input.req,
-                sn: input.sn,
-            })
-        }
-        else {
-            return new this.MsgCallClass({
-                conn: conn,
-                service: input.service,
-                msg: input.msg
-            })
         }
     }
 
@@ -508,13 +497,16 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * Event when the server cannot parse input buffer to api/msg call.
      * By default, it will return "Input Data Error" .
      */
-    async onInputDataError(errMsg: string, conn: BaseConnection<ServiceType>, data: string | Uint8Array) {
+    async onInputDataError(errMsg: string, conn: BaseConnection<ServiceType>, data: string | Uint8Array | object) {
         if (this.options.debugBuf) {
             if (typeof data === 'string') {
                 conn.logger.error(`[InputDataError] ${errMsg} length = ${data.length}`, data)
             }
-            else {
+            else if (data instanceof Uint8Array) {
                 conn.logger.error(`[InputBufferError] ${errMsg} length = ${data.length}`, data.subarray(0, 16))
+            }
+            else {
+                conn.logger.error(`[InputJsonError] ${errMsg} `, data)
             }
         }
 
@@ -536,7 +528,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                     type: TsrpcErrorType.ServerError,
                     code: 'INPUT_DATA_ERR'
                 })
-            }, typeof data === 'string' ? 'text' : 'buffer')
+            }, conn.dataType)
             if (opEncode.isSucc) {
                 let opSend = await conn.sendData(opEncode.output);
                 if (opSend.isSucc) {
@@ -612,8 +604,11 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     }
 
     /**
-     * Execute API function through the inner connection.
-     * It is useful when you want to customize your transport method.
+     * Execute API function through the inner connection, which is useful for unit test.
+     * 
+     * **NOTICE**
+     * The `req` and return value is native JavaScript object which is not compatible to JSON. (etc. ArrayBuffer, Date, ObjectId)
+     * If you are using pure JSON as transfering, you may need use `callApiByJSON`.
      * @param apiName 
      * @param req 
      * @param options 
@@ -630,11 +625,14 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             }
 
             let conn = new InnerConnection({
-                dataType: 'buffer',
+                dataType: 'json',
                 server: this,
                 id: '' + this._connIdCounter.getNext(),
                 ip: '',
-                rs: rs
+                return: {
+                    type: 'raw',
+                    rs: rs
+                }
             });
             let call = new ApiCallInner({
                 conn: conn,
@@ -645,15 +643,115 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         })
     }
 
-    protected _parseServerInput(tsbuffer: TSBuffer, serviceMap: ServiceMap, data: string | Uint8Array, serviceName?: string): { isSucc: true, result: ParsedServerInput } | { isSucc: false, errMsg: string } {
-        if (typeof data === 'string') {
-            let json: any;
-            try {
-                json = JSON.parse(data);
+    /**
+     * Like `server.callApi`, but both input and output are pure JSON object,
+     * which can be `JSON.stringify()` and `JSON.parse()` directly.
+     * Types that not compatible to JSON, would be encoded and decoded automatically.
+     * @param apiName - The same with `server.callApi`, may be parsed from the URL.
+     * @param jsonReq - Request data in pure JSON
+     * @returns Encoded `ApiReturn<Res>` in pure JSON
+     */
+
+    /**
+     * Process JSON request by inner proxy, this is useful when you are porting to cloud function services.
+     * Both the input and output is pure JSON, ArrayBuffer/Date/ObjectId are encoded to string automatically.
+     * @param apiName - Parsed from URL
+     * @param req - Pure JSON
+     * @returns - Pure JSON
+     */
+    inputJSON(apiName: string, req: object): Promise<ApiReturn<object>> {
+        return new Promise(rs => {
+            let conn = new InnerConnection({
+                dataType: 'json',
+                server: this,
+                id: '' + this._connIdCounter.getNext(),
+                ip: '',
+                return: {
+                    type: 'json',
+                    rs: rs
+                }
+            });
+
+            this._onRecvData(conn, req, apiName);
+        })
+    }
+
+    /**
+     * Process input buffer by inner proxy, this is useful when you are porting to cloud function services.
+     * @param buf Input buffer (may be sent by TSRPC client)
+     * @returns Response buffer
+     */
+    inputBuffer(buf: Uint8Array): Promise<Uint8Array> {
+        return new Promise(rs => {
+            let conn = new InnerConnection({
+                dataType: 'buffer',
+                server: this,
+                id: '' + this._connIdCounter.getNext(),
+                ip: '',
+                return: {
+                    type: 'buffer',
+                    rs: rs
+                }
+            });
+
+            this._onRecvData(conn, buf);
+        })
+    }
+
+    protected _parseServerInput(tsbuffer: TSBuffer, serviceMap: ServiceMap, data: string | Uint8Array | object, serviceName?: string): { isSucc: true, result: ParsedServerInput } | { isSucc: false, errMsg: string } {
+        if (data instanceof Uint8Array) {
+            let opServerInputData = TransportDataUtil.tsbuffer.decode(data, 'ServerInputData');
+
+            if (!opServerInputData.isSucc) {
+                return opServerInputData;
             }
-            catch (e: any) {
-                return { isSucc: false, errMsg: `Invalid input JSON: ${e.message}` };
+            let serverInput = opServerInputData.value as ServerInputData;
+
+            // 确认是哪个Service
+            let service = serviceMap.id2Service[serverInput.serviceId];
+            if (!service) {
+                return { isSucc: false, errMsg: `Cannot find service ID: ${serverInput.serviceId}` }
             }
+
+            // 解码Body
+            if (service.type === 'api') {
+                let opReq = tsbuffer.decode(serverInput.buffer, service.reqSchemaId);
+                return opReq.isSucc ? {
+                    isSucc: true,
+                    result: {
+                        type: 'api',
+                        service: service,
+                        req: opReq.value,
+                        sn: serverInput.sn
+                    }
+                } : opReq
+            }
+            else {
+                let opMsg = tsbuffer.decode(serverInput.buffer, service.msgSchemaId);
+                return opMsg.isSucc ? {
+                    isSucc: true,
+                    result: {
+                        type: 'msg',
+                        service: service,
+                        msg: opMsg.value
+                    }
+                } : opMsg;
+            }
+        }
+        else {
+            let json: object;
+            if (typeof data === 'string') {
+                try {
+                    json = JSON.parse(data);
+                }
+                catch (e: any) {
+                    return { isSucc: false, errMsg: `Invalid input JSON: ${e.message}` };
+                }
+            }
+            else {
+                json = data;
+            }
+
             let body: any;
             let sn: number | undefined;
 
@@ -706,45 +804,6 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                         msg: op.value
                     }
                 }
-            }
-        }
-        else {
-            let opServerInputData = TransportDataUtil.tsbuffer.decode(data, 'ServerInputData');
-
-            if (!opServerInputData.isSucc) {
-                return opServerInputData;
-            }
-            let serverInput = opServerInputData.value as ServerInputData;
-
-            // 确认是哪个Service
-            let service = serviceMap.id2Service[serverInput.serviceId];
-            if (!service) {
-                return { isSucc: false, errMsg: `Cannot find service ID: ${serverInput.serviceId}` }
-            }
-
-            // 解码Body
-            if (service.type === 'api') {
-                let opReq = tsbuffer.decode(serverInput.buffer, service.reqSchemaId);
-                return opReq.isSucc ? {
-                    isSucc: true,
-                    result: {
-                        type: 'api',
-                        service: service,
-                        req: opReq.value,
-                        sn: serverInput.sn
-                    }
-                } : opReq
-            }
-            else {
-                let opMsg = tsbuffer.decode(serverInput.buffer, service.msgSchemaId);
-                return opMsg.isSucc ? {
-                    isSucc: true,
-                    result: {
-                        type: 'msg',
-                        service: service,
-                        msg: opMsg.value
-                    }
-                } : opMsg;
             }
         }
     }

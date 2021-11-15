@@ -1,4 +1,5 @@
 import * as http from "http";
+import { ParsedServerInput } from "tsrpc-base-client";
 import { BaseServiceType } from "tsrpc-proto";
 import { ApiCall } from "../base/ApiCall";
 import { BaseConnection, BaseConnectionOptions, ConnectionStatus } from '../base/BaseConnection';
@@ -15,6 +16,9 @@ export interface HttpConnectionOptions<ServiceType extends BaseServiceType> exte
 
 export class HttpConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
     readonly type = 'SHORT';
+
+    protected readonly ApiCallClass = ApiCallHttp;
+    protected readonly MsgCallClass = MsgCallHttp;
 
     readonly httpReq: http.IncomingMessage;
     readonly httpRes: http.ServerResponse;
@@ -76,5 +80,12 @@ export class HttpConnection<ServiceType extends BaseServiceType = any> extends B
         }
         reason && this.httpRes.setHeader('X-TSRPC-Close-Reason', reason);
         this.httpRes.end();
+    }
+
+    // HTTP Server 一个conn只有一个call，对应关联之
+    makeCall(input: ParsedServerInput): ApiCallHttp | MsgCallHttp {
+        let call = super.makeCall(input) as ApiCallHttp | MsgCallHttp;
+        this.call = call;
+        return call;
     }
 }

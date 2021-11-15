@@ -4,6 +4,7 @@ import * as WebSocket from "ws";
 import { BaseConnection, BaseConnectionOptions, ConnectionStatus } from "../base/BaseConnection";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { ApiCallWs } from "./ApiCallWs";
+import { MsgCallWs } from "./MsgCallWs";
 import { WsServer } from "./WsServer";
 
 export interface WsConnectionOptions<ServiceType extends BaseServiceType> extends BaseConnectionOptions<ServiceType> {
@@ -18,6 +19,9 @@ export interface WsConnectionOptions<ServiceType extends BaseServiceType> extend
  */
 export class WsConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
     readonly type = "LONG";
+
+    protected readonly ApiCallClass = ApiCallWs;
+    protected readonly MsgCallClass = MsgCallWs;
 
     readonly ws: WebSocket;
     readonly httpReq: http.IncomingMessage;

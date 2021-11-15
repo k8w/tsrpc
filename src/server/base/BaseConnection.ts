@@ -1,8 +1,9 @@
-import { TransportDataUtil } from "tsrpc-base-client";
+import { ParsedServerInput, TransportDataUtil } from "tsrpc-base-client";
 import { BaseServiceType } from "tsrpc-proto";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { ApiCall } from "./ApiCall";
 import { BaseServer } from "./BaseServer";
+import { MsgCall } from "./MsgCall";
 
 export interface BaseConnectionOptions<ServiceType extends BaseServiceType = any> {
     /** Created by server, each Call has a unique id. */
@@ -10,12 +11,15 @@ export interface BaseConnectionOptions<ServiceType extends BaseServiceType = any
     /** Client IP address */
     ip: string,
     server: BaseServer<ServiceType>,
-    dataType: 'text' | 'buffer'
+    dataType: 'text' | 'buffer' | 'json'
 }
 
 export abstract class BaseConnection<ServiceType extends BaseServiceType = any> {
     /** It is long connection or short connection */
     abstract readonly type: 'LONG' | 'SHORT';
+
+    protected abstract readonly ApiCallClass: { new(options: any): ApiCall };
+    protected abstract readonly MsgCallClass: { new(options: any): MsgCall };
 
     /** Connection unique ID */
     readonly id: string;
@@ -38,7 +42,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     abstract close(reason?: string): void;
 
     /** Send buffer (with pre-flow and post-flow) */
-    async sendData(data: string | Uint8Array, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
+    async sendData(data: string | Uint8Array | object, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
         // Pre Flow
         let pre = await this.server.flows.preSendDataFlow.exec({ conn: this, data: data, call: call }, call?.logger || this.logger);
         if (!pre) {
@@ -47,7 +51,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         data = pre.data;
 
         // @deprecated Pre Buffer Flow
-        if (typeof data !== 'string') {
+        if (data instanceof Uint8Array) {
             let preBuf = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: data, call: call }, call?.logger || this.logger);
             if (!preBuf) {
                 return { isSucc: false, errMsg: 'preSendBufferFlow Error' };
@@ -55,10 +59,40 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             data = preBuf.buf;
         }
 
-        this.server.options.debugBuf && this.logger.debug(typeof data === 'string' ? '[SendText]' : '[SendBuf]', `length=${data.length}`, data);
+        // debugBuf log
+        if (this.server.options.debugBuf) {
+            if (typeof data === 'string') {
+                (call?.logger ?? this.logger)?.debug(`[SendText] length=${data.length}`, data);
+            }
+            else if (data instanceof Uint8Array) {
+                (call?.logger ?? this.logger)?.debug(`[SendBuf] length=${data.length}`, data);
+            }
+            else {
+                (call?.logger ?? this.logger)?.debug('[SendJSON]', data);
+            }
+        }
+
         return this._sendData(data, call);
     }
-    protected abstract _sendData(data: string | Uint8Array, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
+    protected abstract _sendData(data: string | Uint8Array | object, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
+
+    makeCall(input: ParsedServerInput): ApiCall | MsgCall {
+        if (input.type === 'api') {
+            return new this.ApiCallClass({
+                conn: this,
+                service: input.service,
+                req: input.req,
+                sn: input.sn,
+            })
+        }
+        else {
+            return new this.MsgCallClass({
+                conn: this,
+                service: input.service,
+                msg: input.msg
+            })
+        }
+    }
 
     /**
      * Send message to the client, only be available when it is long connection.

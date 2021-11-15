@@ -15,9 +15,6 @@ import { WsConnection } from './WsConnection';
  * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
  */
 export class WsServer<ServiceType extends BaseServiceType = any> extends BaseServer<ServiceType> {
-    readonly ApiCallClass = ApiCallWs;
-    readonly MsgCallClass = MsgCallWs;
-
     readonly options!: WsServerOptions<ServiceType>;
 
     readonly connections: WsConnection<ServiceType>[] = [];
