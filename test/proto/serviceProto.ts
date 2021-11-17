@@ -25,6 +25,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
+    "version": 1,
     "services": [
         {
             "id": 0,
@@ -124,6 +125,23 @@ export const serviceProto: ServiceProto<ServiceType> = {
                         "type": "Reference",
                         "target": "?mongodb/ObjectId"
                     }
+                },
+                {
+                    "id": 1,
+                    "name": "buf",
+                    "type": {
+                        "type": "Buffer",
+                        "arrayType": "Uint8Array"
+                    },
+                    "optional": true
+                },
+                {
+                    "id": 2,
+                    "name": "date",
+                    "type": {
+                        "type": "Date"
+                    },
+                    "optional": true
                 }
             ]
         },
@@ -137,6 +155,23 @@ export const serviceProto: ServiceProto<ServiceType> = {
                         "type": "Reference",
                         "target": "?mongodb/ObjectId"
                     }
+                },
+                {
+                    "id": 1,
+                    "name": "buf",
+                    "type": {
+                        "type": "Buffer",
+                        "arrayType": "Uint8Array"
+                    },
+                    "optional": true
+                },
+                {
+                    "id": 2,
+                    "name": "date",
+                    "type": {
+                        "type": "Date"
+                    },
+                    "optional": true
                 }
             ]
         },

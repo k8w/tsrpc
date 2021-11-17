@@ -368,21 +368,29 @@ describe('HTTP Flows', function () {
 
     });
 
-    it('ObjectId', async function () {
+    it('Extended JSON Types', async function () {
         let server = new HttpServer(getProto(), {
             logger: serverLogger
         });
         await server.autoImplementApi(path.resolve(__dirname, '../api'))
 
+        let buf = new Uint8Array([0, 1, 2, 3, 255, 254, 253, 252]);
+        let date = new Date('2021/11/17');
 
         // ObjectId
         let objId1 = new ObjectId();
         let ret = await server.callApi('ObjId', {
-            id1: objId1
+            id1: objId1,
+            buf: buf,
+            date: date
         });
-        assert.strictEqual(ret.isSucc, true, ret.err?.message);
-        assert.strictEqual(objId1.toString(), ret.res!.id2.toString());
-
-
+        assert.deepStrictEqual(ret, {
+            isSucc: true,
+            res: {
+                id2: objId1,
+                buf: buf,
+                date: date
+            }
+        });
     })
 })

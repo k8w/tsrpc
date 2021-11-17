@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [3.1.2-dev.0] - 2021-11-15
+## [3.1.2] - 2021-11-17
 ### Added
 - `server.inputJSON` and `server.inputBuffer`
 - Add new dataType `json`

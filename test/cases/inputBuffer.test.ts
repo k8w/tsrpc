@@ -2,9 +2,8 @@ import { ObjectId } from 'bson';
 import { assert } from 'chai';
 import chalk from 'chalk';
 import * as path from "path";
-import { Base64Util } from 'tsbuffer';
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
-import { ApiCall, BaseServer, HttpConnection, MsgCall, TerminalColorLogger } from '../../src';
+import { ApiCall, ApiService, BaseServer, HttpConnection, MsgCall, TerminalColorLogger, TransportDataUtil } from '../../src';
 import { HttpServer } from '../../src/server/http/HttpServer';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
@@ -18,11 +17,31 @@ const serverLogger = new PrefixLogger({
     logger: new TerminalColorLogger({ pid: 'Server' })
 });
 
+async function inputBuffer(server: BaseServer<any>, apiName: string, req: any) {
+    let apiSvc: ApiService | undefined = server.serviceMap.apiName2Service[apiName];
+    let inputBuf = apiSvc ? (await TransportDataUtil.encodeApiReq(server.tsbuffer, apiSvc, req, 'buffer')).output : new Uint8Array([0, 1, 2, 3, 255, 254, 253, 252]);
+    if (!inputBuf) {
+        throw new Error('failed to encode inputBuf')
+    }
+
+    let retBuf = await server.inputBuffer(inputBuf);
+    assert.ok(retBuf instanceof Uint8Array)
+
+    let opDecode = await TransportDataUtil.parseServerOutout(server.tsbuffer, server.serviceMap, retBuf, apiSvc?.id ?? 0);
+    if (!opDecode.isSucc) {
+        throw new Error('decode buf failed')
+    }
+    if (opDecode.result.type !== 'api') {
+        throw new Error('decode result is not api')
+    }
+    return opDecode.result.ret;
+}
+
 const getProto = () => Object.merge({}, serviceProto) as ServiceProto<ServiceType>;
 
 async function testApi(server: HttpServer<ServiceType>) {
     // Succ
-    assert.deepStrictEqual(await server.inputJSON('Test', {
+    assert.deepStrictEqual(await inputBuffer(server, 'Test', {
         name: 'Req1'
     }), {
         isSucc: true,
@@ -30,7 +49,7 @@ async function testApi(server: HttpServer<ServiceType>) {
             reply: 'Test reply: Req1'
         }
     });
-    assert.deepStrictEqual(await server.inputJSON('a/b/c/Test', {
+    assert.deepStrictEqual(await inputBuffer(server, 'a/b/c/Test', {
         name: 'Req2'
     }), {
         isSucc: true,
@@ -41,52 +60,46 @@ async function testApi(server: HttpServer<ServiceType>) {
 
     // Inner error
     for (let v of ['Test', 'a/b/c/Test']) {
-        let ret = await server.inputJSON(v as any, {
+        let ret = await inputBuffer(server, v as any, {
             name: 'InnerError'
         });
         delete ret.err!.innerErr.stack;
 
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: {
-                ...new TsrpcError('Internal Server Error', {
-                    code: 'INTERNAL_ERR',
-                    type: TsrpcErrorType.ServerError,
-                    innerErr: `${v} InnerError`
-                })
-            }
+            err: new TsrpcError('Internal Server Error', {
+                code: 'INTERNAL_ERR',
+                type: TsrpcErrorType.ServerError,
+                innerErr: `${v} InnerError`
+            })
         });
     }
 
     // TsrpcError
     for (let v of ['Test', 'a/b/c/Test']) {
-        let ret = await server.inputJSON(v as any, {
+        let ret = await inputBuffer(server, v as any, {
             name: 'TsrpcError'
         });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: {
-                ...new TsrpcError(`${v} TsrpcError`, {
-                    code: 'CODE_TEST',
-                    type: TsrpcErrorType.ApiError,
-                    info: 'ErrInfo ' + v
-                })
-            }
+            err: new TsrpcError(`${v} TsrpcError`, {
+                code: 'CODE_TEST',
+                type: TsrpcErrorType.ApiError,
+                info: 'ErrInfo ' + v
+            })
         });
     }
 
     // call.error
     for (let v of ['Test', 'a/b/c/Test']) {
-        let ret = await server.inputJSON(v as any, {
+        let ret = await inputBuffer(server, v as any, {
             name: 'error'
         });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: {
-                ...new TsrpcError('Got an error', {
-                    type: TsrpcErrorType.ApiError
-                })
-            }
+            err: new TsrpcError('Got an error', {
+                type: TsrpcErrorType.ApiError
+            })
         });
     }
 }
@@ -197,7 +210,7 @@ describe('HTTP Server & Client basic', function () {
         });
 
 
-        let ret = await server.inputJSON('TesASFt' as any, { name: 'xx' } as any);
+        let ret = await inputBuffer(server, 'TesASFt' as any, { name: 'xx' } as any);
         console.log(ret);
         assert.strictEqual(ret.isSucc, false);
         assert.strictEqual(ret.err?.code, 'INPUT_DATA_ERR');
@@ -221,15 +234,13 @@ describe('HTTP Server & Client basic', function () {
         })
 
 
-        let ret = await server.inputJSON('Test', { name: 'Jack' });
+        let ret = await inputBuffer(server, 'Test', { name: 'Jack' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: {
-                ...new TsrpcError('Server Timeout', {
-                    code: 'SERVER_TIMEOUT',
-                    type: TsrpcErrorType.ServerError
-                })
-            }
+            err: new TsrpcError('Server Timeout', {
+                code: 'SERVER_TIMEOUT',
+                type: TsrpcErrorType.ServerError
+            })
         });
 
 
@@ -253,7 +264,7 @@ describe('HTTP Server & Client basic', function () {
         let isStopped = false;
 
         let succNum = 0;
-        await Promise.all(Array.from({ length: 10 }, (v, i) => server.inputJSON('Test', { name: '' + (i * 100) }).then((v: any) => {
+        await Promise.all(Array.from({ length: 10 }, (v, i) => inputBuffer(server, 'Test', { name: '' + (i * 100) }).then((v: any) => {
             if (v.res?.reply === 'OK') {
                 ++succNum;
             }
@@ -285,12 +296,10 @@ describe('HTTP Flows', function () {
             return call;
         });
 
-        let ret = await server.inputJSON('Test', { name: 'xxx' });
+        let ret = await inputBuffer(server, 'Test', { name: 'xxx' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: {
-                ...new TsrpcError('You need login')
-            }
+            err: new TsrpcError('You need login')
         })
     });
 
@@ -310,12 +319,10 @@ describe('HTTP Flows', function () {
             return undefined;
         });
 
-        let ret = await server.inputJSON('Test', { name: 'xxx' });
+        let ret = await inputBuffer(server, 'Test', { name: 'xxx' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: {
-                ...new TsrpcError('You need login')
-            }
+            err: new TsrpcError('You need login')
         })
 
 
@@ -336,16 +343,14 @@ describe('HTTP Flows', function () {
             throw new Error('ASDFASDF')
         });
 
-        let ret = await server.inputJSON('Test', { name: 'xxx' });
+        let ret = await inputBuffer(server, 'Test', { name: 'xxx' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: {
-                ...new TsrpcError('Internal Server Error', {
-                    type: TsrpcErrorType.ServerError,
-                    innerErr: 'ASDFASDF',
-                    code: 'INTERNAL_ERR'
-                })
-            }
+            err: new TsrpcError('Internal Server Error', {
+                type: TsrpcErrorType.ServerError,
+                innerErr: 'ASDFASDF',
+                code: 'INTERNAL_ERR'
+            })
         })
 
 
@@ -366,16 +371,16 @@ describe('HTTP Flows', function () {
             flowExecResult.preApiReturnFlow = true;
             v.return = {
                 isSucc: false,
-                err: { ...new TsrpcError('Ret changed') }
+                err: new TsrpcError('Ret changed')
             }
             return v;
         });
 
-        let ret = await server.inputJSON('Test', { name: 'xxx' });
+        let ret = await inputBuffer(server, 'Test', { name: 'xxx' });
         assert.strictEqual(flowExecResult.preApiReturnFlow, true);
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: { ...new TsrpcError('Ret changed') }
+            err: new TsrpcError('Ret changed')
         })
 
 
@@ -392,7 +397,7 @@ describe('HTTP Flows', function () {
 
         // ObjectId
         let objId1 = new ObjectId();
-        let ret = await server.inputJSON('ObjId', {
+        let ret = await inputBuffer(server, 'ObjId', {
             id1: objId1,
             buf: buf,
             date: date
@@ -400,9 +405,9 @@ describe('HTTP Flows', function () {
         assert.deepStrictEqual(ret, {
             isSucc: true,
             res: {
-                id2: objId1.toHexString(),
-                buf: Base64Util.bufferToBase64(buf),
-                date: date.toJSON()
+                id2: objId1,
+                buf: buf,
+                date: date
             }
         });
     })
