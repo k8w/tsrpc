@@ -411,7 +411,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
             if (!handler) {
                 output.fail.push(svc.name);
-                let logMsg = chalk.red(`Implement ${chalk.cyan.underline(`Api${svc.name}`)} failed:`);
+                let logMsg = chalk.red(`Implement API ${chalk.cyan.underline(`${svc.name}`)} failed:`);
                 logMsg += '\n  |- ' + errMsg;
                 this.logger.error(logMsg);
                 continue;
