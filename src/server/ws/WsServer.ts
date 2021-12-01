@@ -120,30 +120,40 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
      * @returns Send result, `isSucc: true` means the message buffer is sent to kernel, not represents the clients received.
      */
     async broadcastMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], conns?: WsConnection<ServiceType>[]): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+        let connStr: string;
+        if (!conns) {
+            conns = this.connections;
+            connStr = '*';
+        }
+        else {
+            connStr = conns ? conns.map(v => v.id).join(',') : '*';
+        }
+
+        if (!conns.length) {
+            return { isSucc: true };
+        }
+
         if (this.status !== ServerStatus.Opened) {
-            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${conns ? conns.map(v => v.id).join(',') : '*'}]`, 'Server not open');
+            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr}]`, 'Server not open');
             return { isSucc: false, errMsg: 'Server not open' };
         }
 
         // GetService
         let service = this.serviceMap.msgName2Service[msgName as string];
         if (!service) {
-            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${conns ? conns.map(v => v.id).join(',') : '*'}]`, 'Invalid msg name: ' + msgName);
+            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr}]`, 'Invalid msg name: ' + msgName);
             return { isSucc: false, errMsg: 'Invalid msg name: ' + msgName };
         }
 
         // Encode
         let opEncode = TransportDataUtil.encodeServerMsg(this.tsbuffer, service, msg, this.options.jsonEnabled ? 'text' : 'buffer', 'LONG');
         if (!opEncode.isSucc) {
-            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${conns ? conns.map(v => v.id).join(',') : '*'}]`, opEncode.errMsg);
+            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr}]`, opEncode.errMsg);
             return opEncode;
         }
 
         let errMsgs: string[] = [];
-        this.options.logMsg && this.logger.log(`[BroadcastMsg]`, `[${msgName}]`, `[To:${conns ? conns.map(v => v.id).join(',') : '*'}]`, msg);
-        if (!conns) {
-            conns = this.connections;
-        }
+        this.options.logMsg && this.logger.log(`[BroadcastMsg]`, `[${msgName}]`, `[To:${connStr}]`, msg);
 
         // Batch send
         return Promise.all(conns.map(async conn => {
