@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.1.3-dev.0] - 2021-12-01
+### Added
+- `conn.listenMsg`
+
 ## [3.1.2] - 2021-11-17
 ### Added
 - `server.inputJSON` and `server.inputBuffer`

@@ -1,8 +1,8 @@
-import { ParsedServerInput, TransportDataUtil } from "tsrpc-base-client";
+import { MsgHandlerManager, ParsedServerInput, TransportDataUtil } from "tsrpc-base-client";
 import { BaseServiceType } from "tsrpc-proto";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { ApiCall } from "./ApiCall";
-import { BaseServer } from "./BaseServer";
+import { BaseServer, MsgHandler } from "./BaseServer";
 import { MsgCall } from "./MsgCall";
 
 export interface BaseConnectionOptions<ServiceType extends BaseServiceType = any> {
@@ -138,6 +138,40 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         return { isSucc: true };
     }
+
+    // 多个Handler将异步并行执行
+    private _msgHandlers?: MsgHandlerManager;
+    /**
+     * Add a message handler,
+     * duplicate handlers to the same `msgName` would be ignored.
+     * @param msgName
+     * @param handler
+     */
+    listenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: MsgHandler<Call>): MsgHandler<Call> {
+        if (!this._msgHandlers) {
+            this._msgHandlers = new MsgHandlerManager();
+        }
+        this._msgHandlers.addHandler(msgName as string, handler);
+        return handler;
+    };
+    /**
+     * Remove a message handler
+     */
+    unlistenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: Function): void {
+        if (!this._msgHandlers) {
+            this._msgHandlers = new MsgHandlerManager();
+        }
+        this._msgHandlers.removeHandler(msgName as string, handler);
+    };
+    /**
+     * Remove all handlers from a message
+     */
+    unlistenMsgAll<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg): void {
+        if (!this._msgHandlers) {
+            this._msgHandlers = new MsgHandlerManager();
+        }
+        this._msgHandlers.removeAllHandlers(msgName as string);
+    };
 }
 
 export enum ConnectionStatus {

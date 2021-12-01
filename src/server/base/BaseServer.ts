@@ -357,7 +357,12 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         // MsgHandler
         this.options.logMsg && call.logger.log('[RecvMsg]', call.msg);
-        let promises = this._msgHandlers.forEachHandler(call.service.name, call.logger, call);
+        let promises = [
+            // Conn Handlers
+            ...(call.conn['_msgHandlers']?.forEachHandler(call.service.name, call.logger, call) ?? []),
+            // Server Handlers
+            this._msgHandlers.forEachHandler(call.service.name, call.logger, call)
+        ];
         if (!promises.length) {
             this.logger.debug('[UNHANDLED_MSG]', call.service.name);
         }
