@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [3.1.3-dev.1] - 2021-12-01
+## [3.1.3] - 2021-12-04
 ### Added
 - `conn.listenMsg`
 ### Fixed
