@@ -1,6 +1,6 @@
 # TSRPC
 
-EN / [中文](https://tsrpc.cn/docs/introduction)
+EN / [中文](https://tsrpc.cn/docs/introduction.html)
 
 A TypeScript RPC framework with runtime type checking and binary serialization.
 
