@@ -65,8 +65,18 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
                 let conn: HttpConnection<ServiceType> | undefined;
                 httpReq.on('end', async () => {
-                    let isJSON = this.options.jsonEnabled && httpReq.headers["content-type"]?.toLowerCase() === 'application/json'
+
+                    // ---->DS modified block start<----
+
+                    let contentTypes = 'application/json;charset=utf-8'
+
+                    let headerState = httpReq.headers["content-type"] ? contentTypes.includes(httpReq.headers["content-type"].toLowerCase()) : false
+
+                    let isJSON = this.options.jsonEnabled && headerState
                         && httpReq.method === 'POST' && httpReq.url?.startsWith(this.options.jsonHostPath);
+
+                    // ---->DS modified block end<----
+
                     conn = new HttpConnection({
                         server: this,
                         id: '' + this._connIdCounter.getNext(),
@@ -78,6 +88,24 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     await this.flows.postConnectFlow.exec(conn, conn.logger);
 
                     let buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
+
+                    // ---->DS modified block start<----
+
+                    if (httpReq.url && httpReq.url.indexOf('?') != -1) {
+                        let arr = httpReq.url.split('?')
+
+                        if (arr.length >= 2) {
+                            let theParams = JSON.parse(buf.toString())
+                            httpReq.url = arr[0]
+                            let strs = arr[1].split('&')
+                            for (let i = 0; i < strs.length; i++) {
+                                theParams[strs[i].split("=")[0]] = unescape(strs[i].split('=')[1])
+                            }
+                            buf = Buffer.from(JSON.stringify(theParams))
+                        }
+                    }
+                    
+                    // ---->DS modified block end<----
 
                     if (isJSON) {
                         let serviceName = conn.httpReq.url!.substr(this.options.jsonHostPath.length);
