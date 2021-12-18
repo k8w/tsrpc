@@ -65,7 +65,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
                 let conn: HttpConnection<ServiceType> | undefined;
                 httpReq.on('end', async () => {
-                    let isJSON = this.options.jsonEnabled && httpReq.headers["content-type"]?.toLowerCase() === 'application/json'
+                    let isJSON = this.options.jsonEnabled && httpReq.headers["content-type"]?.toLowerCase().includes('application/json')
                         && httpReq.method === 'POST' && httpReq.url?.startsWith(this.options.jsonHostPath);
                     conn = new HttpConnection({
                         server: this,
@@ -80,7 +80,14 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     let buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
 
                     if (isJSON) {
-                        let serviceName = conn.httpReq.url!.substr(this.options.jsonHostPath.length);
+                        let url = conn.httpReq.url!;
+                        
+                        let urlEndPos = url.indexOf('?');
+                        if (urlEndPos > -1) {
+                            url = url.slice(0, urlEndPos);
+                        }
+
+                        let serviceName = url.slice(this.options.jsonHostPath.length);
                         this._onRecvData(conn, buf.toString(), serviceName);
                     }
                     else {

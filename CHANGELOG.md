@@ -1,8 +1,10 @@
 # CHANGELOG
 
-## [3.1.4-dev.1] - 2021-12-18
+## [3.1.4-dev.2] - 2021-12-18
 ### Fixed
 - Type error when disable `skipLibChecks`
+- Cannot resolve JSON when `headers` is `application/json; charset=utf-8`
+- Cannot resolve serviceName when there is query string in the URL
 
 ## [3.1.3] - 2021-12-04
 ### Added
