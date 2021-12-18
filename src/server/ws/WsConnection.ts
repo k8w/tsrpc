@@ -70,11 +70,7 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
         return ConnectionStatus.Opened;
     }
 
-    /**
-     * {@inheritDoc BaseConnection.sendBuf}
-     * @internal
-     */
-    protected async _sendData(data: string | Uint8Array, call?: ApiCallWs): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+    protected async doSendData(data: string | Uint8Array, call?: ApiCallWs): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         let opSend = await new Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>((rs) => {
             this.ws.send(data, e => {
                 e ? rs({ isSucc: false, errMsg: e.message || 'Send buffer error' }) : rs({ isSucc: true });

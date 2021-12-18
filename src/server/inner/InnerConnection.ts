@@ -39,7 +39,7 @@ export class InnerConnection<ServiceType extends BaseServiceType = any> extends 
     }
 
     close(reason?: string): void {
-        this._sendData({
+        this.doSendData({
             isSucc: false,
             err: new TsrpcError(reason ?? 'Internal Server Error', {
                 type: TsrpcErrorType.ServerError,
@@ -49,7 +49,7 @@ export class InnerConnection<ServiceType extends BaseServiceType = any> extends 
         });
     }
 
-    protected async _sendData(data: Uint8Array | ApiReturn<any>, call?: ApiCall): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+    protected async doSendData(data: Uint8Array | ApiReturn<any>, call?: ApiCall): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         this._status = ConnectionStatus.Closed;
 
         if (this.return.type === 'buffer') {
@@ -60,7 +60,7 @@ export class InnerConnection<ServiceType extends BaseServiceType = any> extends 
                         error: data.err
                     }, 'ServerOutputData');
                     if (op.isSucc) {
-                        return this._sendData(op.buf, call);
+                        return this.doSendData(op.buf, call);
                     }
                 }
                 return { isSucc: false, errMsg: 'Error data type' };

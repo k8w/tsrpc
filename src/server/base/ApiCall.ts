@@ -1,4 +1,4 @@
-import { TSBuffer } from 'TSBuffer';
+import { TSBuffer } from 'tsbuffer';
 import { ApiService, TransportDataUtil } from "tsrpc-base-client";
 import { ApiReturn, BaseServiceType, ServerOutputData, TsrpcError, TsrpcErrorData, TsrpcErrorType } from "tsrpc-proto";
 import { PrefixLogger } from "../models/PrefixLogger";

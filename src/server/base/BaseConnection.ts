@@ -72,9 +72,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             }
         }
 
-        return this._sendData(data, call);
+        return this.doSendData(data, call);
     }
-    protected abstract _sendData(data: string | Uint8Array | object, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
+    protected abstract doSendData(data: string | Uint8Array | object, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
 
     makeCall(input: ParsedServerInput): ApiCall | MsgCall {
         if (input.type === 'api') {

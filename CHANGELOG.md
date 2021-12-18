@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.1.4-dev.1] - 2021-12-18
+### Fixed
+- Type error when disable `skipLibChecks`
+
 ## [3.1.3] - 2021-12-04
 ### Added
 - `conn.listenMsg`
