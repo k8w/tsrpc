@@ -10,8 +10,8 @@ export class WebSocketProxy implements IWebSocketProxy {
     options!: IWebSocketProxy['options']
 
     private _ws?: WebSocket;
-    connect(server: string): void {
-        this._ws = new WebSocket(server);
+    connect(server: string, protocols?: string[]): void {
+        this._ws = new WebSocket(server, protocols);
         this._ws.onopen = this.options.onOpen;
         this._ws.onclose = e => {
             this.options.onClose(e.code, e.reason);
@@ -38,7 +38,7 @@ export class WebSocketProxy implements IWebSocketProxy {
     }
     send(data: string | Uint8Array): Promise<{ err?: TsrpcError | undefined; }> {
         return new Promise(rs => {
-            this._ws?.send(typeof data === 'string' ? Buffer.from(data, 'utf-8') : data, err => {
+            this._ws?.send(data, err => {
                 if (err) {
                     this.options.logger?.error('WebSocket Send Error:', err);
                     rs({

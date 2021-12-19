@@ -27,7 +27,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     readonly ip: string;
     readonly server: BaseServer<ServiceType>;
     readonly logger: PrefixLogger;
-    readonly dataType: BaseConnectionOptions['dataType'];
+    dataType: BaseConnectionOptions['dataType'];
 
     constructor(options: BaseConnectionOptions<ServiceType>, logger: PrefixLogger) {
         this.id = options.id;

@@ -107,7 +107,7 @@ describe('WS Server & Client basic', function () {
 
     it('implement API manually', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger,
             debugBuf: true
         });
@@ -121,7 +121,7 @@ describe('WS Server & Client basic', function () {
             logger: clientLogger,
             debugBuf: true
         })
-        await client.connect();
+        assert.ok((await client.connect()).isSucc);
 
         await testApi(server, client);
 
@@ -130,7 +130,7 @@ describe('WS Server & Client basic', function () {
 
     it('extend conn', function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger,
             debugBuf: true
         });
@@ -147,7 +147,7 @@ describe('WS Server & Client basic', function () {
 
     it('autoImplementApi', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger,
             apiTimeout: 5000
         });
@@ -166,9 +166,53 @@ describe('WS Server & Client basic', function () {
         await server.stop();
     });
 
+    it('Client use buffer when server is `json: true`', async function () {
+        let server = new WsServer(getProto(), {
+            json: true,
+            logger: serverLogger,
+            apiTimeout: 5000
+        });
+        await server.start();
+
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
+
+        let client = new WsClient(getProto(), {
+            json: false,
+            logger: clientLogger
+        });
+        await client.connect();
+
+        await testApi(server, client);
+
+        await server.stop();
+    })
+
+    it('Client use JSON when server is `json: false`', async function () {
+        let server = new WsServer(getProto(), {
+            json: false,
+            logger: serverLogger,
+            apiTimeout: 5000
+        });
+        await server.start();
+
+        server.autoImplementApi(path.resolve(__dirname, '../api'))
+
+        let client = new WsClient(getProto(), {
+            json: true,
+            logger: clientLogger
+        });
+        await client.connect();
+
+        let isErr = false;
+        await testApi(server, client).catch(() => { isErr = true });
+        assert.strictEqual(isErr, true);
+
+        await server.stop();
+    })
+
     it('sendMsg', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             port: 3001,
             logger: serverLogger,
             // debugBuf: true
@@ -204,7 +248,7 @@ describe('WS Server & Client basic', function () {
 
     it('server send msg', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             port: 3001,
             logger: serverLogger,
             // debugBuf: true
@@ -240,7 +284,7 @@ describe('WS Server & Client basic', function () {
 
     it('listen msg by regexp', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             port: 3001,
             logger: serverLogger,
             // debugBuf: true
@@ -277,7 +321,7 @@ describe('WS Server & Client basic', function () {
 
     it('server broadcast msg', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             port: 3001,
             logger: serverLogger,
             // debugBuf: true
@@ -345,9 +389,149 @@ describe('WS Server & Client basic', function () {
         })
     })
 
+    it('broadcast to both text and buffer client (server: json)', async function () {
+        let server = new WsServer(getProto(), {
+            json: true,
+            port: 3001,
+            logger: serverLogger,
+            debugBuf: true
+        });
+
+        await server.start();
+
+        let client1 = new WsClient(getProto(), {
+            json: true,
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            debugBuf: true
+        });
+        let client2 = new WsClient(getProto(), {
+            json: false,
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            debugBuf: true
+        });
+        await client1.connect();
+        await client2.connect();
+
+        let msg: MsgChat = {
+            channel: 123,
+            userName: 'fff',
+            content: '666',
+            time: Date.now()
+        };
+
+        await new Promise<void>(rs => {
+            let recvClients: WsClient<any>[] = [];
+            let msgHandler = async (client: WsClient<any>, msg1: MsgChat, msgName: string) => {
+                recvClients.push(client);
+                assert.deepStrictEqual(msg1, msg);
+                assert.deepStrictEqual(msgName, 'Chat')
+                if (recvClients.some(v => v === client1) && recvClients.some(v => v === client2)) {
+                    client1.unlistenMsgAll('Chat');
+                    client2.unlistenMsgAll('Chat');
+                    rs();
+                }
+            }
+
+            client1.listenMsg('Chat', msgHandler.bind(null, client1));
+            client2.listenMsg('Chat', msgHandler.bind(null, client2));
+
+            server.broadcastMsg('Chat', msg);
+        })
+
+        await new Promise<void>(rs => {
+            let recvClients: WsClient<any>[] = [];
+            let msgHandler = async (client: WsClient<any>, msg1: MsgChat, msgName: string) => {
+                recvClients.push(client);
+                assert.deepStrictEqual(msg1, msg);
+                assert.deepStrictEqual(msgName, 'Chat');
+                if (recvClients.some(v => v === client1) && recvClients.some(v => v === client2)) {
+                    await server.stop();
+                    rs();
+                }
+            }
+
+            client1.listenMsg('Chat', msgHandler.bind(null, client1));
+            client2.listenMsg('Chat', msgHandler.bind(null, client2));
+
+            server.broadcastMsg('Chat', msg, server.connections.slice());
+        })
+    })
+
+    it('broadcast to both text and buffer client (server: buffer)', async function () {
+        let server = new WsServer(getProto(), {
+            json: false,
+            port: 3001,
+            logger: serverLogger,
+            debugBuf: true
+        });
+
+        await server.start();
+
+        let client1 = new WsClient(getProto(), {
+            json: true,
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            debugBuf: true
+        });
+        let client2 = new WsClient(getProto(), {
+            json: false,
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            debugBuf: true
+        });
+        await client1.connect();
+        await client2.connect();
+
+        let msg: MsgChat = {
+            channel: 123,
+            userName: 'fff',
+            content: '666',
+            time: Date.now()
+        };
+
+        await new Promise<void>(rs => {
+            let recvClients: WsClient<any>[] = [];
+            let msgHandler = async (client: WsClient<any>, msg1: MsgChat, msgName: string) => {
+                recvClients.push(client);
+                assert.deepStrictEqual(msg1, msg);
+                assert.deepStrictEqual(msgName, 'Chat')
+                if (recvClients.some(v => v === client1) && recvClients.some(v => v === client2)) {
+                    client1.unlistenMsgAll('Chat');
+                    client2.unlistenMsgAll('Chat');
+                    rs();
+                }
+            }
+
+            client1.listenMsg('Chat', msgHandler.bind(null, client1));
+            client2.listenMsg('Chat', msgHandler.bind(null, client2));
+
+            server.broadcastMsg('Chat', msg);
+        })
+
+        await new Promise<void>(rs => {
+            let recvClients: WsClient<any>[] = [];
+            let msgHandler = async (client: WsClient<any>, msg1: MsgChat, msgName: string) => {
+                recvClients.push(client);
+                assert.deepStrictEqual(msg1, msg);
+                assert.deepStrictEqual(msgName, 'Chat');
+                if (recvClients.some(v => v === client1) && recvClients.some(v => v === client2)) {
+                    await server.stop();
+                    rs();
+                }
+            }
+
+            client1.listenMsg('Chat', msgHandler.bind(null, client1));
+            client2.listenMsg('Chat', msgHandler.bind(null, client2));
+
+            server.broadcastMsg('Chat', msg, server.connections.slice());
+        })
+    })
+
     it('abort', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -382,7 +566,7 @@ describe('WS Server & Client basic', function () {
 
     it('pendingApis', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -438,7 +622,7 @@ describe('WS Server & Client basic', function () {
 
     it('error', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -462,7 +646,7 @@ describe('WS Server & Client basic', function () {
 
     it('server timeout', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger,
             apiTimeout: 100
         });
@@ -497,7 +681,7 @@ describe('WS Server & Client basic', function () {
 
     it('client timeout', async function () {
         let server1 = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         server1.implementApi('Test', call => {
@@ -534,7 +718,7 @@ describe('WS Server & Client basic', function () {
 
     it('Graceful stop', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -570,7 +754,7 @@ describe('WS Server & Client basic', function () {
 describe('WS Flows', function () {
     it('Server conn flow', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -613,7 +797,7 @@ describe('WS Flows', function () {
 
     it('Buffer enc/dec flow', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger,
             debugBuf: true
         });
@@ -673,7 +857,7 @@ describe('WS Flows', function () {
 
     it('ApiCall flow', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -720,7 +904,7 @@ describe('WS Flows', function () {
 
     it('ApiCall flow break', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -767,7 +951,7 @@ describe('WS Flows', function () {
 
     it('ApiCall flow error', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -817,7 +1001,7 @@ describe('WS Flows', function () {
 
     it('server ApiReturn flow', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -862,7 +1046,7 @@ describe('WS Flows', function () {
 
     it('client ApiReturn flow', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -907,7 +1091,7 @@ describe('WS Flows', function () {
 
     it('client SendBufferFlow prevent', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -939,7 +1123,7 @@ describe('WS Flows', function () {
 
     it('onInputBufferError', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -965,7 +1149,7 @@ describe('WS Flows', function () {
 
     it('ObjectId', async function () {
         let server = new WsServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         server.autoImplementApi(path.resolve(__dirname, '../api'))

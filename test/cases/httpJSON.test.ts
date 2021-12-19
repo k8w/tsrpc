@@ -92,7 +92,7 @@ async function testApi(server: HttpServer<ServiceType>, client: HttpClient<Servi
 describe('HTTP Server & Client basic', function () {
     it('implement API manually', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger,
             debugBuf: true
         });
@@ -114,7 +114,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('extend call in handler', function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger,
             debugBuf: true
         });
@@ -141,7 +141,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('extend call in flow', function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger,
             debugBuf: true
         });
@@ -178,7 +178,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('autoImplementApi', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger,
             apiTimeout: 5000
         });
@@ -198,7 +198,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('sendMsg', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             port: 3001,
             logger: serverLogger,
             // debugBuf: true
@@ -233,7 +233,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('abort', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -267,7 +267,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('abortByKey', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -312,7 +312,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('abortAll', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -352,7 +352,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('pendingApis', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -407,7 +407,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('error', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -429,7 +429,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('server timeout', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger,
             apiTimeout: 100
         });
@@ -463,7 +463,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('client timeout', async function () {
         let server1 = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         server1.implementApi('Test', call => {
@@ -499,7 +499,7 @@ describe('HTTP Server & Client basic', function () {
 
     it('Graceful stop', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -533,7 +533,7 @@ describe('HTTP Server & Client basic', function () {
 describe('HTTP Flows', function () {
     it('Server conn flow', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -575,7 +575,7 @@ describe('HTTP Flows', function () {
 
     it('Buffer enc/dec flow', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -628,7 +628,7 @@ describe('HTTP Flows', function () {
 
     it('ApiCall flow', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -674,7 +674,7 @@ describe('HTTP Flows', function () {
 
     it('ApiCall flow break', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -720,7 +720,7 @@ describe('HTTP Flows', function () {
 
     it('ApiCall flow error', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -769,7 +769,7 @@ describe('HTTP Flows', function () {
 
     it('server ApiReturn flow', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -814,7 +814,7 @@ describe('HTTP Flows', function () {
 
     it('client ApiReturn flow', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -858,7 +858,7 @@ describe('HTTP Flows', function () {
 
     it('client SendBufferFlow prevent', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
 
@@ -889,7 +889,7 @@ describe('HTTP Flows', function () {
 
     it('onInputBufferError', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -917,7 +917,7 @@ describe('HTTP Flows', function () {
 
     it('ObjectId', async function () {
         let server = new HttpServer(getProto(), {
-            jsonEnabled: true,
+            json: true,
             logger: serverLogger
         });
         server.autoImplementApi(path.resolve(__dirname, '../api'))

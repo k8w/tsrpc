@@ -18,5 +18,5 @@ module.exports = {
     // parallel: false,
 
     // 'expose-gc': true,
-    // fgrep: 'implement API manually'
+    // fgrep: 'broadcast to both'
 }

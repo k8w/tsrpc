@@ -11,7 +11,9 @@ export interface WsConnectionOptions<ServiceType extends BaseServiceType> extend
     server: WsServer<ServiceType>,
     ws: WebSocket,
     httpReq: http.IncomingMessage,
-    onClose: (conn: WsConnection<ServiceType>, code: number, reason: string) => Promise<void>
+    onClose: (conn: WsConnection<ServiceType>, code: number, reason: string) => Promise<void>,
+    dataType: 'text' | 'buffer',
+    isDataTypeConfirmed?: boolean
 }
 
 /**
@@ -26,6 +28,9 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
     readonly ws: WebSocket;
     readonly httpReq: http.IncomingMessage;
     readonly server!: WsServer<ServiceType>;
+    dataType!: 'text' | 'buffer';
+    // 是否已经收到了客户端的第一条消息，以确认了客户端的 dataType
+    isDataTypeConfirmed?: boolean;
 
     constructor(options: WsConnectionOptions<ServiceType>) {
         super(options, new PrefixLogger({
@@ -34,6 +39,7 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
         }));
         this.ws = options.ws;
         this.httpReq = options.httpReq;
+        this.isDataTypeConfirmed = options.isDataTypeConfirmed;
 
         // Init WS
         this.ws.onclose = async e => {
@@ -42,21 +48,34 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
         };
         this.ws.onerror = e => { this.logger.warn('[ClientErr]', e.error) };
         this.ws.onmessage = e => {
-            let data = e.data;
-            if (this.server.options.jsonEnabled) {
-                data = data.toString();
+            let data: Buffer | string;
+            if (e.data instanceof ArrayBuffer) {
+                data = Buffer.from(e.data);
             }
-            if (data instanceof ArrayBuffer) {
-                data = Buffer.from(data);
+            else if (Array.isArray(e.data)) {
+                data = Buffer.concat(e.data)
             }
-            if (Array.isArray(data)) {
-                data = Buffer.concat(data)
+            else if (Buffer.isBuffer(e.data)) {
+                data = e.data;
             }
-            if (Buffer.isBuffer(data)) {
-                data = new Uint8Array(data)
+            else {
+                data = e.data;
             }
 
-            this.server._onRecvData(this, data as string | Uint8Array)
+            // dataType 尚未确认，自动检测
+            if (!this.isDataTypeConfirmed) {
+                if (this.server.options.jsonEnabled && typeof data === 'string') {
+                    this.dataType = 'text';
+                }
+                else {
+                    this.dataType = 'buffer';
+                }
+
+                this.isDataTypeConfirmed = true;
+            }
+
+            // dataType 已确认
+            this.server._onRecvData(this, data)
         };
     }
 

@@ -1,6 +1,8 @@
 # CHANGELOG
 
-## [3.1.4-dev.2] - 2021-12-18
+## [3.1.4-dev.3] - 2021-12-18
+### Added
+- `WsServer` now support client use `buffer` as transfering format when server set `json: true`
 ### Fixed
 - Type error when disable `skipLibChecks`
 - Cannot resolve JSON when `headers` is `application/json; charset=utf-8`

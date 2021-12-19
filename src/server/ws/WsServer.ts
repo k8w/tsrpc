@@ -1,5 +1,5 @@
 import * as http from "http";
-import { TransportDataUtil } from "tsrpc-base-client";
+import { EncodeOutput, TransportDataUtil } from "tsrpc-base-client";
 import { BaseServiceType, ServiceProto } from 'tsrpc-proto';
 import * as WebSocket from 'ws';
 import { Server as WebSocketServer } from 'ws';
@@ -69,7 +69,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 
         return new Promise<void>(async (rs, rj) => {
             await Promise.all(this.connections.map(v => v.close('Server Stop')));
-            this._wsServer!.close(() => { rs(); })
+            this._wsServer!.close(err => { err ? rj(err) : rs() })
         }).then(() => {
             this.logger.log('Server stopped');
             this._status = ServerStatus.Closed;
@@ -84,6 +84,21 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             return;
         }
 
+        // 推测 dataType 和 isDataTypeConfirmed
+        let isDataTypeConfirmed = true;
+        let dataType: 'text' | 'buffer';
+        let protocols = httpReq.headers['sec-websocket-protocol']?.split(',').map(v => v.trim()).filter(v => !!v);
+        if (protocols?.includes('text')) {
+            dataType = 'text';
+        }
+        else if (protocols?.includes('buffer')) {
+            dataType = 'buffer';
+        }
+        else {
+            dataType = this.options.jsonEnabled ? 'text' : 'buffer';
+            isDataTypeConfirmed = false;
+        }
+
         // Create Active Connection
         let conn = new WsConnection({
             id: '' + this._connIdCounter.getNext(),
@@ -92,7 +107,8 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             ws: ws,
             httpReq: httpReq,
             onClose: this._onClientClose,
-            dataType: this.options.jsonEnabled ? 'text' : 'buffer'
+            dataType: dataType,
+            isDataTypeConfirmed: isDataTypeConfirmed
         });
         this.connections.push(conn);
         this._id2Conn[conn.id] = conn;
@@ -143,17 +159,33 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             return { isSucc: false, errMsg: 'Invalid msg name: ' + msgName };
         }
 
-        // Encode
-        let opEncode = TransportDataUtil.encodeServerMsg(this.tsbuffer, service, msg, this.options.jsonEnabled ? 'text' : 'buffer', 'LONG');
-        if (!opEncode.isSucc) {
-            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr}]`, opEncode.errMsg);
-            return opEncode;
+        // Encode group by dataType
+        let _opEncodeBuf: EncodeOutput<Uint8Array> | undefined;
+        let _opEncodeText: EncodeOutput<string> | undefined;
+        const getOpEncodeBuf = () => {
+            if (!_opEncodeBuf) {
+                _opEncodeBuf = TransportDataUtil.encodeServerMsg(this.tsbuffer, service!, msg, 'buffer', 'LONG');
+            }
+            return _opEncodeBuf;
+        }
+        const getOpEncodeText = () => {
+            if (!_opEncodeText) {
+                _opEncodeText = TransportDataUtil.encodeServerMsg(this.tsbuffer, service!, msg, 'text', 'LONG');
+            }
+            return _opEncodeText;
         }
 
-        let errMsgs: string[] = [];
+        // 测试一下编码可以通过
+        let op = conns.some(v => v.dataType === 'buffer') ? getOpEncodeBuf() : getOpEncodeText();
+        if (!op.isSucc) {
+            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr}]`, op.errMsg);
+            return op;
+        }
+
         this.options.logMsg && this.logger.log(`[BroadcastMsg]`, `[${msgName}]`, `[To:${connStr}]`, msg);
 
         // Batch send
+        let errMsgs: string[] = [];
         return Promise.all(conns.map(async conn => {
             // Pre Flow
             let pre = await this.flows.preSendMsgFlow.exec({ conn: conn, service: service!, msg: msg }, this.logger);
@@ -163,7 +195,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             msg = pre.msg;
 
             // Do send!
-            let opSend = await conn.sendData(opEncode.output!);
+            let opSend = await conn.sendData((conn.dataType === 'buffer' ? getOpEncodeBuf() : getOpEncodeText())!.output!);
             if (!opSend.isSucc) {
                 return opSend;
             }
