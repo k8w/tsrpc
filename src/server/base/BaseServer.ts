@@ -664,8 +664,14 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @param req - Pure JSON
      * @returns - Pure JSON
      */
-    inputJSON(apiName: string, req: object): Promise<ApiReturn<object>> {
-        apiName = apiName.replace(/^\//, '');
+    async inputJSON(apiName: string, req: object): Promise<ApiReturn<object>> {
+        if (apiName.startsWith('/')) {
+            apiName = apiName.slice(1);
+        }
+        if (!this.serviceMap.apiName2Service[apiName]) {
+            return { isSucc: false, err: new TsrpcError(`Invalid service name: ${apiName}`, { type: TsrpcErrorType.ServerError }) };
+        }
+
         return new Promise(rs => {
             let conn = new InnerConnection({
                 dataType: 'json',

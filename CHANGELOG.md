@@ -2,7 +2,7 @@
 
 ## [3.1.5-dev.0] - 2021-12-23
 ### Fixed
-- Auto remove `/` in `apiName` of `server.inputJSON`
+- Optimize aliyun FC support of `server.inputJSON`
 
 ## [3.1.4] - 2021-12-18
 ### Added
