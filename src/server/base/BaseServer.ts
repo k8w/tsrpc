@@ -665,6 +665,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @returns - Pure JSON
      */
     inputJSON(apiName: string, req: object): Promise<ApiReturn<object>> {
+        apiName = apiName.replace(/^\//, '');
         return new Promise(rs => {
             let conn = new InnerConnection({
                 dataType: 'json',
