@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [3.1.5-dev.0] - 2021-12-23
+## [3.1.5] - 2021-12-23
 ### Fixed
 - Optimize aliyun FC support of `server.inputJSON`
 

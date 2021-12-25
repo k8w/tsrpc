@@ -669,7 +669,13 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             apiName = apiName.slice(1);
         }
         if (!this.serviceMap.apiName2Service[apiName]) {
-            return { isSucc: false, err: new TsrpcError(`Invalid service name: ${apiName}`, { type: TsrpcErrorType.ServerError }) };
+            return {
+                isSucc: false,
+                err: new TsrpcError(`Invalid service name: ${apiName}`, {
+                    type: TsrpcErrorType.ServerError,
+                    code: 'INPUT_DATA_ERR'
+                })
+            };
         }
 
         return new Promise(rs => {

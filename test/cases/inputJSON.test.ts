@@ -30,7 +30,7 @@ async function testApi(server: HttpServer<ServiceType>) {
             reply: 'Test reply: Req1'
         }
     });
-    assert.deepStrictEqual(await server.inputJSON('a/b/c/Test', {
+    assert.deepStrictEqual(await server.inputJSON('/a/b/c/Test', {
         name: 'Req2'
     }), {
         isSucc: true,
@@ -200,6 +200,7 @@ describe('HTTP Server & Client basic', function () {
         let ret = await server.inputJSON('TesASFt' as any, { name: 'xx' } as any);
         console.log(ret);
         assert.strictEqual(ret.isSucc, false);
+        assert.strictEqual(ret.err?.message, 'Invalid service name: TesASFt');
         assert.strictEqual(ret.err?.code, 'INPUT_DATA_ERR');
         assert.strictEqual(ret.err?.type, TsrpcErrorType.ServerError);
     })
