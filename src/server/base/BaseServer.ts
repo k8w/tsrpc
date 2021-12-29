@@ -515,7 +515,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             }
         }
 
-        const message = `Invalid ${typeof data === 'string' ? 'request format.' : 'request buffer, please check the version of service proto.'}`;
+        const message = data instanceof Uint8Array ? `Invalid request buffer, please check the version of service proto.` : errMsg;
 
         // Short conn, send apiReturn with error
         if (conn.type === 'SHORT') {
@@ -763,7 +763,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                     json = JSON.parse(data);
                 }
                 catch (e: any) {
-                    return { isSucc: false, errMsg: `Invalid input JSON: ${e.message}` };
+                    return { isSucc: false, errMsg: `Input is not a valid JSON string: ${e.message}` };
                 }
             }
             else {

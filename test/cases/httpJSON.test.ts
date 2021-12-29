@@ -5,6 +5,7 @@ import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { ApiCall, BaseServer, HttpConnection, MsgCall, TerminalColorLogger } from '../../src';
 import { HttpClient } from '../../src/client/http/HttpClient';
+import { HttpProxy } from '../../src/client/http/HttpProxy';
 import { HttpServer } from '../../src/server/http/HttpServer';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
@@ -906,10 +907,65 @@ describe('HTTP Flows', function () {
         let ret = await client.callApi('Test', { name: 'XXX' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: new TsrpcError('Invalid request format.', {
+            err: new TsrpcError('Input is not a valid JSON string: Unexpected token } in JSON at position 0', {
                 type: TsrpcErrorType.ServerError,
                 code: 'INPUT_DATA_ERR'
             })
+        })
+
+        await server.stop();
+    })
+
+    it('throw type error in client', async function () {
+        let server = new HttpServer(getProto(), {
+            json: true,
+            logger: serverLogger
+        });
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            json: true,
+            logger: clientLogger
+        });
+
+        let ret = await client.callApi('Test', { name: 23456 } as any);
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError({
+                "code": "INPUT_DATA_ERR",
+                "message": "Property `name`: Expected type to be `string`, actually `number`.",
+                "type": TsrpcErrorType.ClientError
+            })
+        })
+
+        await server.stop();
+    })
+
+    it('throw type error in server', async function () {
+        let server = new HttpServer(getProto(), {
+            json: true,
+            logger: serverLogger
+        });
+        await server.start();
+
+        let retHttp = await new HttpProxy().fetch({
+            url: 'http://127.0.0.1:3000/Test',
+            data: JSON.stringify({ name: 12345 }),
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json; charset=utf-8'
+            },
+            transportOptions: {},
+            responseType: 'text'
+        }).promise;
+
+        assert.deepStrictEqual(JSON.parse((retHttp as any).res), {
+            isSucc: false,
+            err: {
+                "code": "INPUT_DATA_ERR",
+                "message": "Property `name`: Expected type to be `string`, actually `number`.",
+                "type": TsrpcErrorType.ServerError
+            }
         })
 
         await server.stop();

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.1.6] - 2021-12-29
+### Changed
+- Return request type error detail when using JSON
+
 ## [3.1.5] - 2021-12-23
 ### Fixed
 - Optimize aliyun FC support of `server.inputJSON`

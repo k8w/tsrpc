@@ -1141,7 +1141,7 @@ describe('WS Flows', function () {
         let ret = await client.callApi('Test', { name: 'XXX' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: new TsrpcError('Invalid request format.', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
+            err: new TsrpcError('Input is not a valid JSON string: Unexpected token ] in JSON at position 0', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
         })
 
         await server.stop();

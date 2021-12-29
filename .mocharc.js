@@ -18,5 +18,5 @@ module.exports = {
     // parallel: false,
 
     // 'expose-gc': true,
-    // fgrep: 'broadcast to both'
+    // fgrep: 'throw type error in server'
 }
