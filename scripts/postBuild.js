@@ -18,3 +18,9 @@ const path = require('path');
     content = content.replace('__TSRPC_VERSION__', require('../package.json').version);;
     fs.writeFileSync(filepath, content, 'utf-8');
 });
+
+// mongodb-polyfill
+fs.copyFileSync(path.resolve(__dirname, '../res/mongodb-polyfill.d.ts'), path.resolve(__dirname, '../dist/mongodb-polyfill.d.ts'));
+let content = fs.readFileSync(path.resolve(__dirname, '../dist/index.d.ts'), 'utf-8');
+content = content.replace(`/// <reference types="node" />`, `/// <reference types="node" />\n/// <reference path="mongodb-polyfill.d.ts" />`)
+fs.writeFileSync(path.resolve(__dirname, '../dist/index.d.ts'), content, 'utf-8');

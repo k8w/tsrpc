@@ -59,7 +59,7 @@
     "useUnknownInCatchVariables": false
   },
   "include": [
-    "src",
+    "src"
     // "test"
     // "benchmark"
   ]

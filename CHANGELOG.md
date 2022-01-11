@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.1.7] - 2022-01-11
+### Added
+- `mongodb-polyfill.d.ts` to fixed mongodb type bug.
+
 ## [3.1.6] - 2021-12-29
 ### Changed
 - Return request type error detail when using JSON
