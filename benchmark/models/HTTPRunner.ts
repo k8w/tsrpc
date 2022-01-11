@@ -162,7 +162,7 @@ export class HttpRunner {
     /**
      * callApi 并且计入统计
      */
-    callApi: typeof benchmarkClient.callApi = (apiName, req) => {
+    callApi: typeof benchmarkClient.callApi = async (apiName, req) => {
         this._maxApiNameLength = Math.max(apiName.length, this._maxApiNameLength);
 
         if (!this._apiStat[apiName]) {
@@ -189,15 +189,17 @@ export class HttpRunner {
         ++this._apiStat[apiName].last.sendReq;
 
         let startTime = Date.now();
-        return benchmarkClient.callApi(apiName, req).then(res => {
+        let ret = await benchmarkClient.callApi(apiName, req);
+
+        if (ret.isSucc) {
             this._apiStat[apiName].last.succTime = Date.now();
             this._apiStat[apiName].resTime.push(Date.now() - startTime);
             this._apiStat[apiName].last.resTime.push(Date.now() - startTime);
             ++this._apiStat[apiName].succ;
             ++this._apiStat[apiName].last.succ;
-            return res;
-        }).catch((e: TsrpcError) => {
-            if (e.type === TsrpcErrorType.NetworkError) {
+        }
+        else {
+            if (ret.err.type === TsrpcErrorType.NetworkError) {
                 ++this._apiStat[apiName].networkError;
                 ++this._apiStat[apiName].last.networkError;
             }
@@ -205,9 +207,9 @@ export class HttpRunner {
                 ++this._apiStat[apiName].otherError;
                 ++this._apiStat[apiName].last.otherError;
             }
+        }
 
-            throw e;
-        });
+        return ret;
     }
 
     private _report() {
