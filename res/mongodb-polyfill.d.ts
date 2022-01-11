@@ -1,5 +1,9 @@
 import { ObjectId } from 'bson';
 
+type InsertOneResult<T> = any;
+type OptionalId<T> = any;
+type Document = any;
+
 declare module 'mongodb' {   
     export interface Collection<TSchema extends Document = Document> {
         insertOne(doc: OptionalUnlessRequiredId_1<TSchema>): Promise<InsertOneResult<TSchema>>;
