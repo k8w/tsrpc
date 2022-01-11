@@ -1,4 +1,4 @@
-import { HttpServer } from '../../src/server/http/HttpServer';
+import { HttpServer } from '../../src/index';
 import { serviceProto } from "../protocols/proto";
 
 async function main() {
