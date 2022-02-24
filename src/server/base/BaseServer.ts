@@ -465,12 +465,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             }
         }
         catch (e: any) {
-            if (e.code === 'MODULE_NOT_FOUND') {
-                return { errMsg: `Module not found: ${modulePath}` };
-            }
-            else {
-                return { errMsg: e.message }
-            }
+            this.logger.error(e);
+            return { errMsg: e.message };
         }
     }
 
