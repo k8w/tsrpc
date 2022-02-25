@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## [3.2.0] - 2022-02-26
+### Added
+- Support using `keyof`
+- Support type alias and `keyof` in `Pick` and `Omit`
+- Support `Pick<Intersection>` and `Omit<Intersection>`
+- Support `interface` extends Mapped Type, like `Pick` `Omit`
+- Support `Pick<XXX, keyof XXX>`
+- Support `Pick<XXX, TypeReference>`
+- Support `Pick<UnionType>` and `Pick<IntersectionType>`, the same to `Omit`
+- Support reference enum value as literal type,like:
+    ```ts
+    export enum Types {
+        Type1,
+        Type2
+    }
+    export interface Obj {
+        type: Types.Type1,
+        value: string
+    }
+    ```
+### Changed
+- `SchemaType` switched to class
+
 ## [3.1.9] - 2022-01-12
 ### Added
 - `mongodb-polyfill.d.ts` to fixed mongodb type bug.
