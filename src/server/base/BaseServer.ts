@@ -412,13 +412,10 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         for (let svc of apiServices) {
             //get api handler
-            let { handler, errMsg } = await this.getApiHandler(svc, apiPath, this.logger)
+            let { handler } = await this.getApiHandler(svc, apiPath, this.logger)
 
             if (!handler) {
                 output.fail.push(svc.name);
-                let logMsg = chalk.red(`Implement API ${chalk.cyan.underline(`${svc.name}`)} failed:`);
-                logMsg += '\n  |- ' + errMsg;
-                this.logger.error(logMsg);
                 continue;
             }
 
@@ -464,9 +461,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                 return { errMsg: `Cannot find export { ${'Api' + handlerName} } at: ${modulePath}` }
             }
         }
-        catch (e: any) {
-            this.logger.error(e);
-            return { errMsg: e.message };
+        catch (e: unknown) {
+            this.logger.error(chalk.red(`Implement API ${chalk.cyan.underline(`${svc.name}`)} failed:`), e);
+            return { errMsg: (e as Error).message };
         }
     }
 
