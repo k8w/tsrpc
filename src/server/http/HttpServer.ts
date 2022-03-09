@@ -79,9 +79,9 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
                     let buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
 
-                    if (isJSON) {
+                    if (conn.dataType === 'text') {
                         let url = conn.httpReq.url!;
-                        
+
                         let urlEndPos = url.indexOf('?');
                         if (urlEndPos > -1) {
                             url = url.slice(0, urlEndPos);

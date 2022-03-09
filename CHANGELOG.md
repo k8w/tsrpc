@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.2.1-beta.0] - 2022-03-09
+### Added
+- `preRecvDataFlow` add param `serviceName`
+- Support change `dataType` in `postConnectFlow`
+
 ## [3.2.0] - 2022-02-26
 ### Added
 - Support using `keyof`

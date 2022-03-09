@@ -59,7 +59,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
          * Before processing the received data, usually be used to encryption / decryption.
          * Return `null | undefined` would ignore the buffer.
          */
-        preRecvDataFlow: new Flow<{ conn: BaseConnection<ServiceType>, data: string | Uint8Array | object }>(),
+        preRecvDataFlow: new Flow<{ conn: BaseConnection<ServiceType>, data: string | Uint8Array | object, serviceName?: string }>(),
         /**
          * Before send out data to network, usually be used to encryption / decryption.
          * Return `null | undefined` would not send the buffer.
@@ -245,11 +245,12 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             return;
         }
 
-        let pre = await this.flows.preRecvDataFlow.exec({ conn: conn, data: data }, conn.logger);
+        let pre = await this.flows.preRecvDataFlow.exec({ conn: conn, data: data, serviceName: serviceName }, conn.logger);
         if (!pre) {
             return;
         }
         data = pre.data;
+        serviceName = pre.serviceName;
 
         // @deprecated preRecvBuffer
         if (data instanceof Uint8Array) {
@@ -770,7 +771,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             let service: ApiService | MsgService | undefined;
             if (serviceName == undefined) {
                 if (!Array.isArray(json)) {
-                    return { isSucc: false, errMsg: `Invalid request format` };
+                    return { isSucc: false, errMsg: `Invalid request format: unresolved service name.` };
                 }
                 serviceName = json[0] as string;
                 body = json[1];
