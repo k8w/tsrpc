@@ -46,7 +46,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Pre Flow
         let pre = await this.server.flows.preSendDataFlow.exec({ conn: this, data: data, call: call }, call?.logger || this.logger);
         if (!pre) {
-            return { isSucc: false, errMsg: 'preSendDataFlow Error' };
+            return { isSucc: false, errMsg: 'Broken by preSendDataFlow' };
         }
         data = pre.data;
 
@@ -54,7 +54,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         if (data instanceof Uint8Array) {
             let preBuf = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: data, call: call }, call?.logger || this.logger);
             if (!preBuf) {
-                return { isSucc: false, errMsg: 'preSendBufferFlow Error' };
+                return { isSucc: false, errMsg: 'Broken by preSendBufferFlow' };
             }
             data = preBuf.buf;
         }

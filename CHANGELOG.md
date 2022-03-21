@@ -1,9 +1,10 @@
 # CHANGELOG
-
-## [3.2.1-beta.0] - 2022-03-09
+## [3.2.1] - 2022-03-21
 ### Added
 - `preRecvDataFlow` add param `serviceName`
 - Support change `dataType` in `postConnectFlow`
+### Fixed
+- Remark text error
 
 ## [3.2.0] - 2022-02-26
 ### Added
