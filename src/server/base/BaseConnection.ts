@@ -46,7 +46,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Pre Flow
         let pre = await this.server.flows.preSendDataFlow.exec({ conn: this, data: data, call: call }, call?.logger || this.logger);
         if (!pre) {
-            return { isSucc: false, errMsg: 'preSendBufferFlow Error' };
+            return { isSucc: false, errMsg: 'preSendDataFlow Error' };
         }
         data = pre.data;
 
