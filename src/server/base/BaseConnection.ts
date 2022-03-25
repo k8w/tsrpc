@@ -42,11 +42,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     abstract close(reason?: string): void;
 
     /** Send buffer (with pre-flow and post-flow) */
-    async sendData(data: string | Uint8Array | object, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
+    async sendData(data: string | Uint8Array | object, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string, canceledByFlow?: boolean }> {
         // Pre Flow
         let pre = await this.server.flows.preSendDataFlow.exec({ conn: this, data: data, call: call }, call?.logger || this.logger);
         if (!pre) {
-            return { isSucc: false, errMsg: 'Broken by preSendDataFlow' };
+            return { isSucc: false, errMsg: 'Canceled by preSendDataFlow', canceledByFlow: true };
         }
         data = pre.data;
 
@@ -54,7 +54,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         if (data instanceof Uint8Array) {
             let preBuf = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: data, call: call }, call?.logger || this.logger);
             if (!preBuf) {
-                return { isSucc: false, errMsg: 'Broken by preSendBufferFlow' };
+                return { isSucc: false, errMsg: 'Canceled by preSendBufferFlow', canceledByFlow: true };
             }
             data = preBuf.buf;
         }
@@ -100,7 +100,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param msg - Message body
      * @returns Promise resolved when the buffer is sent to kernel, it not represents the server received it.
      */
-    async sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
+    async sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]): ReturnType<BaseConnection['sendData']> {
         if (this.type === 'SHORT') {
             this.logger.warn('[SendMsgErr]', `[${msgName}]`, 'Short connection cannot sendMsg');
             return { isSucc: false, errMsg: 'Short connection cannot sendMsg' }
@@ -115,7 +115,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Pre Flow
         let pre = await this.server.flows.preSendMsgFlow.exec({ conn: this, service: service, msg: msg }, this.logger);
         if (!pre) {
-            return { isSucc: false, errMsg: 'sendMsg prevent by preSendMsgFlow' };
+            return { isSucc: false, errMsg: 'Canceled by preSendMsgFlow', canceledByFlow: true };
         }
         msg = pre.msg;
 

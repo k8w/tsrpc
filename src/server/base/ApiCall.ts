@@ -3,6 +3,7 @@ import { ApiService, TransportDataUtil } from "tsrpc-base-client";
 import { ApiReturn, BaseServiceType, ServerOutputData, TsrpcError, TsrpcErrorData, TsrpcErrorType } from "tsrpc-proto";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { BaseCall, BaseCallOptions } from "./BaseCall";
+import { BaseConnection } from './BaseConnection';
 
 export interface ApiCallOptions<Req, ServiceType extends BaseServiceType> extends BaseCallOptions<ServiceType> {
     /** Which service the Call is belong to */
@@ -107,11 +108,17 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         this._return = ret;
         let opSend = await (sendReturn ? sendReturn(ret) : this._sendReturn(ret));
         if (!opSend.isSucc) {
-            this.logger.error('[SendReturnErr]', opSend.errMsg, ret);
-            if (ret.isSucc || ret.err.type === TsrpcErrorType.ApiError) {
-                this._return = undefined;
-                this.server.onInternalServerError({ message: opSend.errMsg, name: 'SendReturnErr' }, this)
+            if (opSend.canceledByFlow) {
+                this.logger.log('[SendReturnCancel]', opSend.errMsg, ret);
             }
+            else {
+                this.logger.error('[SendReturnErr]', opSend.errMsg, ret);
+                if (ret.isSucc || ret.err.type === TsrpcErrorType.ApiError) {
+                    this._return = undefined;
+                    this.server.onInternalServerError({ message: opSend.errMsg, name: 'SendReturnErr' }, this)
+                }
+            }
+            
             return;
         }
 
@@ -133,7 +140,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         await this.server.flows.postApiReturnFlow.exec(preFlow, this.logger);
     }
 
-    protected async _sendReturn(ret: ApiReturn<Res>): Promise<{ isSucc: true } | { isSucc: false, errMsg: string }> {
+    protected async _sendReturn(ret: ApiReturn<Res>): ReturnType<SendReturnMethod<Res>> {
         // Encode
         let opServerOutput = ApiCall.encodeApiReturn(this.server.tsbuffer, this.service, ret, this.conn.dataType, this.sn);;
         if (!opServerOutput.isSucc) {
@@ -192,7 +199,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
     }
 }
 
-export type SendReturnMethod<Res> = (ret: ApiReturn<Res>) => Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>;
+export type SendReturnMethod<Res> = (ret: ApiReturn<Res>) => ReturnType<BaseConnection['sendData']>;
 
 export declare type EncodeApiReturnOutput<T> = {
     isSucc: true;

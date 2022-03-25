@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.2.3-dev.0] - 2022-03-25
+### Fixed
+- When `preSendDataFlow` return undefined, do not send "Internal Server Error".
+
 ## [3.2.2] - 2022-03-22
 ### Fixed
 - `postDisconnectFlow` not executed when `disconnect()` manually
