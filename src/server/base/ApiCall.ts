@@ -90,7 +90,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
     };
 
 
-    protected async _prepareReturn(ret: ApiReturn<Res>, sendReturn?: SendReturnMethod<Res>): Promise<void> {
+    protected async _prepareReturn(ret: ApiReturn<Res>): Promise<void> {
         if (this._return) {
             return;
         }
@@ -100,27 +100,10 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         let preFlow = await this.server.flows.preApiReturnFlow.exec({ call: this, return: ret }, this.logger);
         // Stopped!
         if (!preFlow) {
+            this.logger.debug('[preApiReturnFlow]', 'Canceled')
             return;
         }
         ret = preFlow.return;
-
-        // Do send!
-        this._return = ret;
-        let opSend = await (sendReturn ? sendReturn(ret) : this._sendReturn(ret));
-        if (!opSend.isSucc) {
-            if (opSend.canceledByFlow) {
-                this.logger.log('[SendReturnCancel]', opSend.errMsg, ret);
-            }
-            else {
-                this.logger.error('[SendReturnErr]', opSend.errMsg, ret);
-                if (ret.isSucc || ret.err.type === TsrpcErrorType.ApiError) {
-                    this._return = undefined;
-                    this.server.onInternalServerError({ message: opSend.errMsg, name: 'SendReturnErr' }, this)
-                }
-            }
-            
-            return;
-        }
 
         // record & log ret
         this._usedTime = Date.now() - this.startTime;
@@ -129,11 +112,29 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         }
         else {
             if (ret.err.type === TsrpcErrorType.ApiError) {
-                this.logger.log('[ResErr]', `${this.usedTime}ms`, ret.err, 'req=', this.req);
+                this.logger.log('[ApiErr]', `${this.usedTime}ms`, ret.err, 'req=', this.req);
             }
             else {
-                this.logger.error(`[ResErr]`, `${this.usedTime}ms`, ret.err, 'req=', this.req)
+                this.logger.error(`[ApiErr]`, `${this.usedTime}ms`, ret.err, 'req=', this.req)
             }
+        }
+
+        // Do send!
+        this._return = ret;
+        let opSend = await this._sendReturn(ret);
+        if (!opSend.isSucc) {
+            if (opSend.canceledByFlow) {
+                this.logger.debug(`[${opSend.canceledByFlow}]`, 'Canceled');
+            }
+            else {
+                this.logger.error('[SendDataErr]', opSend.errMsg);
+                if (ret.isSucc || ret.err.type === TsrpcErrorType.ApiError) {
+                    this._return = undefined;
+                    this.server.onInternalServerError({ message: opSend.errMsg, name: 'SendReturnErr' }, this)
+                }
+            }
+
+            return;
         }
 
         // Post Flow

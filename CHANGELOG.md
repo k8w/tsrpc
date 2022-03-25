@@ -1,8 +1,14 @@
 # CHANGELOG
 
 ## [3.2.3-dev.0] - 2022-03-25
+### Added
+- Print debug-level log when "pre flow" is canceled
+### Changed
+- Log `[ResErr]` renamed to `[ApiErr]` to consist with client's.
+- Log `ApiRes` and `ApiErr` once they are ready to send, instead of after send them.
 ### Fixed
 - When `preSendDataFlow` return undefined, do not send "Internal Server Error".
+- Remove some unused code.
 
 ## [3.2.2] - 2022-03-22
 ### Fixed

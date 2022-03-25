@@ -247,6 +247,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
         let pre = await this.flows.preRecvDataFlow.exec({ conn: conn, data: data, serviceName: serviceName }, conn.logger);
         if (!pre) {
+            conn.logger.debug('[preRecvDataFlow] Canceled');
             return;
         }
         data = pre.data;
@@ -256,6 +257,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         if (data instanceof Uint8Array) {
             let preBuf = await this.flows.preRecvBufferFlow.exec({ conn: conn, buf: data }, conn.logger);
             if (!preBuf) {
+                conn.logger.debug('[preRecvBufferFlow] Canceled');
                 return;
             }
             data = preBuf.buf;
@@ -303,6 +305,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                 clearTimeout(timeoutTimer);
                 timeoutTimer = undefined;
             }
+            call.logger.debug('[preApiCallFlow] Canceled');
             return;
         }
         call = preFlow;
@@ -352,6 +355,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         // Pre Flow
         let preFlow = await this.flows.preMsgCallFlow.exec(call, call.logger);
         if (!preFlow) {
+            call.logger.debug('[preMsgCallFlow]', 'Canceled')
             return;
         }
         call = preFlow;

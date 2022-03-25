@@ -190,6 +190,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             // Pre Flow
             let pre = await this.flows.preSendMsgFlow.exec({ conn: conn, service: service!, msg: msg }, this.logger);
             if (!pre) {
+                conn.logger.debug('[preSendMsgFlow]', 'Canceled');
                 return { isSucc: false, errMsg: 'Prevented by preSendMsgFlow' };
             }
             msg = pre.msg;

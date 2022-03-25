@@ -42,11 +42,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     abstract close(reason?: string): void;
 
     /** Send buffer (with pre-flow and post-flow) */
-    async sendData(data: string | Uint8Array | object, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string, canceledByFlow?: boolean }> {
+    async sendData(data: string | Uint8Array | object, call?: ApiCall): Promise<{ isSucc: true } | { isSucc: false, errMsg: string, canceledByFlow?: string }> {
         // Pre Flow
         let pre = await this.server.flows.preSendDataFlow.exec({ conn: this, data: data, call: call }, call?.logger || this.logger);
         if (!pre) {
-            return { isSucc: false, errMsg: 'Canceled by preSendDataFlow', canceledByFlow: true };
+            return { isSucc: false, errMsg: 'Canceled by preSendDataFlow', canceledByFlow: 'preSendDataFlow' };
         }
         data = pre.data;
 
@@ -54,7 +54,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         if (data instanceof Uint8Array) {
             let preBuf = await this.server.flows.preSendBufferFlow.exec({ conn: this, buf: data, call: call }, call?.logger || this.logger);
             if (!preBuf) {
-                return { isSucc: false, errMsg: 'Canceled by preSendBufferFlow', canceledByFlow: true };
+                return { isSucc: false, errMsg: 'Canceled by preSendBufferFlow', canceledByFlow: 'preSendBufferFlow' };
             }
             data = preBuf.buf;
         }
@@ -115,7 +115,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Pre Flow
         let pre = await this.server.flows.preSendMsgFlow.exec({ conn: this, service: service, msg: msg }, this.logger);
         if (!pre) {
-            return { isSucc: false, errMsg: 'Canceled by preSendMsgFlow', canceledByFlow: true };
+            this.logger.debug('[preSendMsgFlow]', 'Canceled');
+            return { isSucc: false, errMsg: 'Canceled by preSendMsgFlow', canceledByFlow: 'preSendMsgFlow' };
         }
         msg = pre.msg;
 
