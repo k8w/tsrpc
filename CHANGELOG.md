@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [3.2.3-dev.0] - 2022-03-25
+## [3.2.3] - 2022-03-25
 ### Added
 - Print debug-level log when "pre flow" is canceled
 ### Changed
