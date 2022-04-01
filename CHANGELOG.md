@@ -104,6 +104,7 @@
 - 增加对 `mongodb/ObjectId` 的支持
 
 ## [3.0.10] - 2021-10-13
+### Changed
 - `BaseConnection` 泛型参数默认为 `any`，便于扩展类型
 - `HttpClient` and `WsClient` no longer have default type param
 
