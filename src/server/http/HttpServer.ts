@@ -51,6 +51,9 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 if (this.options.cors) {
                     httpRes.setHeader('Access-Control-Allow-Origin', this.options.cors);
                     httpRes.setHeader('Access-Control-Allow-Headers', 'Content-Type,*');
+                    if (this.options.corsMaxAge) {
+                        httpRes.setHeader('Access-Control-Max-Age', '' + this.options.corsMaxAge);
+                    }
                     if (httpReq.method === 'OPTIONS') {
                         httpRes.writeHead(200);
                         httpRes.end();
@@ -213,6 +216,11 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
      * @defaultValue `*`
      */
     cors?: string,
+    /**
+     * Response header value of `Access-Control-Allow-Origin`.
+     * @defaultValue `3600`
+     */
+    corsMaxAge?: number,
 
     /**
      * Actual URL path is `${jsonHostPath}/${apiName}`.
@@ -226,6 +234,7 @@ export const defaultHttpServerOptions: HttpServerOptions<any> = {
     ...defaultBaseServerOptions,
     port: 3000,
     cors: '*',
+    corsMaxAge: 3600,
     jsonHostPath: '/',
 
     // TODO: keep-alive time (to SLB)
