@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [3.2.4] - 2022-04-12
+## [3.2.5] - 2022-04-12
 ### Added
 - New server options `corsMaxAge` to optimized preflight requests, default value is 3600.
 ### Fixed
