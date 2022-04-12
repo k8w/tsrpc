@@ -1,8 +1,10 @@
 # CHANGELOG
 
-## [3.2.4-dev.1] - 2022-04-02
+## [3.2.4] - 2022-04-12
 ### Added
 - New server options `corsMaxAge` to optimized preflight requests, default value is 3600.
+### Fixed
+- `NonNullable` cannot be encoded and decoded when as a property in interface
 
 ## [3.2.3] - 2022-03-25
 ### Added
