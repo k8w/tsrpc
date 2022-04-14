@@ -3,7 +3,7 @@ import { assert } from 'chai';
 import chalk from 'chalk';
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
-import { BaseServer, TerminalColorLogger, WsConnection } from '../../src';
+import { BaseServer, TerminalColorLogger, TransportDataUtil, WsClientStatus, WsConnection } from '../../src';
 import { WsClient } from '../../src/client/ws/WsClient';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import { WsServer } from '../../src/server/ws/WsServer';
@@ -537,6 +537,104 @@ describe('WS Server & Client basic', function () {
             }
         })))
         assert.strictEqual(succNum, 10);
+    })
+
+    it('Client heartbeat works', async function () {
+        let server = new WsServer(getProto(), {
+            port: 3001,
+            logger: serverLogger,
+            debugBuf: true
+        });
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            heartbeat: {
+                interval: 1000,
+                timeout: 1000
+            },
+            debugBuf: true
+        });
+        await client.connect();
+
+        await new Promise(rs => { setTimeout(rs, 2000) });
+        client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
+        assert.strictEqual(client.status, WsClientStatus.Opened)
+        assert.ok(client.lastHeartbeatLatency > 0);
+
+        await client.disconnect();
+        await server.stop();
+    })
+
+    it('Client heartbeat error', async function () {
+        let server = new WsServer(getProto(), {
+            port: 3001,
+            logger: serverLogger,
+            debugBuf: true
+        });
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            heartbeat: {
+                interval: 1000,
+                timeout: 1000
+            },
+            debugBuf: true
+        });
+
+        let disconnectFlowData: { isManual?: boolean } | undefined;
+        client.flows.postDisconnectFlow.push(v => {
+            disconnectFlowData = {}
+            return v;
+        })
+
+        await client.connect();
+
+        const temp = TransportDataUtil.HeartbeatPacket;
+        (TransportDataUtil as any).HeartbeatPacket = new Uint8Array([0, 0]);
+
+        await new Promise(rs => { setTimeout(rs, 2000) });
+        client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
+        assert.strictEqual(client.status, WsClientStatus.Closed)
+        assert.deepStrictEqual(disconnectFlowData, {})
+
+        await client.disconnect();
+        await server.stop();
+        (TransportDataUtil as any).HeartbeatPacket = temp;
+    })
+
+    it('Server heartbeat kick', async function () {
+        let server = new WsServer(getProto(), {
+            port: 3001,
+            logger: serverLogger,
+            debugBuf: true,
+            heartbeatTimeout: 1000
+        });
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            server: 'ws://127.0.0.1:3001',
+            logger: clientLogger,
+            debugBuf: true
+        });
+
+        let disconnectFlowData: { isManual?: boolean } | undefined;
+        client.flows.postDisconnectFlow.push(v => {
+            disconnectFlowData = {}
+            return v;
+        })
+
+        await client.connect();
+
+        await new Promise(rs => { setTimeout(rs, 2000) });
+        assert.strictEqual(client.status, WsClientStatus.Closed)
+        assert.deepStrictEqual(disconnectFlowData, {})
+
+        await client.disconnect();
+        await server.stop();
     })
 })
 

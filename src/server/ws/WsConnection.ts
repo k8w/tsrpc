@@ -1,4 +1,5 @@
 import * as http from "http";
+import { TransportDataUtil } from "tsrpc-base-client";
 import { BaseServiceType } from "tsrpc-proto";
 import * as WebSocket from "ws";
 import { BaseConnection, BaseConnectionOptions, ConnectionStatus } from "../base/BaseConnection";
@@ -41,8 +42,21 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
         this.httpReq = options.httpReq;
         this.isDataTypeConfirmed = options.isDataTypeConfirmed;
 
+        if (this.server.options.heartbeatTimeout) {
+            const timeout = this.server.options.heartbeatTimeout;
+            this._heartbeatInterval = setInterval(() => {
+                if (Date.now() - this._lastHeartbeatTime > timeout) {
+                    this.ws.close(1001, 'Receive heartbeat timeout');
+                }
+            }, timeout);
+        }
+
         // Init WS
         this.ws.onclose = async e => {
+            if (this._heartbeatInterval) {
+                clearInterval(this._heartbeatInterval);
+                this._heartbeatInterval = undefined;
+            }
             await options.onClose(this, e.code, e.reason);
             this._rsClose?.();
         };
@@ -62,6 +76,14 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
                 data = e.data;
             }
 
+            // 心跳包，直接回复
+            if (data instanceof Buffer && data.equals(TransportDataUtil.HeartbeatPacket)) {
+                this.server.options.debugBuf && this.logger.log('[Heartbeat] Recv ping and send pong', TransportDataUtil.HeartbeatPacket);
+                this._lastHeartbeatTime = Date.now();
+                this.ws.send(TransportDataUtil.HeartbeatPacket);
+                return;
+            }
+
             // dataType 尚未确认，自动检测
             if (!this.isDataTypeConfirmed) {
                 if (this.server.options.jsonEnabled && typeof data === 'string') {
@@ -78,6 +100,9 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
             this.server._onRecvData(this, data)
         };
     }
+
+    private _lastHeartbeatTime = 0;
+    private _heartbeatInterval?: ReturnType<typeof setInterval>;
 
     get status(): ConnectionStatus {
         if (this.ws.readyState === WebSocket.CLOSED) {

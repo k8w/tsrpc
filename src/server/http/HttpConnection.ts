@@ -58,6 +58,9 @@ export class HttpConnection<ServiceType extends BaseServiceType = any> extends B
     }
 
     protected async doSendData(data: string | Uint8Array, call?: ApiCall): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+        if (typeof data === 'string') {
+            this.httpRes.setHeader('Content-Type', 'application/json; charset=utf-8');
+        }
         this.httpRes.end(typeof data === 'string' ? data : Buffer.from(data.buffer, data.byteOffset, data.byteLength));
         return { isSucc: true }
     }

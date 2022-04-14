@@ -225,6 +225,13 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 export interface WsServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
     /** Which port the WebSocket server is listen to */
     port: number;
+
+    /** 
+     * Kick connection out if not receive heartbeat packet after the time (ms)
+     * `undefined` represent disable this feature
+     * @defaultValue `undefined`
+     */
+    heartbeatTimeout?: number;
 };
 
 const defaultWsServerOptions: WsServerOptions<any> = {

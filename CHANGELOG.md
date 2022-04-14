@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.0-dev.0] - 2022-04-14
+### Added
+- Builtin heartbeat support
+- New options `logLevel`
+### Fixed
+- Add response header `Content-Type: application/json; charset=utf-8` for JSON mode under HttpServer, to fix the decoding issue in Chrome dev tools.
+
 ## [3.2.5] - 2022-04-12
 ### Added
 - New server options `corsMaxAge` to optimized preflight requests, default value is 3600.

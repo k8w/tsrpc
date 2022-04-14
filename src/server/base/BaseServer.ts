@@ -3,7 +3,7 @@ import chalk from "chalk";
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
 import { ApiService, Counter, Flow, getCustomObjectIdTypes, MsgHandlerManager, MsgService, ParsedServerInput, ServiceMap, ServiceMapUtil, TransportDataUtil } from 'tsrpc-base-client';
-import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, ServerInputData, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
+import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, LogLevel, ServerInputData, ServiceProto, setLogLevel, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { ApiCallInner } from "../inner/ApiCallInner";
 import { InnerConnection } from "../inner/InnerConnection";
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
@@ -162,6 +162,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         });
         this.serviceMap = ServiceMapUtil.getServiceMap(proto);
         this.logger = this.options.logger;
+        setLogLevel(this.logger, this.options.logLevel);
 
         // Process uncaught exception, so that Node.js process would not exit easily
         BaseServer.processUncaughtException(this.logger);
@@ -867,6 +868,11 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
      * @defaultValue `new TerminalColorLogger()` (print to console with color)
      */
     logger: Logger;
+    /**
+     * The minimum log level of `logger`
+     * @defaultValue `debug`
+     */
+    logLevel: LogLevel;
     /** 
      * Whethere to print API request body into log (may increase log size)
      * @defaultValue `true`
@@ -904,6 +910,7 @@ export const defaultBaseServerOptions: BaseServerOptions<any> = {
     strictNullChecks: false,
     apiTimeout: 30000,
     logger: new TerminalColorLogger,
+    logLevel: 'debug',
     logReqBody: true,
     logResBody: true,
     logMsg: true,
