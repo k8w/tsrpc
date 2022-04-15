@@ -227,11 +227,12 @@ export interface WsServerOptions<ServiceType extends BaseServiceType> extends Ba
     port: number;
 
     /** 
-     * Kick connection out if not receive heartbeat packet after the time (ms)
-     * `undefined` represent disable this feature
+     * Close a connection if not receive heartbeat after the time (ms).
+     * This value should be greater than `client.heartbeat.interval`, for exmaple 2x of it.
+     * `undefined` or `0` represent disable this feature.
      * @defaultValue `undefined`
      */
-    heartbeatTimeout?: number;
+    heartbeatWaitTime?: number;
 };
 
 const defaultWsServerOptions: WsServerOptions<any> = {

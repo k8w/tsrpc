@@ -611,7 +611,7 @@ describe('WS Server & Client basic', function () {
             port: 3001,
             logger: serverLogger,
             debugBuf: true,
-            heartbeatTimeout: 1000
+            heartbeatWaitTime: 1000
         });
         await server.start();
 

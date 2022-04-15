@@ -457,19 +457,20 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         // try import
         let modulePath = path.resolve(apiPath, handlerPath, 'Api' + handlerName);
         try {
-            let handlerModule = await import(modulePath);
-            // 优先 default，其次 ApiName 同名
-            let handler = handlerModule.default ?? handlerModule['Api' + handlerName];
-            if (handler) {
-                return { handler: handler };
-            }
-            else {
-                return { errMsg: `Cannot find export { ${'Api' + handlerName} } at: ${modulePath}` }
-            }
+            var handlerModule = await import(modulePath);
         }
         catch (e: unknown) {
             this.logger.error(chalk.red(`Implement API ${chalk.cyan.underline(`${svc.name}`)} failed:`), e);
             return { errMsg: (e as Error).message };
+        }
+
+        // 优先 default，其次 ApiName 同名
+        let handler = handlerModule.default ?? handlerModule['Api' + handlerName];
+        if (handler) {
+            return { handler: handler };
+        }
+        else {
+            return { errMsg: `Missing 'export Api${handlerName}' or 'export default' in: ${modulePath}` }
         }
     }
 
@@ -774,6 +775,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
 
             // Parse serviceName / body / sn
             let service: ApiService | MsgService | undefined;
+            const oriServiceName = serviceName;
             if (serviceName == undefined) {
                 if (!Array.isArray(json)) {
                     return { isSucc: false, errMsg: `Invalid request format: unresolved service name.` };
@@ -789,7 +791,14 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             // Get Service
             service = serviceMap.apiName2Service[serviceName] ?? serviceMap.msgName2Service[serviceName];
             if (!service) {
-                return { isSucc: false, errMsg: `Invalid service name: ${serviceName}` };
+                let errMsg = `Invalid service name: ${chalk.cyan.underline(serviceName)}`;
+
+                // 可能是 JSON 模式下，jsonHostPath 未设置妥当的原因，此时给予友好提示
+                if (oriServiceName) {
+                    
+                }
+
+                return { isSucc: false, errMsg: errMsg };
             }
 
             // Decode

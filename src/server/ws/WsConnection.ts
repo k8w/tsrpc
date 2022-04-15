@@ -42,11 +42,11 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
         this.httpReq = options.httpReq;
         this.isDataTypeConfirmed = options.isDataTypeConfirmed;
 
-        if (this.server.options.heartbeatTimeout) {
-            const timeout = this.server.options.heartbeatTimeout;
+        if (this.server.options.heartbeatWaitTime) {
+            const timeout = this.server.options.heartbeatWaitTime;
             this._heartbeatInterval = setInterval(() => {
                 if (Date.now() - this._lastHeartbeatTime > timeout) {
-                    this.ws.close(1001, 'Receive heartbeat timeout');
+                    this.ws.close(3001, 'Receive heartbeat timeout');
                 }
             }, timeout);
         }

@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [3.3.0-dev.0] - 2022-04-14
+## [3.3.0] - 2022-04-15
 ### Added
 - Builtin heartbeat support
 - New options `logLevel`
