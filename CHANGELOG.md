@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.1-dev.0] - 2022-04-27
+### Fixed
+- `HttpConnection.status` not correct when request aborted by client
+
 ## [3.3.0] - 2022-04-15
 ### Added
 - Builtin heartbeat support

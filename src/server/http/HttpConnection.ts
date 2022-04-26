@@ -46,10 +46,10 @@ export class HttpConnection<ServiceType extends BaseServiceType = any> extends B
 
 
     public get status(): ConnectionStatus {
-        if (this.httpRes.writableFinished) {
+        if (this.httpRes.socket?.writableFinished) {
             return ConnectionStatus.Closed;
         }
-        else if (this.httpRes.writableEnded) {
+        else if (this.httpRes.socket?.writableEnded) {
             return ConnectionStatus.Closing;
         }
         else {
