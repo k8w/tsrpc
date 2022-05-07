@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [3.3.1-dev.0] - 2022-04-27
+## [3.3.1] - 2022-05-07
 ### Fixed
 - `HttpConnection.status` not correct when request aborted by client
 
