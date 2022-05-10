@@ -134,28 +134,27 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
      * @returns Send result, `isSucc: true` means the message buffer is sent to kernel, not represents the clients received.
      */
     async broadcastMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], conns?: WsConnection<ServiceType>[]): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
-        let connStr: string;
+        let connAll = false;
         if (!conns) {
             conns = this.connections;
-            connStr = '*';
+            connAll = true;
         }
-        else {
-            connStr = conns ? conns.map(v => v.id).join(',') : '*';
-        }
+
+        const connStr = () => connAll ? '*' : conns.map(v => v.id).join(',');
 
         if (!conns.length) {
             return { isSucc: true };
         }
 
         if (this.status !== ServerStatus.Opened) {
-            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr}]`, 'Server not open');
+            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr()}]`, 'Server not open');
             return { isSucc: false, errMsg: 'Server not open' };
         }
 
         // GetService
         let service = this.serviceMap.msgName2Service[msgName as string];
         if (!service) {
-            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr}]`, 'Invalid msg name: ' + msgName);
+            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr()}]`, 'Invalid msg name: ' + msgName);
             return { isSucc: false, errMsg: 'Invalid msg name: ' + msgName };
         }
 
@@ -178,11 +177,11 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         // 测试一下编码可以通过
         let op = conns.some(v => v.dataType === 'buffer') ? getOpEncodeBuf() : getOpEncodeText();
         if (!op.isSucc) {
-            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr}]`, op.errMsg);
+            this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr()}]`, op.errMsg);
             return op;
         }
 
-        this.options.logMsg && this.logger.log(`[BroadcastMsg]`, `[${msgName}]`, `[To:${connStr}]`, msg);
+        this.options.logMsg && this.logger.log(`[BroadcastMsg]`, `[${msgName}]`, `[To:${connStr()}]`, msg);
 
         // Batch send
         let errMsgs: string[] = [];
