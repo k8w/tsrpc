@@ -388,7 +388,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @param apiName 
      * @param handler 
      */
-    implementApi<Api extends keyof ServiceType['api'], Call extends ApiCall<ServiceType['api'][Api]['req'], ServiceType['api'][Api]['res']>>(apiName: Api, handler: ApiHandler<Call>): void {
+    implementApi<Api extends string & keyof ServiceType['api'], Call extends ApiCall<ServiceType['api'][Api]['req'], ServiceType['api'][Api]['res']>>(apiName: Api, handler: ApiHandler<Call>): void {
         if (this._apiHandlers[apiName as string]) {
             throw new Error('Already exist handler for API: ' + apiName);
         }
@@ -480,20 +480,20 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @param msgName
      * @param handler
      */
-    listenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: MsgHandler<Call>): MsgHandler<Call> {
+    listenMsg<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: MsgHandler<Call>): MsgHandler<Call> {
         this._msgHandlers.addHandler(msgName as string, handler);
         return handler;
     };
     /**
      * Remove a message handler
      */
-    unlistenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: Function): void {
+    unlistenMsg<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: Function): void {
         this._msgHandlers.removeHandler(msgName as string, handler);
     };
     /**
      * Remove all handlers from a message
      */
-    unlistenMsgAll<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg): void {
+    unlistenMsgAll<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg): void {
         this._msgHandlers.removeAllHandlers(msgName as string);
     };
     // #endregion   
@@ -618,7 +618,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @param req 
      * @param options 
      */
-    callApi<T extends keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req']): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
+    callApi<T extends string & keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req']): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
         return new Promise(rs => {
             // 确认是哪个Service
             let service = this.serviceMap.apiName2Service[apiName as string];

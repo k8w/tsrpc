@@ -133,7 +133,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
      * @param connIds - `id` of target connections, `undefined` means broadcast to every connections.
      * @returns Send result, `isSucc: true` means the message buffer is sent to kernel, not represents the clients received.
      */
-    async broadcastMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], conns?: WsConnection<ServiceType>[]): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
+    async broadcastMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], conns?: WsConnection<ServiceType>[]): Promise<{ isSucc: true; } | { isSucc: false; errMsg: string; }> {
         let connStr: string;
         if (!conns) {
             conns = this.connections;
