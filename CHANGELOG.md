@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.3] - 2022-06-07
+### Fixed
+- Remove `bson` dependency, import `ObjectId` dynamically.
+
 ## [3.3.2] - 2022-06-01
 ### Fixed
 - Update dependencies

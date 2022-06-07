@@ -1,9 +1,9 @@
-import { ObjectId } from "bson";
 import chalk from "chalk";
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
 import { ApiService, Counter, Flow, getCustomObjectIdTypes, MsgHandlerManager, MsgService, ParsedServerInput, ServiceMap, ServiceMapUtil, TransportDataUtil } from 'tsrpc-base-client';
 import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, LogLevel, ServerInputData, ServiceProto, setLogLevel, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
+import { getClassObjectId } from "../../models/getClassObjectId";
 import { ApiCallInner } from "../inner/ApiCallInner";
 import { InnerConnection } from "../inner/InnerConnection";
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
@@ -156,7 +156,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         this.tsbuffer = new TSBuffer({
             ...proto.types,
             // Support mongodb/ObjectId
-            ...getCustomObjectIdTypes(ObjectId)
+            ...getCustomObjectIdTypes(getClassObjectId())
         }, {
             strictNullChecks: this.options.strictNullChecks
         });
