@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.4.0-beta.0] - 2022-06-08
+### Added
+- `https` options for `HttpServer`
+- `wss` options for `WsServer`
+
 ## [3.3.3] - 2022-06-07
 ### Fixed
 - Remove `bson` dependency, import `ObjectId` dynamically.

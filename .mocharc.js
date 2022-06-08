@@ -4,6 +4,7 @@ module.exports = {
         './test/Base.ts'
     ],
     exit: true,
+    bail: true,
     timeout: 999999,
     'preserve-symlinks': true,
     spec: [

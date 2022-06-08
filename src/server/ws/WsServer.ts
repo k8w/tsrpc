@@ -1,4 +1,5 @@
 import * as http from "http";
+import https from "https";
 import { EncodeOutput, TransportDataUtil } from "tsrpc-base-client";
 import { BaseServiceType, ServiceProto } from 'tsrpc-proto';
 import * as WebSocket from 'ws';
@@ -26,6 +27,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
     }
 
     private _wsServer?: WebSocketServer;
+    private _httpServer?: http.Server | https.Server;
 
     /**
      * {@inheritDoc BaseServer.start}
@@ -36,20 +38,25 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         }
         this._status = ServerStatus.Opening;
         return new Promise((rs, rj) => {
-            this.logger.log('Starting WebSocket server...');
-            this._wsServer = new WebSocketServer({
-                port: this.options.port
-            }, () => {
-                this.logger.log(`Server started at ${this.options.port}...`);
-                this._status = ServerStatus.Opened;
-                rs();
+            this.logger.log(`Starting ${this.options.wss ? 'WSS' : 'WS'} server...`);
+
+            // Create HTTP/S Server
+            this._httpServer = (this.options.wss ? https : http).createServer({
+                ...this.options.wss
             });
 
-            this._wsServer.on('connection', this._onClientConnect);
-            this._wsServer.on('error', e => {
-                this.logger.error('[ServerError]', e);
-                rj(e);
+            // Create WebSocket Server
+            this._wsServer = new WebSocketServer({
+                server: this._httpServer
             });
+            this._wsServer.on('connection', this._onClientConnect);
+
+            // Start Server
+            this._httpServer.listen(this.options.port, () => {
+                this._status = ServerStatus.Opened;
+                this.logger.log(`Server started at ${this.options.port}.`);
+                rs();
+            })
         })
     }
 
@@ -68,8 +75,11 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         this._status = ServerStatus.Closing;
 
         return new Promise<void>(async (rs, rj) => {
-            await Promise.all(this.connections.map(v => v.close('Server Stop')));
-            this._wsServer!.close(err => { err ? rj(err) : rs() })
+            await Promise.all(this.connections.map(v => v.close('Server stopped')));
+            // Close HTTP Server
+            await new Promise<void>((rs1, rj1) => { this._httpServer?.close(err => { err ? rj1(err) : rs1() }) })
+            // Close WS Server
+            this._wsServer!.close(err => { err ? rj(err) : rs() });
         }).then(() => {
             this.logger.log('Server stopped');
             this._status = ServerStatus.Closed;
@@ -225,6 +235,26 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 export interface WsServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
     /** Which port the WebSocket server is listen to */
     port: number;
+
+    /**
+     * HTTPS options, the server would use wss instead of http if this value is defined.
+     * NOTICE: Once you enabled wss, you CANNOT visit the server via `ws://` anymore.
+     * If you need visit the server via both `ws://` and `wss://`, you can start 2 HttpServer (one with `wss` and another without).
+     * @defaultValue `undefined`
+     */
+    wss?: {
+        /**
+         * @example
+         * fs.readFileSync('xxx-key.pem');
+         */
+        key: https.ServerOptions['key'],
+
+        /**
+         * @example
+         * fs.readFileSync('xxx-cert.pem');
+         */
+        cert: https.ServerOptions['cert']
+    },
 
     /** 
      * Close a connection if not receive heartbeat after the time (ms).

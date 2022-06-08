@@ -1,4 +1,5 @@
 import * as http from "http";
+import https from "https";
 import { BaseServiceType, ServiceProto } from 'tsrpc-proto';
 import { HttpUtil } from '../../models/HttpUtil';
 import { TSRPC_VERSION } from "../../models/version";
@@ -25,7 +26,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     }
 
     /** Native `http.Server` of NodeJS */
-    httpServer?: http.Server;
+    httpServer?: http.Server | https.Server;
     /**
      * {@inheritDoc BaseServer.start}
      */
@@ -36,8 +37,10 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
         return new Promise(rs => {
             this._status = ServerStatus.Opening;
-            this.logger.log(`Starting HTTP server ...`);
-            this.httpServer = http.createServer((httpReq, httpRes) => {
+            this.logger.log(`Starting ${this.options.https ? 'HTTPS' : 'HTTP'} server ...`);
+            this.httpServer = (this.options.https ? https : http).createServer({
+                ...this.options.https
+            }, (httpReq, httpRes) => {
                 if (this.status !== ServerStatus.Opened) {
                     httpRes.statusCode = 503;
                     httpRes.end();
@@ -193,6 +196,27 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 export interface HttpServerOptions<ServiceType extends BaseServiceType> extends BaseServerOptions<ServiceType> {
     /** Which port the HTTP server listen to */
     port: number,
+
+    /**
+     * HTTPS options, the server would use https instead of http if this value is defined.
+     * NOTICE: Once you enabled https, you CANNOT visit the server via `http://` anymore.
+     * If you need visit the server via both `http://` and `https://`, you can start 2 HttpServer (one with `https` and another without).
+     * @defaultValue `undefined`
+     */
+    https?: {
+        /**
+         * @example
+         * fs.readFileSync('xxx-key.pem');
+         */
+        key: https.ServerOptions['key'],
+
+        /**
+         * @example
+         * fs.readFileSync('xxx-cert.pem');
+         */
+        cert: https.ServerOptions['cert']
+    },
+
     /** 
      * Passed to the `timeout` property to the native `http.Server` of NodeJS, in milliseconds.
      * `0` and `undefined` will disable the socket timeout behavior.
@@ -202,6 +226,7 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
      * @see {@link https://nodejs.org/dist/latest-v14.x/docs/api/http.html#http_server_timeout}
      */
     socketTimeout?: number,
+
     /**
      * Passed to the `keepAliveTimeout` property to the native `http.Server` of NodeJS, in milliseconds.
      * It means keep-alive timeout of HTTP socket connection.
@@ -209,6 +234,7 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
      * @see {@link https://nodejs.org/dist/latest-v14.x/docs/api/http.html#http_server_keepalivetimeout}
      */
     keepAliveTimeout?: number,
+
     /** 
      * Response header value of `Access-Control-Allow-Origin`.
      * If this has any value, it would also set `Access-Control-Allow-Headers` as `*`.
@@ -216,6 +242,7 @@ export interface HttpServerOptions<ServiceType extends BaseServiceType> extends 
      * @defaultValue `*`
      */
     cors?: string,
+
     /**
      * Response header value of `Access-Control-Allow-Origin`.
      * @defaultValue `3600`
