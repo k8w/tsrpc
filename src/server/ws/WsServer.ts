@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import * as http from "http";
 import https from "https";
 import { EncodeOutput, TransportDataUtil } from "tsrpc-base-client";
@@ -123,14 +124,14 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         this.connections.push(conn);
         this._id2Conn[conn.id] = conn;
 
-        conn.logger.log('[Connected]', `ActiveConn=${this.connections.length}`);
+        conn.logger.log(chalk.green('[Connected]'), `ActiveConn=${this.connections.length}`);
         this.flows.postConnectFlow.exec(conn, conn.logger);
     };
 
     private _onClientClose = async (conn: WsConnection<ServiceType>, code: number, reason: string) => {
         this.connections.removeOne(v => v.id === conn.id);
         delete this._id2Conn[conn.id];
-        conn.logger.log('[Disconnected]', `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this.connections.length}`)
+        conn.logger.log(chalk.green('[Disconnected]'), `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this.connections.length}`)
 
         await this.flows.postDisconnectFlow.exec({ conn: conn, reason: reason }, conn.logger);
     }
