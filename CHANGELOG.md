@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [3.4.0-beta.3] - 2022-06-09
+## [3.4.0-beta.4] - 2022-06-09
 ### Added
 - `https` options for `HttpServer`
 - `wss` options for `WsServer`

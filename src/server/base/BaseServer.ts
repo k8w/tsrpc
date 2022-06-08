@@ -334,7 +334,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         call = preFlow;
 
         // exec ApiCall
-        call.logger.log('[ApiReq]', this.options.logReqBody ? call.req : '');
+        call.logger.log(chalk.green('[ApiReq]'), this.options.logReqBody ? call.req : '');
         let { handler } = await this.getApiHandler(call.service, this._delayImplementApiPath, call.logger);
         // exec API handler
         if (handler) {
