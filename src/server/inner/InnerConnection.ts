@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { ApiReturn, TsrpcError, TsrpcErrorType } from "tsrpc-proto";
 import { ApiCall, BaseConnection, BaseServiceType, PrefixLogger, TransportDataUtil } from "../..";
 import { BaseConnectionOptions, ConnectionStatus } from "../base/BaseConnection";
@@ -27,7 +28,7 @@ export class InnerConnection<ServiceType extends BaseServiceType = any> extends 
     constructor(options: InnerConnectionOptions<ServiceType>) {
         super(options, new PrefixLogger({
             logger: options.server.logger,
-            prefixs: [`Inner #${options.id}`]
+            prefixs: [chalk.gray(`Inner #${options.id}`)]
         }));
 
         this.return = options.return;

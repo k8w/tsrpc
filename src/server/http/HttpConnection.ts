@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import * as http from "http";
 import { ParsedServerInput } from "tsrpc-base-client";
 import { BaseServiceType } from "tsrpc-proto";
@@ -37,7 +38,7 @@ export class HttpConnection<ServiceType extends BaseServiceType = any> extends B
     constructor(options: HttpConnectionOptions<ServiceType>) {
         super(options, new PrefixLogger({
             logger: options.server.logger,
-            prefixs: [`${options.ip} #${options.id}`]
+            prefixs: [chalk.gray(`${options.ip} #${options.id}`)]
         }));
 
         this.httpReq = options.httpReq;

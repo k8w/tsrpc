@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { MsgHandlerManager, ParsedServerInput, TransportDataUtil } from "tsrpc-base-client";
 import { BaseServiceType } from "tsrpc-proto";
 import { PrefixLogger } from "../models/PrefixLogger";
@@ -128,7 +129,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
 
         // Do send!
-        this.server.options.logMsg && this.logger.log('[SendMsg]', `[${msgName}]`, msg);
+        this.server.options.logMsg && this.logger.log(chalk.cyan.underline(`[Msg:${msgName}]`), chalk.green('[SendMsg]'), msg);
         let opSend = await this.sendData(opServerOutput.output);
         if (!opSend.isSucc) {
             return opSend;

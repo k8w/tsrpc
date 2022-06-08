@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import * as http from "http";
 import { TransportDataUtil } from "tsrpc-base-client";
 import { BaseServiceType } from "tsrpc-proto";
@@ -36,7 +37,7 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
     constructor(options: WsConnectionOptions<ServiceType>) {
         super(options, new PrefixLogger({
             logger: options.server.logger,
-            prefixs: [`${options.ip} Conn#${options.id}`]
+            prefixs: [chalk.gray(`${options.ip} Conn#${options.id}`)]
         }));
         this.ws = options.ws;
         this.httpReq = options.httpReq;

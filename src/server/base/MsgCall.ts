@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { MsgService } from "tsrpc-base-client";
 import { BaseServiceType } from "tsrpc-proto";
 import { PrefixLogger } from "../models/PrefixLogger";
@@ -22,7 +23,7 @@ export abstract class MsgCall<Msg = any, ServiceType extends BaseServiceType = a
     constructor(options: MsgCallOptions<Msg, ServiceType>, logger?: PrefixLogger) {
         super(options, logger ?? new PrefixLogger({
             logger: options.conn.logger,
-            prefixs: [`[Msg:${options.service.name}]`]
+            prefixs: [chalk.cyan.underline(`[Msg:${options.service.name}]`)]
         }));
 
         this.msg = options.msg;

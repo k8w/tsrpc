@@ -384,7 +384,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         call = preFlow;
 
         // MsgHandler
-        this.options.logMsg && call.logger.log('[RecvMsg]', call.msg);
+        this.options.logMsg && call.logger.log(chalk.green('[RecvMsg]'), call.msg);
         let promises = [
             // Conn Handlers
             ...(call.conn['_msgHandlers']?.forEachHandler(call.service.name, call.logger, call) ?? []),
