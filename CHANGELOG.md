@@ -1,10 +1,12 @@
 # CHANGELOG
 
-## [3.4.0-beta.1] - 2022-06-08
+## [3.4.0-beta.2] - 2022-06-08
 ### Added
 - `https` options for `HttpServer`
 - `wss` options for `WsServer`
 - Support using the same name with API and message
+### Changed
+- Deprecate `serviceName` in `preRecvDataFlow`, use `serviceId` instead
 
 ## [3.3.3] - 2022-06-07
 ### Fixed

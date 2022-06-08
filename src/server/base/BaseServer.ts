@@ -66,7 +66,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
              * @deprecated use `serviceId` instead
              */
             serviceName?: string,
-            /** Parsed service id */
+            /** 
+             * Parsed service id, you can get this by `this.serviceMap.apiName2Service[serviceName].id`
+             */
             serviceId?: number
         }>(),
         /**
@@ -268,13 +270,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             return;
         }
         data = pre.data;
-
-        // Pre flow res
-        if (pre.serviceId !== serviceId) {
-            serviceId = pre.serviceId
-        }
+        serviceId = pre.serviceId
         // @deprecated 兼容
-        else if (pre.serviceName && pre.serviceName !== preServiceName) {
+        if (pre.serviceName && pre.serviceName !== preServiceName) {
             serviceId = this.serviceMap.apiName2Service[pre.serviceName]?.id;
         }
 
