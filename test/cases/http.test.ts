@@ -196,7 +196,7 @@ describe('HTTP Server & Client basic', function () {
             logger: serverLogger,
             // debugBuf: true
         });
-
+        await server.autoImplementApi(path.resolve(__dirname, '../api'))
         await server.start();
 
         let client = new HttpClient(getProto(), {
@@ -222,6 +222,38 @@ describe('HTTP Server & Client basic', function () {
             client.sendMsg('Chat', msg);
         })
     })
+
+    it('Same-name msg and api', async function () {
+        let server = new HttpServer(getProto(), {
+            port: 3001,
+            logger: serverLogger,
+            debugBuf: true
+        });
+
+        await server.autoImplementApi(path.resolve(__dirname, '../api'))
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            server: 'http://127.0.0.1:3001',
+            logger: clientLogger,
+            debugBuf: true
+        });
+
+        let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.ok(ret.isSucc);
+
+        return new Promise(rs => {
+            server.listenMsg('Test', async v => {
+                assert.deepStrictEqual(v.msg, { content: 'abc' });
+                await server.stop();
+                rs();
+            });
+
+            client.sendMsg('Test', {
+                content: 'abc'
+            });
+        })
+    });
 
     it('abort', async function () {
         let server = new HttpServer(getProto(), {

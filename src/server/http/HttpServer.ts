@@ -89,12 +89,28 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                         let url = conn.httpReq.url!;
 
                         let urlEndPos = url.indexOf('?');
+                        let isMsg: boolean = false;
                         if (urlEndPos > -1) {
-                            url = url.slice(0, urlEndPos);
+                            isMsg = url.slice(urlEndPos + 1).split('&').some(v => v === 'type=msg');
+                            url = url.slice(0, urlEndPos);                            
                         }
 
+                        // Parse serviceId
                         let serviceName = url.slice(this.options.jsonHostPath.length);
-                        this._onRecvData(conn, buf.toString(), serviceName);
+                        let serviceId: number | undefined;
+                        if (isMsg) {
+                            serviceId = this.serviceMap.msgName2Service[serviceName]?.id;
+                        }
+                        else {
+                            serviceId = this.serviceMap.apiName2Service[serviceName]?.id
+                        }
+
+                        const data = buf.toString();
+                        if (serviceId === undefined) {
+                            this.onInputDataError(`Invalid ${isMsg ? 'msg' : 'api'} path: ${serviceName}`, conn, data)
+                            return;
+                        }
+                        this._onRecvData(conn, data, serviceId);
                     }
                     else {
                         this._onRecvData(conn, buf);

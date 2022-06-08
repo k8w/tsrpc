@@ -194,6 +194,39 @@ describe('WS Server & Client basic', function () {
         })
     });
 
+    it('Same-name msg and api', async function () {
+        let server = new WsServer(getProto(), {
+            port: 3000,
+            logger: serverLogger,
+            // debugBuf: true
+        });
+
+        await server.autoImplementApi(path.resolve(__dirname, '../api'))
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            server: 'ws://127.0.0.1:3000',
+            logger: clientLogger,
+            // debugBuf: true
+        });
+        await client.connect();
+
+        let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.ok(ret.isSucc);
+
+        return new Promise(rs => {
+            server.listenMsg('Test', async v => {
+                assert.deepStrictEqual(v.msg, { content: 'abc' });
+                await server.stop();
+                rs();
+            });
+
+            client.sendMsg('Test', {
+                content: 'abc'
+            });
+        })
+    });
+
     it('server send msg', async function () {
         let server = new WsServer(getProto(), {
             port: 3001,
