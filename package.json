@@ -1,6 +1,6 @@
 {
   "name": "tsrpc",
-  "version": "3.3.1",
+  "version": "3.4.0-beta.4",
   "description": "A TypeScript RPC Framework, with runtime type checking and built-in serialization, support both HTTP and WebSocket.",
   "main": "index.js",
   "exports": {
@@ -38,29 +38,29 @@
   "author": "k8w",
   "license": "MIT",
   "devDependencies": {
-    "@microsoft/api-documenter": "^7.17.9",
-    "@microsoft/api-extractor": "^7.22.2",
+    "@microsoft/api-documenter": "^7.17.17",
+    "@microsoft/api-extractor": "^7.25.0",
     "@types/chai": "^4.3.1",
     "@types/mocha": "^8.2.3",
     "@types/node": "^15.14.9",
     "@types/uuid": "^8.3.4",
     "chai": "^4.3.6",
     "mocha": "^9.2.2",
+    "mongodb": "^4.7.0",
     "nyc": "^15.1.0",
-    "rollup": "^2.70.2",
-    "rollup-plugin-typescript2": "^0.31.2",
-    "ts-node": "^10.7.0",
-    "typescript": "^4.6.3"
+    "rollup": "^2.75.6",
+    "rollup-plugin-typescript2": "^0.32.1",
+    "ts-node": "^10.8.1",
+    "typescript": "^4.7.3"
   },
   "dependencies": {
     "@types/ws": "^7.4.7",
-    "bson": "*",
     "chalk": "^4.1.2",
-    "tsbuffer": "^2.2.2",
-    "tsrpc-base-client": "^2.0.5",
-    "tsrpc-proto": "^1.4.1",
+    "tsbuffer": "^2.2.3",
+    "tsrpc-base-client": "^2.0.8-dev.1",
+    "tsrpc-proto": "^1.4.2",
     "uuid": "^8.3.2",
-    "ws": "^7.5.7"
+    "ws": "^7.5.8"
   },
   "nyc": {
     "extension": [

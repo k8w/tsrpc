@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { MsgHandlerManager, ParsedServerInput, TransportDataUtil } from "tsrpc-base-client";
 import { BaseServiceType } from "tsrpc-proto";
 import { PrefixLogger } from "../models/PrefixLogger";
@@ -100,7 +101,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param msg - Message body
      * @returns Promise resolved when the buffer is sent to kernel, it not represents the server received it.
      */
-    async sendMsg<T extends keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]): ReturnType<BaseConnection['sendData']> {
+    async sendMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T]): ReturnType<BaseConnection['sendData']> {
         if (this.type === 'SHORT') {
             this.logger.warn('[SendMsgErr]', `[${msgName}]`, 'Short connection cannot sendMsg');
             return { isSucc: false, errMsg: 'Short connection cannot sendMsg' }
@@ -128,7 +129,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
 
         // Do send!
-        this.server.options.logMsg && this.logger.log('[SendMsg]', `[${msgName}]`, msg);
+        this.server.options.logMsg && this.logger.log(chalk.cyan.underline(`[Msg:${msgName}]`), chalk.green('[SendMsg]'), msg);
         let opSend = await this.sendData(opServerOutput.output);
         if (!opSend.isSucc) {
             return opSend;
@@ -148,7 +149,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param msgName
      * @param handler
      */
-    listenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: MsgHandler<Call>): MsgHandler<Call> {
+    listenMsg<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: MsgHandler<Call>): MsgHandler<Call> {
         if (!this._msgHandlers) {
             this._msgHandlers = new MsgHandlerManager();
         }
@@ -158,7 +159,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     /**
      * Remove a message handler
      */
-    unlistenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: Function): void {
+    unlistenMsg<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: Function): void {
         if (!this._msgHandlers) {
             this._msgHandlers = new MsgHandlerManager();
         }
@@ -167,7 +168,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     /**
      * Remove all handlers from a message
      */
-    unlistenMsgAll<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg): void {
+    unlistenMsgAll<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg): void {
         if (!this._msgHandlers) {
             this._msgHandlers = new MsgHandlerManager();
         }

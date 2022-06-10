@@ -1,6 +1,7 @@
 import { ObjectId } from 'bson';
 import { assert } from 'chai';
 import chalk from 'chalk';
+import fs from "fs";
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { BaseServer, TerminalColorLogger, TransportDataUtil, WsClientStatus, WsConnection } from '../../src';
@@ -11,6 +12,9 @@ import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
 import { ApiTest } from '../api/ApiTest';
 import { MsgChat } from '../proto/MsgChat';
 import { serviceProto, ServiceType } from '../proto/serviceProto';
+
+// 允许自签名证书（方便测试）
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
 
 const serverLogger = new PrefixLogger({
     prefixs: [chalk.bgGreen.white(' Server ')],
@@ -88,9 +92,10 @@ async function testApi(server: WsServer<ServiceType>, client: WsClient<ServiceTy
     }
 }
 
-describe('WS JSON Server & Client basic', function () {
+describe('WS Server & Client basic', function () {
     it('cannot callApi before connect', async function () {
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger,
             debugBuf: true
@@ -107,6 +112,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('implement API manually', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger,
             debugBuf: true
@@ -117,6 +126,7 @@ describe('WS JSON Server & Client basic', function () {
         server.implementApi('a/b/c/Test', ApiAbcTest);
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger,
             debugBuf: true
@@ -130,6 +140,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('extend conn', function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger,
             debugBuf: true
@@ -147,6 +161,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('autoImplementApi', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger,
             apiTimeout: 5000
@@ -156,6 +174,7 @@ describe('WS JSON Server & Client basic', function () {
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -168,6 +187,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('Client use buffer when server is `json: true`', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger,
             apiTimeout: 5000
@@ -177,6 +200,7 @@ describe('WS JSON Server & Client basic', function () {
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: false,
             logger: clientLogger
         });
@@ -189,6 +213,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('Client use JSON when server is `json: false`', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: false,
             logger: serverLogger,
             apiTimeout: 5000
@@ -198,6 +226,7 @@ describe('WS JSON Server & Client basic', function () {
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -212,6 +241,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('sendMsg', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             port: 3001,
             logger: serverLogger,
@@ -222,7 +255,7 @@ describe('WS JSON Server & Client basic', function () {
 
         let client = new WsClient(getProto(), {
             json: true,
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
         });
@@ -246,43 +279,12 @@ describe('WS JSON Server & Client basic', function () {
         })
     });
 
-    it('Same-name msg and api', async function () {
-        let server = new WsServer(getProto(), {
-            port: 3000,
-            logger: serverLogger,
-            json: true,
-            // debugBuf: true
-        });
-
-        await server.autoImplementApi(path.resolve(__dirname, '../api'))
-        await server.start();
-
-        let client = new WsClient(getProto(), {
-            server: 'ws://127.0.0.1:3000',
-            logger: clientLogger,
-            json: true,
-            // debugBuf: true
-        });
-        await client.connect();
-
-        let ret = await client.callApi('Test', { name: 'xxx' });
-        assert.ok(ret.isSucc);
-
-        return new Promise(rs => {
-            server.listenMsg('Test', async v => {
-                assert.deepStrictEqual(v.msg, { content: 'abc' });
-                await server.stop();
-                rs();
-            });
-
-            client.sendMsg('Test', {
-                content: 'abc'
-            });
-        })
-    });
-
     it('server send msg', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             port: 3001,
             logger: serverLogger,
@@ -293,7 +295,7 @@ describe('WS JSON Server & Client basic', function () {
 
         let client = new WsClient(getProto(), {
             json: true,
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
         });
@@ -319,6 +321,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('listen msg by regexp', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             port: 3001,
             logger: serverLogger,
@@ -329,7 +335,7 @@ describe('WS JSON Server & Client basic', function () {
 
         let client = new WsClient(getProto(), {
             json: true,
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
         });
@@ -356,6 +362,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('server broadcast msg', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             port: 3001,
             logger: serverLogger,
@@ -366,13 +376,13 @@ describe('WS JSON Server & Client basic', function () {
 
         let client1 = new WsClient(getProto(), {
             json: true,
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
         });
         let client2 = new WsClient(getProto(), {
             json: true,
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
         });
@@ -426,6 +436,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('broadcast to both text and buffer client (server: json)', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             port: 3001,
             logger: serverLogger,
@@ -436,13 +450,13 @@ describe('WS JSON Server & Client basic', function () {
 
         let client1 = new WsClient(getProto(), {
             json: true,
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             debugBuf: true
         });
         let client2 = new WsClient(getProto(), {
             json: false,
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             debugBuf: true
         });
@@ -496,6 +510,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('broadcast to both text and buffer client (server: buffer)', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: false,
             port: 3001,
             logger: serverLogger,
@@ -506,13 +524,13 @@ describe('WS JSON Server & Client basic', function () {
 
         let client1 = new WsClient(getProto(), {
             json: true,
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             debugBuf: true
         });
         let client2 = new WsClient(getProto(), {
             json: false,
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             debugBuf: true
         });
@@ -566,6 +584,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('abort', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -574,6 +596,7 @@ describe('WS JSON Server & Client basic', function () {
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -601,6 +624,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('pendingApis', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -609,6 +636,7 @@ describe('WS JSON Server & Client basic', function () {
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -657,6 +685,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('error', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -664,7 +696,7 @@ describe('WS JSON Server & Client basic', function () {
 
         let client1 = new WsClient(getProto(), {
             json: true,
-            server: 'ws://localhost:80',
+            server: 'wss://localhost:80',
             logger: clientLogger
         })
         let res = await client1.connect();
@@ -681,6 +713,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('server timeout', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger,
             apiTimeout: 100
@@ -698,6 +734,7 @@ describe('WS JSON Server & Client basic', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -716,6 +753,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('client timeout', async function () {
         let server1 = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -732,6 +773,7 @@ describe('WS JSON Server & Client basic', function () {
         await server1.start();
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             timeout: 100,
             logger: clientLogger
@@ -753,6 +795,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('Graceful stop', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -770,6 +816,7 @@ describe('WS JSON Server & Client basic', function () {
         let isStopped = false;
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -787,6 +834,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('Client heartbeat works', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             port: 3001,
             logger: serverLogger,
             debugBuf: true,
@@ -795,7 +846,7 @@ describe('WS JSON Server & Client basic', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             heartbeat: {
                 interval: 1000,
@@ -817,6 +868,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('Client heartbeat error', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             port: 3001,
             logger: serverLogger,
             debugBuf: true,
@@ -825,7 +880,7 @@ describe('WS JSON Server & Client basic', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             heartbeat: {
                 interval: 1000,
@@ -858,6 +913,10 @@ describe('WS JSON Server & Client basic', function () {
 
     it('Server heartbeat kick', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             port: 3001,
             logger: serverLogger,
             debugBuf: true,
@@ -867,7 +926,7 @@ describe('WS JSON Server & Client basic', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
-            server: 'ws://127.0.0.1:3001',
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             debugBuf: true,
             json: true
@@ -890,9 +949,13 @@ describe('WS JSON Server & Client basic', function () {
     })
 })
 
-describe('WS JSON Flows', function () {
+describe('WS Flows', function () {
     it('Server conn flow', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -924,6 +987,7 @@ describe('WS JSON Flows', function () {
         assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -936,6 +1000,10 @@ describe('WS JSON Flows', function () {
 
     it('Buffer enc/dec flow', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger,
             debugBuf: true
@@ -961,6 +1029,7 @@ describe('WS JSON Flows', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger,
             debugBuf: true
@@ -996,6 +1065,10 @@ describe('WS JSON Flows', function () {
 
     it('ApiCall flow', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -1019,6 +1092,7 @@ describe('WS JSON Flows', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -1043,6 +1117,10 @@ describe('WS JSON Flows', function () {
 
     it('ApiCall flow break', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -1066,6 +1144,7 @@ describe('WS JSON Flows', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -1090,6 +1169,10 @@ describe('WS JSON Flows', function () {
 
     it('ApiCall flow error', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -1112,6 +1195,7 @@ describe('WS JSON Flows', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -1140,6 +1224,10 @@ describe('WS JSON Flows', function () {
 
     it('server ApiReturn flow', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -1167,6 +1255,7 @@ describe('WS JSON Flows', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -1185,6 +1274,10 @@ describe('WS JSON Flows', function () {
 
     it('client ApiReturn flow', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -1198,6 +1291,7 @@ describe('WS JSON Flows', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -1230,6 +1324,10 @@ describe('WS JSON Flows', function () {
 
     it('client SendBufferFlow prevent', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -1243,6 +1341,7 @@ describe('WS JSON Flows', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -1262,12 +1361,17 @@ describe('WS JSON Flows', function () {
 
     it('onInputBufferError', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
         await server.start();
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });
@@ -1288,6 +1392,10 @@ describe('WS JSON Flows', function () {
 
     it('ObjectId', async function () {
         let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             json: true,
             logger: serverLogger
         });
@@ -1295,6 +1403,7 @@ describe('WS JSON Flows', function () {
         await server.start();
 
         let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             json: true,
             logger: clientLogger
         });

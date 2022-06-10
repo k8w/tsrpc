@@ -1,6 +1,7 @@
 import { ServiceProto } from 'tsrpc-proto';
 import { ReqTest, ResTest } from './a/b/c/PtlTest';
 import { MsgChat } from './MsgChat';
+import { MsgTest } from './MsgTest';
 import { ReqObjId, ResObjId } from './PtlObjId';
 import { ReqTest as ReqTest_1, ResTest as ResTest_1 } from './PtlTest';
 
@@ -20,12 +21,13 @@ export interface ServiceType {
         }
     },
     msg: {
-        "Chat": MsgChat
+        "Chat": MsgChat,
+        "Test": MsgTest
     }
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 1,
+    "version": 2,
     "services": [
         {
             "id": 0,
@@ -35,6 +37,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 1,
             "name": "Chat",
+            "type": "msg"
+        },
+        {
+            "id": 4,
+            "name": "Test",
             "type": "msg"
         },
         {
@@ -111,6 +118,18 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "time",
                     "type": {
                         "type": "Number"
+                    }
+                }
+            ]
+        },
+        "MsgTest/MsgTest": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "content",
+                    "type": {
+                        "type": "String"
                     }
                 }
             ]

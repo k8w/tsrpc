@@ -90,7 +90,7 @@ async function testApi(server: HttpServer<ServiceType>, client: HttpClient<Servi
     }
 }
 
-describe('HTTP Server & Client basic', function () {
+describe('HTTP JSON Server & Client basic', function () {
     it('implement API manually', async function () {
         let server = new HttpServer(getProto(), {
             json: true,
@@ -231,6 +231,40 @@ describe('HTTP Server & Client basic', function () {
             client.sendMsg('Chat', msg);
         })
     })
+
+    it('Same-name msg and api', async function () {
+        let server = new HttpServer(getProto(), {
+            port: 3001,
+            json: true,
+            logger: serverLogger,
+            // debugBuf: true
+        });
+
+        await server.autoImplementApi(path.resolve(__dirname, '../api'))
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            server: 'http://127.0.0.1:3001',
+            json: true,
+            logger: clientLogger,
+            // debugBuf: true
+        });
+
+        let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.ok(ret.isSucc);
+
+        return new Promise(rs => {
+            server.listenMsg('Test', async v => {
+                assert.deepStrictEqual(v.msg, { content: 'abc' });
+                await server.stop();
+                rs();
+            });
+
+            client.sendMsg('Test', {
+                content: 'abc'
+            });
+        })
+    });
 
     it('abort', async function () {
         let server = new HttpServer(getProto(), {
@@ -531,7 +565,7 @@ describe('HTTP Server & Client basic', function () {
     })
 })
 
-describe('HTTP Flows', function () {
+describe('HTTP JSON Flows', function () {
     it('Server conn flow', async function () {
         let server = new HttpServer(getProto(), {
             json: true,

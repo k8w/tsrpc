@@ -1,4 +1,4 @@
-import { ObjectId } from 'bson';
+import { ObjectId } from 'mongodb';
 import { OmitUnion } from 'k8w-extend-native';
 
 type InsertOneResult<T> = any;

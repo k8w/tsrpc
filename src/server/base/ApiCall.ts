@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { TSBuffer } from 'tsbuffer';
 import { ApiService, TransportDataUtil } from "tsrpc-base-client";
 import { ApiReturn, BaseServiceType, ServerOutputData, TsrpcError, TsrpcErrorData, TsrpcErrorType } from "tsrpc-proto";
@@ -41,7 +42,7 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
     constructor(options: ApiCallOptions<Req, ServiceType>, logger?: PrefixLogger) {
         super(options, logger ?? new PrefixLogger({
             logger: options.conn.logger,
-            prefixs: [`[Api:${options.service.name}]${options.sn !== undefined ? ` SN=${options.sn}` : ''}`]
+            prefixs: [`${chalk.cyan.underline(`[Api:${options.service.name}]`)}${options.sn !== undefined ? chalk.gray(` SN=${options.sn}`) : ''}`]
         }));
 
         this.sn = options.sn;
@@ -108,14 +109,14 @@ export abstract class ApiCall<Req = any, Res = any, ServiceType extends BaseServ
         // record & log ret
         this._usedTime = Date.now() - this.startTime;
         if (ret.isSucc) {
-            this.logger.log('[ApiRes]', `${this.usedTime}ms`, this.server.options.logResBody ? ret.res : '');
+            this.logger.log(chalk.green('[ApiRes]'), `${this.usedTime}ms`, this.server.options.logResBody ? ret.res : '');
         }
         else {
             if (ret.err.type === TsrpcErrorType.ApiError) {
-                this.logger.log('[ApiErr]', `${this.usedTime}ms`, ret.err, 'req=', this.req);
+                this.logger.log(chalk.red('[ApiErr]'), `${this.usedTime}ms`, ret.err, 'req=', this.req);
             }
             else {
-                this.logger.error(`[ApiErr]`, `${this.usedTime}ms`, ret.err, 'req=', this.req)
+                this.logger.error(chalk.red('[ApiErr]'), `${this.usedTime}ms`, ret.err, 'req=', this.req)
             }
         }
 

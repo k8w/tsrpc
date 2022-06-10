@@ -1,10 +1,12 @@
 import { ObjectId } from 'bson';
 import { assert } from 'chai';
 import chalk from 'chalk';
+import fs from "fs";
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { ApiCall, BaseServer, HttpConnection, MsgCall, TerminalColorLogger } from '../../src';
 import { HttpClient } from '../../src/client/http/HttpClient';
+import { HttpProxy } from '../../src/client/http/HttpProxy';
 import { HttpServer } from '../../src/server/http/HttpServer';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
@@ -12,6 +14,9 @@ import { ApiTest } from '../api/ApiTest';
 import { MsgChat } from '../proto/MsgChat';
 import { ReqTest, ResTest } from '../proto/PtlTest';
 import { serviceProto, ServiceType } from '../proto/serviceProto';
+
+// 允许自签名证书（方便测试）
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
 
 const serverLogger = new PrefixLogger({
     prefixs: [chalk.bgGreen.white(' Server ')],
@@ -92,6 +97,11 @@ async function testApi(server: HttpServer<ServiceType>, client: HttpClient<Servi
 describe('HTTP Server & Client basic', function () {
     it('implement API manually', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger,
             debugBuf: true
         });
@@ -101,6 +111,8 @@ describe('HTTP Server & Client basic', function () {
         server.implementApi('a/b/c/Test', ApiAbcTest);
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger,
             debugBuf: true
         })
@@ -112,6 +124,11 @@ describe('HTTP Server & Client basic', function () {
 
     it('extend call in handler', function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger,
             debugBuf: true
         });
@@ -138,6 +155,11 @@ describe('HTTP Server & Client basic', function () {
 
     it('extend call in flow', function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger,
             debugBuf: true
         });
@@ -174,6 +196,11 @@ describe('HTTP Server & Client basic', function () {
 
     it('autoImplementApi', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger,
             apiTimeout: 5000
         });
@@ -182,6 +209,8 @@ describe('HTTP Server & Client basic', function () {
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         })
 
@@ -192,15 +221,21 @@ describe('HTTP Server & Client basic', function () {
 
     it('sendMsg', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             port: 3001,
             logger: serverLogger,
             // debugBuf: true
         });
-        await server.autoImplementApi(path.resolve(__dirname, '../api'))
+
         await server.start();
 
         let client = new HttpClient(getProto(), {
-            server: 'http://127.0.0.1:3001',
+            json: true,
+            server: 'https://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
         });
@@ -223,40 +258,13 @@ describe('HTTP Server & Client basic', function () {
         })
     })
 
-    it('Same-name msg and api', async function () {
-        let server = new HttpServer(getProto(), {
-            port: 3001,
-            logger: serverLogger,
-            debugBuf: true
-        });
-
-        await server.autoImplementApi(path.resolve(__dirname, '../api'))
-        await server.start();
-
-        let client = new HttpClient(getProto(), {
-            server: 'http://127.0.0.1:3001',
-            logger: clientLogger,
-            debugBuf: true
-        });
-
-        let ret = await client.callApi('Test', { name: 'xxx' });
-        assert.ok(ret.isSucc);
-
-        return new Promise(rs => {
-            server.listenMsg('Test', async v => {
-                assert.deepStrictEqual(v.msg, { content: 'abc' });
-                await server.stop();
-                rs();
-            });
-
-            client.sendMsg('Test', {
-                content: 'abc'
-            });
-        })
-    });
-
     it('abort', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -264,6 +272,8 @@ describe('HTTP Server & Client basic', function () {
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         })
 
@@ -289,6 +299,11 @@ describe('HTTP Server & Client basic', function () {
 
     it('abortByKey', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -296,6 +311,8 @@ describe('HTTP Server & Client basic', function () {
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         })
 
@@ -332,6 +349,11 @@ describe('HTTP Server & Client basic', function () {
 
     it('abortAll', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -339,6 +361,8 @@ describe('HTTP Server & Client basic', function () {
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         })
 
@@ -370,6 +394,11 @@ describe('HTTP Server & Client basic', function () {
 
     it('pendingApis', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
         await server.start();
@@ -377,6 +406,8 @@ describe('HTTP Server & Client basic', function () {
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         })
 
@@ -423,12 +454,18 @@ describe('HTTP Server & Client basic', function () {
 
     it('error', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
         await server.start();
 
         let client1 = new HttpClient(getProto(), {
-            server: 'http://localhost:80',
+            json: true,
+            server: 'https://localhost:80',
             logger: clientLogger
         })
 
@@ -443,6 +480,11 @@ describe('HTTP Server & Client basic', function () {
 
     it('server timeout', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger,
             apiTimeout: 100
         });
@@ -459,6 +501,8 @@ describe('HTTP Server & Client basic', function () {
         await server.start();
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         });
         let ret = await client.callApi('Test', { name: 'Jack' });
@@ -475,6 +519,11 @@ describe('HTTP Server & Client basic', function () {
 
     it('client timeout', async function () {
         let server1 = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
         server1.implementApi('Test', call => {
@@ -490,6 +539,8 @@ describe('HTTP Server & Client basic', function () {
         await server1.start();
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             timeout: 100,
             logger: clientLogger
         });
@@ -509,6 +560,11 @@ describe('HTTP Server & Client basic', function () {
 
     it('Graceful stop', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
 
@@ -525,6 +581,8 @@ describe('HTTP Server & Client basic', function () {
         let isStopped = false;
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         })
 
@@ -541,6 +599,11 @@ describe('HTTP Server & Client basic', function () {
 describe('HTTP Flows', function () {
     it('Server conn flow', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
 
@@ -570,6 +633,8 @@ describe('HTTP Flows', function () {
         assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         });
         await client.callApi('Test', { name: 'xxx' });
@@ -581,6 +646,11 @@ describe('HTTP Flows', function () {
 
     it('Buffer enc/dec flow', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
 
@@ -590,44 +660,38 @@ describe('HTTP Flows', function () {
             call.succ({ reply: 'Enc&Dec' });
         });
 
-        server.flows.preRecvBufferFlow.push(v => {
-            flowExecResult.preRecvBufferFlow = true;
-            for (let i = 0; i < v.buf.length; ++i) {
-                v.buf[i] ^= 128;
-            }
+        server.flows.preRecvDataFlow.push(v => {
+            flowExecResult.preRecvDataFlow = true;
+            v.data = (v.data as string).split('').reverse().join('');
             return v;
         });
-        server.flows.preSendBufferFlow.push(v => {
-            flowExecResult.preSendBufferFlow = true;
-            for (let i = 0; i < v.buf.length; ++i) {
-                v.buf[i] ^= 128;
-            }
+        server.flows.preSendDataFlow.push(v => {
+            flowExecResult.preSendDataFlow = true;
+            v.data = (v.data as string).split('').reverse().join('');
             return v;
         })
 
         await server.start();
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         });
 
-        client.flows.preSendBufferFlow.push(v => {
-            for (let i = 0; i < v.buf.length; ++i) {
-                v.buf[i] ^= 128;
-            }
+        client.flows.preSendDataFlow.push(v => {
+            v.data = (v.data as string).split('').reverse().join('');
             return v;
         });
 
-        client.flows.preRecvBufferFlow.push(v => {
-            for (let i = 0; i < v.buf.length; ++i) {
-                v.buf[i] ^= 128;
-            }
+        client.flows.preRecvDataFlow.push(v => {
+            v.data = (v.data as string).split('').reverse().join('');
             return v;
         });
 
         let ret = await client.callApi('Test', { name: 'xxx' });
-        assert.strictEqual(flowExecResult.preRecvBufferFlow, true);
-        assert.strictEqual(flowExecResult.preSendBufferFlow, true);
+        assert.strictEqual(flowExecResult.preRecvDataFlow, true);
+        assert.strictEqual(flowExecResult.preSendDataFlow, true);
         assert.deepStrictEqual(ret, {
             isSucc: true,
             res: {
@@ -640,6 +704,11 @@ describe('HTTP Flows', function () {
 
     it('ApiCall flow', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
 
@@ -662,6 +731,8 @@ describe('HTTP Flows', function () {
         await server.start();
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         });
 
@@ -684,6 +755,11 @@ describe('HTTP Flows', function () {
 
     it('ApiCall flow break', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
 
@@ -706,6 +782,8 @@ describe('HTTP Flows', function () {
         await server.start();
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         });
 
@@ -728,6 +806,11 @@ describe('HTTP Flows', function () {
 
     it('ApiCall flow error', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
 
@@ -749,6 +832,8 @@ describe('HTTP Flows', function () {
         await server.start();
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         });
 
@@ -775,6 +860,11 @@ describe('HTTP Flows', function () {
 
     it('server ApiReturn flow', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
 
@@ -801,6 +891,8 @@ describe('HTTP Flows', function () {
         await server.start();
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         });
 
@@ -818,6 +910,11 @@ describe('HTTP Flows', function () {
 
     it('client ApiReturn flow', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
 
@@ -830,6 +927,8 @@ describe('HTTP Flows', function () {
         await server.start();
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         });
 
@@ -860,6 +959,11 @@ describe('HTTP Flows', function () {
 
     it('client SendBufferFlow prevent', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
 
@@ -872,10 +976,12 @@ describe('HTTP Flows', function () {
         await server.start();
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         });
 
-        client.flows.preSendBufferFlow.push(v => {
+        client.flows.preSendDataFlow.push(v => {
             return undefined
         });
 
@@ -889,24 +995,29 @@ describe('HTTP Flows', function () {
 
     it('onInputBufferError', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
         await server.start();
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         });
-        client.flows.preSendBufferFlow.push(v => {
-            for (let i = 0; i < v.buf.length; ++i) {
-                v.buf[i] += 1;
-            }
+        client.flows.preSendDataFlow.push(v => {
+            v.data = (v.data as string).split('').reverse().join('');
             return v;
         });
 
         let ret = await client.callApi('Test', { name: 'XXX' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: new TsrpcError('Invalid request buffer, please check the version of service proto.', {
+            err: new TsrpcError('Input is not a valid JSON string: Unexpected token } in JSON at position 0', {
                 type: TsrpcErrorType.ServerError,
                 code: 'INPUT_DATA_ERR'
             })
@@ -915,14 +1026,85 @@ describe('HTTP Flows', function () {
         await server.stop();
     })
 
+    it('throw type error in client', async function () {
+        let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
+            logger: serverLogger
+        });
+        await server.start();
+
+        let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
+            logger: clientLogger
+        });
+
+        let ret = await client.callApi('Test', { name: 23456 } as any);
+        assert.deepStrictEqual(ret, {
+            isSucc: false,
+            err: new TsrpcError({
+                "code": "INPUT_DATA_ERR",
+                "message": "Property `name`: Expected type to be `string`, actually `number`.",
+                "type": TsrpcErrorType.ClientError
+            })
+        })
+
+        await server.stop();
+    })
+
+    it('throw type error in server', async function () {
+        let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
+            logger: serverLogger
+        });
+        await server.start();
+
+        let retHttp = await new HttpProxy().fetch({
+            url: 'https://127.0.0.1:3000/Test',
+            data: JSON.stringify({ name: 12345 }),
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json; charset=utf-8'
+            },
+            transportOptions: {},
+            responseType: 'text'
+        }).promise;
+
+        assert.deepStrictEqual(JSON.parse((retHttp as any).res), {
+            isSucc: false,
+            err: {
+                "code": "INPUT_DATA_ERR",
+                "message": "Property `name`: Expected type to be `string`, actually `number`.",
+                "type": TsrpcErrorType.ServerError
+            }
+        })
+
+        await server.stop();
+    })
+
     it('ObjectId', async function () {
         let server = new HttpServer(getProto(), {
+            https: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            json: true,
             logger: serverLogger
         });
         server.autoImplementApi(path.resolve(__dirname, '../api'))
         await server.start();
 
         let client = new HttpClient(getProto(), {
+            server: 'https://127.0.0.1:3000',
+            json: true,
             logger: clientLogger
         });
 

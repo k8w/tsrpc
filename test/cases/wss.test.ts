@@ -1,17 +1,20 @@
 import { ObjectId } from 'bson';
 import { assert } from 'chai';
 import chalk from 'chalk';
+import fs from "fs";
 import * as path from "path";
 import { ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
-import { ApiCall, BaseServer, HttpConnection, MsgCall, TerminalColorLogger } from '../../src';
-import { HttpClient } from '../../src/client/http/HttpClient';
-import { HttpServer } from '../../src/server/http/HttpServer';
+import { BaseServer, TerminalColorLogger, TransportDataUtil, WsClientStatus, WsConnection } from '../../src';
+import { WsClient } from '../../src/client/ws/WsClient';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
+import { WsServer } from '../../src/server/ws/WsServer';
 import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
 import { ApiTest } from '../api/ApiTest';
 import { MsgChat } from '../proto/MsgChat';
-import { ReqTest, ResTest } from '../proto/PtlTest';
 import { serviceProto, ServiceType } from '../proto/serviceProto';
+
+// 允许自签名证书（方便测试）
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
 
 const serverLogger = new PrefixLogger({
     prefixs: [chalk.bgGreen.white(' Server ')],
@@ -24,7 +27,7 @@ const clientLogger = new PrefixLogger({
 
 const getProto = () => Object.merge({}, serviceProto) as ServiceProto<ServiceType>;
 
-async function testApi(server: HttpServer<ServiceType>, client: HttpClient<ServiceType>) {
+async function testApi(server: WsServer<ServiceType>, client: WsClient<ServiceType>) {
     // Succ
     assert.deepStrictEqual(await client.callApi('Test', {
         name: 'Req1'
@@ -89,9 +92,29 @@ async function testApi(server: HttpServer<ServiceType>, client: HttpClient<Servi
     }
 }
 
-describe('HTTP Server & Client basic', function () {
+describe('WS Server & Client basic', function () {
+    it('cannot callApi before connect', async function () {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
+            logger: clientLogger,
+            debugBuf: true
+        })
+        let res = await client.callApi('Test', { name: 'xxx' });
+        assert.deepStrictEqual(res, {
+            isSucc: false,
+            err: new TsrpcError('WebSocket is not connected', {
+                code: 'WS_NOT_OPEN',
+                type: TsrpcErrorType.ClientError
+            })
+        })
+    })
+
     it('implement API manually', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger,
             debugBuf: true
         });
@@ -100,80 +123,44 @@ describe('HTTP Server & Client basic', function () {
         server.implementApi('Test', ApiTest);
         server.implementApi('a/b/c/Test', ApiAbcTest);
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger,
             debugBuf: true
         })
+        await client.connect();
 
         await testApi(server, client);
 
         await server.stop();
     })
 
-    it('extend call in handler', function () {
-        let server = new HttpServer(getProto(), {
+    it('extend conn', function () {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger,
             debugBuf: true
         });
-
-        type MyApiCall<Req, Res> = ApiCall<Req, Res> & {
-            value1?: string;
-            value2: string;
-        }
-        type MyMsgCall<Msg> = MsgCall<Msg> & {
-            value1?: string;
-            value2: string;
-        }
-
-        server.implementApi('Test', (call: MyApiCall<ReqTest, ResTest>) => {
-            call.value1 = 'xxx';
-            call.value2 = 'xxx';
-        });
-        server.listenMsg('Chat', (call: MyMsgCall<MsgChat>) => {
-            call.msg.content;
-            call.value1 = 'xxx';
-            call.value2 = 'xxx';
-        })
-    })
-
-    it('extend call in flow', function () {
-        let server = new HttpServer(getProto(), {
-            logger: serverLogger,
-            debugBuf: true
-        });
-
-        type MyApiCall<Req, Res> = ApiCall<Req, Res> & {
-            value1?: string;
-            value2: string;
-        }
-        type MyMsgCall<Msg> = MsgCall<Msg> & {
-            value1?: string;
-            value2: string;
-        }
-        type MyConn = HttpConnection<any> & {
-            currentUser: {
-                uid: string,
-                nickName: string
+        type MyConn = WsConnection<any> & {
+            sessionData: {
+                value: string;
             }
         }
-
         server.flows.postConnectFlow.push((conn: MyConn) => {
-            conn.currentUser.nickName = 'asdf';
+            conn.sessionData.value = 'zxcdv';
             return conn;
-        });
-        server.flows.postConnectFlow.exec(null as any as MyConn, console);
-        server.flows.preApiCallFlow.push((call: MyApiCall<any, any>) => {
-            call.value2 = 'x';
-            return call;
-        });
-        server.flows.preSendMsgFlow.push((call: MyMsgCall<any>) => {
-            call.value2 = 'f';
-            return call;
         })
     })
 
     it('autoImplementApi', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger,
             apiTimeout: 5000
         });
@@ -181,9 +168,11 @@ describe('HTTP Server & Client basic', function () {
 
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
-        })
+        });
+        await client.connect();
 
         await testApi(server, client);
 
@@ -191,19 +180,24 @@ describe('HTTP Server & Client basic', function () {
     });
 
     it('sendMsg', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             port: 3001,
             logger: serverLogger,
             // debugBuf: true
         });
-        await server.autoImplementApi(path.resolve(__dirname, '../api'))
+
         await server.start();
 
-        let client = new HttpClient(getProto(), {
-            server: 'http://127.0.0.1:3001',
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
         });
+        await client.connect();
 
         return new Promise(rs => {
             let msg: MsgChat = {
@@ -221,51 +215,173 @@ describe('HTTP Server & Client basic', function () {
 
             client.sendMsg('Chat', msg);
         })
-    })
+    });
 
-    it('Same-name msg and api', async function () {
-        let server = new HttpServer(getProto(), {
+    it('server send msg', async function () {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             port: 3001,
             logger: serverLogger,
-            debugBuf: true
+            // debugBuf: true
         });
 
-        await server.autoImplementApi(path.resolve(__dirname, '../api'))
         await server.start();
 
-        let client = new HttpClient(getProto(), {
-            server: 'http://127.0.0.1:3001',
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3001',
             logger: clientLogger,
-            debugBuf: true
+            // debugBuf: true
         });
-
-        let ret = await client.callApi('Test', { name: 'xxx' });
-        assert.ok(ret.isSucc);
+        await client.connect();
 
         return new Promise(rs => {
-            server.listenMsg('Test', async v => {
-                assert.deepStrictEqual(v.msg, { content: 'abc' });
+            let msg: MsgChat = {
+                channel: 123,
+                userName: 'fff',
+                content: '666',
+                time: Date.now()
+            };
+
+            client.listenMsg('Chat', async msg1 => {
+                assert.deepStrictEqual(msg1, msg);
                 await server.stop();
                 rs();
             });
 
-            client.sendMsg('Test', {
-                content: 'abc'
-            });
+            server.connections[0].sendMsg('Chat', msg);
         })
     });
 
+    it('listen msg by regexp', async function () {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            port: 3001,
+            logger: serverLogger,
+            // debugBuf: true
+        });
+
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3001',
+            logger: clientLogger,
+            // debugBuf: true
+        });
+        await client.connect();
+
+        return new Promise(rs => {
+            let msg: MsgChat = {
+                channel: 123,
+                userName: 'fff',
+                content: '666',
+                time: Date.now()
+            };
+
+            client.listenMsg(/.*/, async (msg1, msgName: string) => {
+                assert.deepStrictEqual(msg1, msg);
+                assert.deepStrictEqual(msgName, 'Chat');
+                await server.stop();
+                rs();
+            });
+
+            server.connections[0].sendMsg('Chat', msg);
+        })
+    });
+
+    it('server broadcast msg', async function () {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            port: 3001,
+            logger: serverLogger,
+            // debugBuf: true
+        });
+
+        await server.start();
+
+        let client1 = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3001',
+            logger: clientLogger,
+            // debugBuf: true
+        });
+        let client2 = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3001',
+            logger: clientLogger,
+            // debugBuf: true
+        });
+        await client1.connect();
+        await client2.connect();
+
+        let msg: MsgChat = {
+            channel: 123,
+            userName: 'fff',
+            content: '666',
+            time: Date.now()
+        };
+
+        await new Promise<void>(rs => {
+            let recvClients: WsClient<any>[] = [];
+            let msgHandler = async (client: WsClient<any>, msg1: MsgChat, msgName: string) => {
+                recvClients.push(client);
+                assert.deepStrictEqual(msg1, msg);
+                assert.deepStrictEqual(msgName, 'Chat')
+                if (recvClients.some(v => v === client1) && recvClients.some(v => v === client2)) {
+                    client1.unlistenMsgAll('Chat');
+                    client2.unlistenMsgAll('Chat');
+                    rs();
+                }
+            }
+
+            client1.listenMsg('Chat', msgHandler.bind(null, client1));
+            client2.listenMsg('Chat', msgHandler.bind(null, client2));
+
+            server.broadcastMsg('Chat', msg);
+        })
+
+        await new Promise<void>(rs => {
+            let recvClients: WsClient<any>[] = [];
+            let msgHandler = async (client: WsClient<any>, msg1: MsgChat, msgName: string) => {
+                recvClients.push(client);
+                assert.deepStrictEqual(msg1, msg);
+                assert.deepStrictEqual(msgName, 'Chat');
+                if (recvClients.some(v => v === client1) && recvClients.some(v => v === client2)) {
+                    await server.stop();
+                    rs();
+                }
+            }
+
+            client1.listenMsg('Chat', msgHandler.bind(null, client1));
+            client2.listenMsg('Chat', msgHandler.bind(null, client2));
+
+            server.broadcastMsg('Chat', msg, server.connections.slice());
+        })
+    })
+
     it('abort', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
         await server.start();
 
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
-        })
+        });
+        await client.connect();
 
         let result: any | undefined;
         let promise = client.callApi('Test', { name: 'aaaaaaaa' });
@@ -287,98 +403,23 @@ describe('HTTP Server & Client basic', function () {
         await server.stop();
     });
 
-    it('abortByKey', async function () {
-        let server = new HttpServer(getProto(), {
-            logger: serverLogger
-        });
-        await server.start();
-
-        server.autoImplementApi(path.resolve(__dirname, '../api'))
-
-        let client = new HttpClient(getProto(), {
-            logger: clientLogger
-        })
-
-        let result: any | undefined;
-        let result1: any | undefined;
-
-        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
-        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
-        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
-        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
-        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
-
-        client.callApi('Test', { name: 'bbbbbb' }).then(v => { result1 = v; });
-
-        setTimeout(() => {
-            client.abortByKey('XXX')
-        }, 10);
-
-        await new Promise<void>(rs => {
-            setTimeout(() => {
-                assert.strictEqual(result, undefined);
-                assert.deepStrictEqual(result1, {
-                    isSucc: true,
-                    res: {
-                        reply: 'Test reply: bbbbbb'
-                    }
-                })
-                rs();
-            }, 150)
-        })
-
-        await server.stop();
-    })
-
-    it('abortAll', async function () {
-        let server = new HttpServer(getProto(), {
-            logger: serverLogger
-        });
-        await server.start();
-
-        server.autoImplementApi(path.resolve(__dirname, '../api'))
-
-        let client = new HttpClient(getProto(), {
-            logger: clientLogger
-        })
-
-        let result: any | undefined;
-        let result1: any | undefined;
-
-        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
-        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
-        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
-        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
-        client.callApi('Test', { name: 'aaaaaaaa' }, { abortKey: 'XXX' }).then(v => { result = v; });
-
-        client.callApi('Test', { name: 'bbbbbb' }).then(v => { result1 = v; });
-
-        setTimeout(() => {
-            client.abortAll()
-        }, 10);
-
-        await new Promise<void>(rs => {
-            setTimeout(() => {
-                assert.strictEqual(result, undefined);
-                assert.strictEqual(result1, undefined);
-                rs();
-            }, 150)
-        })
-
-        await server.stop();
-    })
-
     it('pendingApis', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
         await server.start();
 
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
-        })
+        });
+        await client.connect();
 
         for (let i = 0; i < 10; ++i) {
             let promise = Promise.all(Array.from({ length: 10 }, () => new Promise<void>(rs => {
@@ -422,27 +463,37 @@ describe('HTTP Server & Client basic', function () {
     })
 
     it('error', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
         await server.start();
 
-        let client1 = new HttpClient(getProto(), {
-            server: 'http://localhost:80',
+        let client1 = new WsClient(getProto(), {
+            server: 'wss://localhost:80',
             logger: clientLogger
         })
+        let res = await client1.connect();
+        assert.strictEqual(res.isSucc, false);
 
         let ret = await client1.callApi('Test', { name: 'xx' });
         console.log(ret);
         assert.strictEqual(ret.isSucc, false);
-        assert.strictEqual(ret.err?.code, 'ECONNREFUSED');
-        assert.strictEqual(ret.err?.type, TsrpcErrorType.NetworkError);
+        assert.strictEqual(ret.err?.code, 'WS_NOT_OPEN');
+        assert.strictEqual(ret.err?.type, TsrpcErrorType.ClientError);
 
         await server.stop();
     })
 
     it('server timeout', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger,
             apiTimeout: 100
         });
@@ -458,9 +509,11 @@ describe('HTTP Server & Client basic', function () {
         })
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
         });
+        await client.connect();
         let ret = await client.callApi('Test', { name: 'Jack' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
@@ -474,7 +527,11 @@ describe('HTTP Server & Client basic', function () {
     });
 
     it('client timeout', async function () {
-        let server1 = new HttpServer(getProto(), {
+        let server1 = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
         server1.implementApi('Test', call => {
@@ -489,10 +546,12 @@ describe('HTTP Server & Client basic', function () {
         })
         await server1.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             timeout: 100,
             logger: clientLogger
         });
+        await client.connect();
 
         let ret = await client.callApi('Test', { name: 'Jack123' });
         // SERVER TIMEOUT的call还没执行完，但是call却被放入Pool了，导致这个BUG
@@ -508,7 +567,11 @@ describe('HTTP Server & Client basic', function () {
     });
 
     it('Graceful stop', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
 
@@ -524,23 +587,140 @@ describe('HTTP Server & Client basic', function () {
         await server.start();
         let isStopped = false;
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
-        })
+        });
+        await client.connect();
 
         let succNum = 0;
         await Promise.all(Array.from({ length: 10 }, (v, i) => client.callApi('Test', { name: '' + (i * 100) }).then(v => {
+            console.log('xxx', v)
             if (v.res?.reply === 'OK') {
                 ++succNum;
             }
         })))
         assert.strictEqual(succNum, 10);
     })
+
+    it('Client heartbeat works', async function () {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            port: 3001,
+            logger: serverLogger,
+            debugBuf: true
+        });
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3001',
+            logger: clientLogger,
+            heartbeat: {
+                interval: 1000,
+                timeout: 1000
+            },
+            debugBuf: true
+        });
+        await client.connect();
+
+        await new Promise(rs => { setTimeout(rs, 2000) });
+        client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
+        assert.strictEqual(client.status, WsClientStatus.Opened)
+        assert.ok(client.lastHeartbeatLatency > 0);
+
+        await client.disconnect();
+        await server.stop();
+    })
+
+    it('Client heartbeat error', async function () {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            port: 3001,
+            logger: serverLogger,
+            debugBuf: true
+        });
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3001',
+            logger: clientLogger,
+            heartbeat: {
+                interval: 1000,
+                timeout: 1000
+            },
+            debugBuf: true
+        });
+
+        let disconnectFlowData: { isManual?: boolean } | undefined;
+        client.flows.postDisconnectFlow.push(v => {
+            disconnectFlowData = {}
+            return v;
+        })
+
+        await client.connect();
+
+        const temp = TransportDataUtil.HeartbeatPacket;
+        (TransportDataUtil as any).HeartbeatPacket = new Uint8Array([0, 0]);
+
+        await new Promise(rs => { setTimeout(rs, 2000) });
+        client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
+        assert.strictEqual(client.status, WsClientStatus.Closed)
+        assert.deepStrictEqual(disconnectFlowData, {})
+
+        await client.disconnect();
+        await server.stop();
+        (TransportDataUtil as any).HeartbeatPacket = temp;
+    })
+
+    it('Server heartbeat kick', async function () {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            port: 3001,
+            logger: serverLogger,
+            debugBuf: true,
+            heartbeatWaitTime: 1000
+        });
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3001',
+            logger: clientLogger,
+            debugBuf: true
+        });
+
+        let disconnectFlowData: { isManual?: boolean } | undefined;
+        client.flows.postDisconnectFlow.push(v => {
+            disconnectFlowData = {}
+            return v;
+        })
+
+        await client.connect();
+
+        await new Promise(rs => { setTimeout(rs, 2000) });
+        assert.strictEqual(client.status, WsClientStatus.Closed)
+        assert.deepStrictEqual(disconnectFlowData, {})
+
+        await client.disconnect();
+        await server.stop();
+    })
 })
 
-describe('HTTP Flows', function () {
+describe('WS Flows', function () {
     it('Server conn flow', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
 
@@ -560,6 +740,7 @@ describe('HTTP Flows', function () {
             return v;
         });
         server.flows.postDisconnectFlow.push(v => {
+            server.logger.log('server postDisconnectFlow')
             flowExecResult.postDisconnectFlow = true;
             return v;
         })
@@ -569,22 +750,28 @@ describe('HTTP Flows', function () {
         assert.strictEqual(flowExecResult.postConnectFlow, undefined);
         assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
         });
+        await client.connect();
         await client.callApi('Test', { name: 'xxx' });
         assert.strictEqual(flowExecResult.postConnectFlow, true);
-        assert.strictEqual(flowExecResult.postDisconnectFlow, true);
-
         await server.stop();
+        assert.strictEqual(flowExecResult.postDisconnectFlow, true);
     })
 
     it('Buffer enc/dec flow', async function () {
-        let server = new HttpServer(getProto(), {
-            logger: serverLogger
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
+            logger: serverLogger,
+            debugBuf: true
         });
 
-        const flowExecResult: { [K in (keyof BaseServer['flows'])]?: boolean } = {};
+        const flowExecResult: { [key: string]: boolean } = {};
 
         server.implementApi('Test', async call => {
             call.succ({ reply: 'Enc&Dec' });
@@ -607,11 +794,15 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
-            logger: clientLogger
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
+            logger: clientLogger,
+            debugBuf: true
         });
+        await client.connect();
 
         client.flows.preSendBufferFlow.push(v => {
+            flowExecResult.client_preSendBufferFlow = true;
             for (let i = 0; i < v.buf.length; ++i) {
                 v.buf[i] ^= 128;
             }
@@ -619,6 +810,7 @@ describe('HTTP Flows', function () {
         });
 
         client.flows.preRecvBufferFlow.push(v => {
+            flowExecResult.client_preRecvBufferFlow = true;
             for (let i = 0; i < v.buf.length; ++i) {
                 v.buf[i] ^= 128;
             }
@@ -626,6 +818,8 @@ describe('HTTP Flows', function () {
         });
 
         let ret = await client.callApi('Test', { name: 'xxx' });
+        assert.strictEqual(flowExecResult.client_preSendBufferFlow, true);
+        assert.strictEqual(flowExecResult.client_preRecvBufferFlow, true);
         assert.strictEqual(flowExecResult.preRecvBufferFlow, true);
         assert.strictEqual(flowExecResult.preSendBufferFlow, true);
         assert.deepStrictEqual(ret, {
@@ -639,7 +833,11 @@ describe('HTTP Flows', function () {
     });
 
     it('ApiCall flow', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
 
@@ -661,9 +859,11 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
         });
+        await client.connect();
 
         client.flows.preCallApiFlow.push(v => {
             if (v.apiName !== 'ObjId') {
@@ -683,7 +883,11 @@ describe('HTTP Flows', function () {
     });
 
     it('ApiCall flow break', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
 
@@ -705,9 +909,11 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
         });
+        await client.connect();
 
         client.flows.preCallApiFlow.push(v => {
             if (v.apiName !== 'ObjId') {
@@ -727,7 +933,11 @@ describe('HTTP Flows', function () {
     });
 
     it('ApiCall flow error', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
 
@@ -748,9 +958,11 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
         });
+        await client.connect();
 
         client.flows.preCallApiFlow.push(v => {
             if (v.apiName !== 'ObjId') {
@@ -774,7 +986,11 @@ describe('HTTP Flows', function () {
     });
 
     it('server ApiReturn flow', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
 
@@ -800,10 +1016,11 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
         });
-
+        await client.connect();
 
         let ret = await client.callApi('Test', { name: 'xxx' });
         assert.strictEqual(flowExecResult.preApiReturnFlow, true);
@@ -817,11 +1034,15 @@ describe('HTTP Flows', function () {
     });
 
     it('client ApiReturn flow', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
 
-        const flowExecResult: { [K in (keyof HttpClient<any>['flows'])]?: boolean } = {};
+        const flowExecResult: { [K in (keyof WsClient<any>['flows'])]?: boolean } = {};
 
         server.implementApi('Test', async call => {
             call.succ({ reply: 'xxxxxxxxxxxxxxxxxxxx' });
@@ -829,9 +1050,11 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
         });
+        await client.connect();
 
         client.flows.preApiReturnFlow.push(v => {
             flowExecResult.preApiReturnFlow = true;
@@ -859,7 +1082,11 @@ describe('HTTP Flows', function () {
     });
 
     it('client SendBufferFlow prevent', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
 
@@ -871,9 +1098,11 @@ describe('HTTP Flows', function () {
 
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
         });
+        await client.connect();
 
         client.flows.preSendBufferFlow.push(v => {
             return undefined
@@ -888,14 +1117,20 @@ describe('HTTP Flows', function () {
     });
 
     it('onInputBufferError', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
         });
+        await client.connect();
         client.flows.preSendBufferFlow.push(v => {
             for (let i = 0; i < v.buf.length; ++i) {
                 v.buf[i] += 1;
@@ -906,25 +1141,28 @@ describe('HTTP Flows', function () {
         let ret = await client.callApi('Test', { name: 'XXX' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: new TsrpcError('Invalid request buffer, please check the version of service proto.', {
-                type: TsrpcErrorType.ServerError,
-                code: 'INPUT_DATA_ERR'
-            })
+            err: new TsrpcError('Invalid request buffer, please check the version of service proto.', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
         })
 
         await server.stop();
     })
 
     it('ObjectId', async function () {
-        let server = new HttpServer(getProto(), {
+        let server = new WsServer(getProto(), {
+            wss: {
+                key: fs.readFileSync('test/server.key'),
+                cert: fs.readFileSync('test/server.crt')
+            },
             logger: serverLogger
         });
         server.autoImplementApi(path.resolve(__dirname, '../api'))
         await server.start();
 
-        let client = new HttpClient(getProto(), {
+        let client = new WsClient(getProto(), {
+            server: 'wss://127.0.0.1:3000',
             logger: clientLogger
         });
+        await client.connect();
 
         // ObjectId
         let objId1 = new ObjectId();

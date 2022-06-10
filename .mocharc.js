@@ -4,6 +4,7 @@ module.exports = {
         './test/Base.ts'
     ],
     exit: true,
+    bail: true,
     timeout: 999999,
     'preserve-symlinks': true,
     spec: [
@@ -14,9 +15,14 @@ module.exports = {
         './test/cases/inner.test.ts',
         './test/cases/inputJSON.test.ts',
         './test/cases/inputBuffer.test.ts',
+        './test/cases/https.test.ts',
+        './test/cases/httpsJSON.test.ts',
+        './test/cases/wss.test.ts',
+        './test/cases/wssJSON.test.ts',
+
     ],
     // parallel: false,
 
     // 'expose-gc': true,
-    // fgrep: 'throw type error in server'
+    // fgrep: 'Same-name'
 }

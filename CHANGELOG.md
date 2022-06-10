@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [3.4.0-beta.4] - 2022-06-09
+### Added
+- `https` options for `HttpServer`
+- `wss` options for `WsServer`
+- Support using the same name with API and message
+### Changed
+- Deprecate `serviceName` in `preRecvDataFlow`, use `serviceId` instead
+- Optimized log color
+
+## [3.3.3] - 2022-06-07
+### Fixed
+- Remove `bson` dependency, import `ObjectId` dynamically.
+
+## [3.3.2] - 2022-06-01
+### Fixed
+- Update dependencies
+
 ## [3.3.1] - 2022-05-07
 ### Fixed
 - `HttpConnection.status` not correct when request aborted by client

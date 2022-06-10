@@ -1,9 +1,9 @@
-import { ObjectId } from "bson";
 import chalk from "chalk";
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
-import { ApiService, Counter, Flow, getCustomObjectIdTypes, MsgHandlerManager, MsgService, ParsedServerInput, ServiceMap, ServiceMapUtil, TransportDataUtil } from 'tsrpc-base-client';
+import { Counter, Flow, getCustomObjectIdTypes, MsgHandlerManager, MsgService, ParsedServerInput, ServiceMap, ServiceMapUtil, TransportDataUtil } from 'tsrpc-base-client';
 import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, LogLevel, ServerInputData, ServiceProto, setLogLevel, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
+import { getClassObjectId } from "../../models/getClassObjectId";
 import { ApiCallInner } from "../inner/ApiCallInner";
 import { InnerConnection } from "../inner/InnerConnection";
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
@@ -59,7 +59,18 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
          * Before processing the received data, usually be used to encryption / decryption.
          * Return `null | undefined` would ignore the buffer.
          */
-        preRecvDataFlow: new Flow<{ conn: BaseConnection<ServiceType>, data: string | Uint8Array | object, serviceName?: string }>(),
+        preRecvDataFlow: new Flow<{
+            conn: BaseConnection<ServiceType>,
+            data: string | Uint8Array | object,
+            /**
+             * @deprecated use `serviceId` instead
+             */
+            serviceName?: string,
+            /** 
+             * Parsed service id, you can get this by `this.serviceMap.apiName2Service[serviceName].id`
+             */
+            serviceId?: number
+        }>(),
         /**
          * Before send out data to network, usually be used to encryption / decryption.
          * Return `null | undefined` would not send the buffer.
@@ -156,7 +167,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         this.tsbuffer = new TSBuffer({
             ...proto.types,
             // Support mongodb/ObjectId
-            ...getCustomObjectIdTypes(ObjectId)
+            ...getCustomObjectIdTypes(getClassObjectId())
         }, {
             strictNullChecks: this.options.strictNullChecks
         });
@@ -221,7 +232,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
     /**
      * Process the buffer, after the `preRecvBufferFlow`.
      */
-    async _onRecvData(conn: BaseConnection<ServiceType>, data: string | Uint8Array | object, serviceName?: string) {
+    async _onRecvData(conn: BaseConnection<ServiceType>, data: string | Uint8Array | object, serviceId?: number) {
         // 非 OPENED 状态 停止接受新的请求
         if (!(conn instanceof InnerConnection) && this.status !== ServerStatus.Opened) {
             return;
@@ -246,13 +257,24 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             return;
         }
 
-        let pre = await this.flows.preRecvDataFlow.exec({ conn: conn, data: data, serviceName: serviceName }, conn.logger);
+        // Pre flow
+        const preServiceName = serviceId ? this.serviceMap.id2Service[serviceId].name : undefined;
+        let pre = await this.flows.preRecvDataFlow.exec({
+            conn: conn,
+            data: data,
+            serviceId: serviceId,
+            serviceName: preServiceName
+        }, conn.logger);
         if (!pre) {
             conn.logger.debug('[preRecvDataFlow] Canceled');
             return;
         }
         data = pre.data;
-        serviceName = pre.serviceName;
+        serviceId = pre.serviceId
+        // @deprecated 兼容
+        if (pre.serviceName && pre.serviceName !== preServiceName) {
+            serviceId = this.serviceMap.apiName2Service[pre.serviceName]?.id;
+        }
 
         // @deprecated preRecvBuffer
         if (data instanceof Uint8Array) {
@@ -265,7 +287,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
 
         // Parse Call
-        let opInput = this._parseServerInput(this.tsbuffer, this.serviceMap, data, serviceName);
+        let opInput = this._parseServerInput(this.tsbuffer, this.serviceMap, data, serviceId);
         if (!opInput.isSucc) {
             this.onInputDataError(opInput.errMsg, conn, data);
             return;
@@ -312,7 +334,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         call = preFlow;
 
         // exec ApiCall
-        call.logger.log('[ApiReq]', this.options.logReqBody ? call.req : '');
+        call.logger.log(chalk.green('[ApiReq]'), this.options.logReqBody ? call.req : '');
         let { handler } = await this.getApiHandler(call.service, this._delayImplementApiPath, call.logger);
         // exec API handler
         if (handler) {
@@ -362,7 +384,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         call = preFlow;
 
         // MsgHandler
-        this.options.logMsg && call.logger.log('[RecvMsg]', call.msg);
+        this.options.logMsg && call.logger.log(chalk.green('[RecvMsg]'), call.msg);
         let promises = [
             // Conn Handlers
             ...(call.conn['_msgHandlers']?.forEachHandler(call.service.name, call.logger, call) ?? []),
@@ -388,7 +410,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @param apiName 
      * @param handler 
      */
-    implementApi<Api extends keyof ServiceType['api'], Call extends ApiCall<ServiceType['api'][Api]['req'], ServiceType['api'][Api]['res']>>(apiName: Api, handler: ApiHandler<Call>): void {
+    implementApi<Api extends string & keyof ServiceType['api'], Call extends ApiCall<ServiceType['api'][Api]['req'], ServiceType['api'][Api]['res']>>(apiName: Api, handler: ApiHandler<Call>): void {
         if (this._apiHandlers[apiName as string]) {
             throw new Error('Already exist handler for API: ' + apiName);
         }
@@ -480,20 +502,20 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @param msgName
      * @param handler
      */
-    listenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: MsgHandler<Call>): MsgHandler<Call> {
+    listenMsg<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: MsgHandler<Call>): MsgHandler<Call> {
         this._msgHandlers.addHandler(msgName as string, handler);
         return handler;
     };
     /**
      * Remove a message handler
      */
-    unlistenMsg<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: Function): void {
+    unlistenMsg<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: Function): void {
         this._msgHandlers.removeHandler(msgName as string, handler);
     };
     /**
      * Remove all handlers from a message
      */
-    unlistenMsgAll<Msg extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg): void {
+    unlistenMsgAll<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg): void {
         this._msgHandlers.removeAllHandlers(msgName as string);
     };
     // #endregion   
@@ -618,7 +640,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * @param req 
      * @param options 
      */
-    callApi<T extends keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req']): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
+    callApi<T extends string & keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req']): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
         return new Promise(rs => {
             // 确认是哪个Service
             let service = this.serviceMap.apiName2Service[apiName as string];
@@ -668,7 +690,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         if (apiName.startsWith('/')) {
             apiName = apiName.slice(1);
         }
-        if (!this.serviceMap.apiName2Service[apiName]) {
+        const service = this.serviceMap.apiName2Service[apiName];
+        if (!service) {
             return {
                 isSucc: false,
                 err: new TsrpcError(`Invalid service name: ${apiName}`, {
@@ -690,7 +713,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                 }
             });
 
-            this._onRecvData(conn, req, apiName);
+            this._onRecvData(conn, req, service.id);
         })
     }
 
@@ -716,7 +739,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         })
     }
 
-    protected _parseServerInput(tsbuffer: TSBuffer, serviceMap: ServiceMap, data: string | Uint8Array | object, serviceName?: string): { isSucc: true, result: ParsedServerInput } | { isSucc: false, errMsg: string } {
+    protected _parseServerInput(tsbuffer: TSBuffer, serviceMap: ServiceMap, data: string | Uint8Array | object, serviceId?: number): { isSucc: true, result: ParsedServerInput } | { isSucc: false, errMsg: string } {
         if (data instanceof Uint8Array) {
             let opServerInputData = TransportDataUtil.tsbuffer.decode(data, 'ServerInputData');
 
@@ -773,31 +796,32 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             let body: any;
             let sn: number | undefined;
 
-            // Parse serviceName / body / sn
-            let service: ApiService | MsgService | undefined;
-            const oriServiceName = serviceName;
-            if (serviceName == undefined) {
+            // Parse serviceId / body / sn
+            if (serviceId == undefined) {
+                // 未指定 serviceId，必然是长连接，传入格式应该是数组 [serviceName, body, sn?]
                 if (!Array.isArray(json)) {
                     return { isSucc: false, errMsg: `Invalid request format: unresolved service name.` };
                 }
-                serviceName = json[0] as string;
+
                 body = json[1];
                 sn = json[2];
+
+                // Parse serviceId
+                const serviceName = json[0] as string;
+                const isMsg = sn === undefined;
+                serviceId = (isMsg ? serviceMap.msgName2Service : serviceMap.apiName2Service)[serviceName]?.id;
+                if (serviceId === undefined) {
+                    return { isSucc: false, errMsg: `Invalid ${isMsg ? 'msg' : 'api'} path: ${serviceName}` };
+                }
             }
             else {
                 body = json;
             }
 
             // Get Service
-            service = serviceMap.apiName2Service[serviceName] ?? serviceMap.msgName2Service[serviceName];
+            let service = serviceMap.id2Service[serviceId];
             if (!service) {
-                let errMsg = `Invalid service name: ${chalk.cyan.underline(serviceName)}`;
-
-                // 可能是 JSON 模式下，jsonHostPath 未设置妥当的原因，此时给予友好提示
-                if (oriServiceName) {
-                    // TODO
-                }
-
+                let errMsg = `Invalid service id: ${chalk.cyan.underline(serviceId)}`;
                 return { isSucc: false, errMsg: errMsg };
             }
 
