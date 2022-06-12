@@ -151,7 +151,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             connAll = true;
         }
 
-        const connStr = () => connAll ? '*' : conns.map(v => v.id).join(',');
+        const connStr = () => connAll ? '*' : conns!.map(v => v.id).join(',');
 
         if (!conns.length) {
             return { isSucc: true };
