@@ -57,7 +57,7 @@
     "@types/ws": "^7.4.7",
     "chalk": "^4.1.2",
     "tsbuffer": "^2.2.3",
-    "tsrpc-base-client": "^2.0.8-dev.1",
+    "tsrpc-base-client": "^2.1.0",
     "tsrpc-proto": "^1.4.2",
     "uuid": "^8.3.2",
     "ws": "^7.5.8"
