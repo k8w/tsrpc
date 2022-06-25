@@ -1081,4 +1081,65 @@ describe('WS Flows', function () {
 
         await server.stop();
     })
+
+    it('recvMsgFlow', async function () {
+        let server = new WsServer(getProto(), {
+            logger: serverLogger
+        });
+        let serverReceivedMsgs: { name: string, msg: any }[] = [];
+        server.listenMsg(/.*/, call => {
+            serverReceivedMsgs.push({ name: call.service.name, msg: call.msg });
+            server.broadcastMsg(call.service.name as any, call.msg);
+        });
+        await server.start();
+
+        let client = new WsClient(getProto(), {
+            logger: clientLogger
+        });
+        let clientReceivedMsgs: { name: string, msg: any }[] = [];
+        client.flows.preRecvMsgFlow.push(v => {
+            if (v.msgName === 'Chat') {
+                return undefined;
+            }
+            if (v.msgName === 'Test') {
+                v.msg.content += 'CCC'
+            }
+            return v;
+        });
+        client.flows.postRecvMsgFlow.push(v => {
+            clientReceivedMsgs.push({ name: v.msgName, msg: v.msg });
+            return v;
+        })
+        await client.connect();
+
+        client.sendMsg('Chat', {
+            channel: 0,
+            content: 'AAA',
+            time: 0,
+            userName: 'AAA'
+        });
+        client.sendMsg('Test', {
+            content: 'AAA'
+        })
+        await new Promise(rs => { setTimeout(rs, 1000) });
+
+        assert.deepStrictEqual(serverReceivedMsgs, [{
+            name: 'Chat',
+            msg: {
+                channel: 0,
+                content: 'AAA',
+                time: 0,
+                userName: 'AAA'
+            }
+        }, {
+            name: 'Test',
+            msg: { content: 'AAA' }
+        }])
+        assert.deepStrictEqual(clientReceivedMsgs, [{
+            name: 'Test',
+            msg: { content: 'AAACCC' }
+        }])
+
+        await server.stop();
+    })
 })

@@ -501,23 +501,46 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * duplicate handlers to the same `msgName` would be ignored.
      * @param msgName
      * @param handler
+     * @returns
      */
-    listenMsg<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: MsgHandler<Call>): MsgHandler<Call> {
-        this._msgHandlers.addHandler(msgName as string, handler);
+    listenMsg<T extends keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][T]>>(msgName: T | RegExp, handler: MsgHandler<Call>): MsgHandler<Call> {
+        if (msgName instanceof RegExp) {
+            Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
+                this._msgHandlers.addHandler(k, handler)
+            })
+        }
+        else {
+            this._msgHandlers.addHandler(msgName as string, handler)
+        }
+
         return handler;
-    };
+    }
     /**
      * Remove a message handler
      */
-    unlistenMsg<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg, handler: Function): void {
-        this._msgHandlers.removeHandler(msgName as string, handler);
-    };
+    unlistenMsg<T extends keyof ServiceType['msg']>(msgName: T | RegExp, handler: Function) {
+        if (msgName instanceof RegExp) {
+            Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
+                this._msgHandlers.removeHandler(k, handler)
+            })
+        }
+        else {
+            this._msgHandlers.removeHandler(msgName as string, handler)
+        }
+    }
     /**
      * Remove all handlers from a message
      */
-    unlistenMsgAll<Msg extends string & keyof ServiceType['msg'], Call extends MsgCall<ServiceType['msg'][Msg]>>(msgName: Msg): void {
-        this._msgHandlers.removeAllHandlers(msgName as string);
-    };
+    unlistenMsgAll<T extends keyof ServiceType['msg']>(msgName: T | RegExp) {
+        if (msgName instanceof RegExp) {
+            Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
+                this._msgHandlers.removeAllHandlers(k)
+            })
+        }
+        else {
+            this._msgHandlers.removeAllHandlers(msgName as string)
+        }
+    }
     // #endregion   
 
     /**

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.4.1] - 2022-06-25
+### Added
+- New client flow: `preRecvMsgFlow` and `postRecvMsgFlow`
+- Support `server.listenMsg` by regexp
+
 ## [3.4.0] - 2022-06-14
 ### Added
 - `https` options for `HttpServer`
