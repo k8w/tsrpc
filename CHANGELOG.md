@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.2-dev.-1] - 2022-06-28
+### Added
+- New options `logConnect` for `WsServer`
+
 ## [3.4.1] - 2022-06-25
 ### Added
 - New client flow: `preRecvMsgFlow` and `postRecvMsgFlow`

@@ -930,17 +930,17 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
      */
     logLevel: LogLevel;
     /** 
-     * Whethere to print API request body into log (may increase log size)
+     * Whether to print API request body into log (may increase log size)
      * @defaultValue `true`
      */
     logReqBody: boolean;
     /** 
-     * Whethere to print API response body into log (may increase log size)
+     * Whether to print API response body into log (may increase log size)
      * @defaultValue `true`
      */
     logResBody: boolean;
     /**
-     * Whethere to print `[SendMsg]` and `[RecvMsg]` log into log
+     * Whether to print `[SendMsg]` and `[RecvMsg]` log into log
      * @defaultValue `true`
      */
     logMsg: boolean;

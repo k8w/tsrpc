@@ -124,14 +124,14 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
         this.connections.push(conn);
         this._id2Conn[conn.id] = conn;
 
-        conn.logger.log(chalk.green('[Connected]'), `ActiveConn=${this.connections.length}`);
+        this.options.logConnect && conn.logger.log(chalk.green('[Connected]'), `ActiveConn=${this.connections.length}`);
         this.flows.postConnectFlow.exec(conn, conn.logger);
     };
 
     private _onClientClose = async (conn: WsConnection<ServiceType>, code: number, reason: string) => {
         this.connections.removeOne(v => v.id === conn.id);
         delete this._id2Conn[conn.id];
-        conn.logger.log(chalk.green('[Disconnected]'), `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this.connections.length}`)
+        this.options.logConnect && conn.logger.log(chalk.green('[Disconnected]'), `Code=${code} ${reason ? `Reason=${reason} ` : ''}ActiveConn=${this.connections.length}`)
 
         await this.flows.postDisconnectFlow.exec({ conn: conn, reason: reason }, conn.logger);
     }
@@ -236,6 +236,9 @@ export interface WsServerOptions<ServiceType extends BaseServiceType> extends Ba
     /** Which port the WebSocket server is listen to */
     port: number;
 
+    /** Whether to print `[Connected]` and `[Disconnected]` into log */
+    logConnect: boolean;
+
     /**
      * HTTPS options, the server would use wss instead of http if this value is defined.
      * NOTICE: Once you enabled wss, you CANNOT visit the server via `ws://` anymore.
@@ -267,5 +270,6 @@ export interface WsServerOptions<ServiceType extends BaseServiceType> extends Ba
 
 const defaultWsServerOptions: WsServerOptions<any> = {
     ...defaultBaseServerOptions,
-    port: 3000
+    port: 3000,
+    logConnect: false
 }
