@@ -1,0 +1,45 @@
+{
+  "name": "tsrpc-proto",
+  "version": "1.4.2",
+  "description": "TSRPC service proto definition",
+  "main": "index.js",
+  "exports": {
+    "require": "./index.js",
+    "import": "./index.mjs"
+  },
+  "typings": "index.d.ts",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k8w/tsrpc-proto.git"
+  },
+  "scripts": {
+    "test": "mocha",
+    "coverage": "nyc mocha test/**/*.test.ts && start coverage\\index.html",
+    "build": "npm run build:js && npm run build:dts && npm run build:doc && cp package.json LICENSE README.md dist/",
+    "build:js": "rm -rf dist && npx rollup -c",
+    "build:dts": "rm -rf lib && npx tsc && npx api-extractor run --local --verbose && node scripts/removePrivate.js && rm -rf lib",
+    "build:doc": "rm -rf docs/api && npx api-documenter markdown --input temp --output docs/api"
+  },
+  "author": "",
+  "license": "MIT",
+  "types": "index.d.ts",
+  "devDependencies": {
+    "@microsoft/api-documenter": "^7.15.3",
+    "@microsoft/api-extractor": "^7.19.4",
+    "@types/chai": "^4.3.1",
+    "@types/mocha": "^9.1.0",
+    "chai": "^4.3.6",
+    "mocha": "^9.2.2",
+    "rollup": "^2.68.0",
+    "rollup-plugin-typescript2": "^0.31.2",
+    "ts-node": "^10.7.0",
+    "typescript": "^4.5.5"
+  },
+  "dependencies": {
+    "tsbuffer-schema": "^2.2.0",
+    "tslib": "*"
+  }
+}

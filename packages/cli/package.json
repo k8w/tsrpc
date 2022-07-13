@@ -1,0 +1,74 @@
+{
+  "name": "tsrpc-cli",
+  "version": "2.4.5",
+  "description": "TSRPC CLI Tools",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run build:js && npm run build:dts",
+    "build:js": "rm -rf dist && npx rollup -c && cp -rf res LICENSE README.md package.json dist/",
+    "build:dts": "rm -rf lib && npx tsc && npx api-extractor run --local --verbose && rm -rf lib",
+    "try": "node -r ts-node/register src/index.ts proto -i try/proto -o try/proto/proto.ts -n",
+    "try:npx": "npx tsrpc proto -i try/proto -o try/proto/proto.ts -n",
+    "test": "npx mocha",
+    "test:doc": "cd test/demo_project/backend && npm run doc",
+    "up:dev": "ncu -u -t minor && npm i && npm run bp:dev",
+    "bp:dev": "npm run build && cd dist && npm publish --tag dev"
+  },
+  "bin": {
+    "tsrpc": "./bin.js",
+    "tsrpc-cli": "./bin.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k8w/tsrpc-cli.git"
+  },
+  "keywords": [
+    "tsrpc",
+    "tsbuffer",
+    "k8w",
+    "typescript",
+    "buffer",
+    "protobuf"
+  ],
+  "author": "k8w",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/k8w/tsrpc-cli/issues"
+  },
+  "homepage": "https://github.com/k8w/tsrpc-cli#readme",
+  "devDependencies": {
+    "@microsoft/api-documenter": "^7.18.0",
+    "@microsoft/api-extractor": "^7.28.2",
+    "@rollup/plugin-replace": "^2.4.2",
+    "@types/fs-extra": "^9.0.13",
+    "@types/glob": "^7.2.0",
+    "@types/inquirer": "^7.3.3",
+    "@types/minimist": "^1.2.2",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^15.14.9",
+    "@types/typescript": "^2.0.0",
+    "mocha": "^9.2.2",
+    "openapi-types": "^9.3.1",
+    "rollup": "^2.75.7",
+    "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-typescript2": "^0.32.1"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "chokidar": "^3.5.3",
+    "fs-extra": "^10.1.0",
+    "glob": "^7.2.3",
+    "inquirer": "^8.2.4",
+    "k8w-extend-native": "^1.4.6",
+    "minimist": "^1.2.6",
+    "ora": "^5.4.1",
+    "os-locale": "^5.0.0",
+    "ts-node": "^10.8.2",
+    "tsbuffer": "^2.2.3",
+    "tsbuffer-proto-generator": "^1.7.2",
+    "tsbuffer-schema": "^2.2.0",
+    "tsrpc-proto": "^1.4.2",
+    "typescript": "^4.7.4",
+    "typescript-formatter": "^7.2.2"
+  }
+}

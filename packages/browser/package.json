@@ -1,0 +1,62 @@
+{
+  "name": "tsrpc-browser",
+  "version": "3.4.1",
+  "description": "TSRPC Client for browser",
+  "main": "index.js",
+  "exports": {
+    "require": "./index.js",
+    "import": "./index.mjs"
+  },
+  "scripts": {
+    "pretest": "cd test && npm i & cd ..",
+    "test": "cd test && npm i && npm test & cd ..",
+    "dev": "cd test && npm run dev & cd..",
+    "coverage": "nyc mocha test/**/*.test.ts && start coverage\\index.html",
+    "build": "npm run build:js && npm run build:dts && cp package.json LICENSE README.md dist/",
+    "build:js": "rm -rf dist && npx rollup -c",
+    "build:dts": "rm -rf lib && npx tsc && npx api-extractor run --local --verbose && node scripts/postDts.js && rm -rf lib",
+    "build:doc": "rm -rf docs/api && npx api-documenter markdown --input temp --output docs/api"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/k8w/tsrpc-browser.git"
+  },
+  "keywords": [
+    "k8w",
+    "kingworks",
+    "tsrpc",
+    "typescript",
+    "fullstack",
+    "rpc",
+    "framework",
+    "ajax",
+    "fetch",
+    "axios",
+    "request",
+    "tsbuffer",
+    "fullts"
+  ],
+  "author": "k8w",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/preset-env": "^7.18.2",
+    "@microsoft/api-documenter": "^7.17.22",
+    "@microsoft/api-extractor": "^7.26.1",
+    "@rollup/plugin-babel": "^5.3.1",
+    "@rollup/plugin-commonjs": "^19.0.2",
+    "@rollup/plugin-node-resolve": "^13.3.0",
+    "rollup": "^2.75.7",
+    "rollup-plugin-typescript2": "^0.32.1",
+    "typescript": "^4.7.4"
+  },
+  "typings": "index.d.ts",
+  "dependencies": {
+    "core-js": "*",
+    "tsrpc-base-client": "^2.1.2"
+  },
+  "browserslist": [
+    "defaults",
+    "chrome 30",
+    "ie 10"
+  ]
+}

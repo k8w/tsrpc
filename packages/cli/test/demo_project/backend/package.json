@@ -1,0 +1,17 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "proto": "node -r ts-node/register ../../../src/bin.ts proto",
+    "sync": "node -r ts-node/register ../../../src/bin.ts sync",
+    "link": "node -r ts-node/register ../../../src/bin.ts link",
+    "api": "node -r ts-node/register ../../../src/bin.ts api",
+    "dev": "node -r ts-node/register ../../../src/bin.ts dev",
+    "build": "node -r ts-node/register ../../../src/bin.ts build",
+    "doc": "node -r ts-node/register ../../../src/bin.ts doc"
+  },
+  "author": "",
+  "license": "ISC"
+}

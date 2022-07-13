@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSRPC API</title>
+    <style>
+        code {
+            white-space: pre;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="main"></div>
+    <script src="tsrpc-api.js"></script>
+    <script>
+        function render(data) {
+            let main = document.getElementById('main');
+            main.innerHTML = `
+<div class='apis'>
+    <h1>API</h1>
+    ${data.apis.map(api => `
+        <div class='api-item>
+            <h2>${api.title ?? api.path}</h2>
+            <dl>
+                <dt>路径</dt>
+                <dd><span>POST</span> <code>${api.path}</code></dd>
+                <dt>请求</dt>
+                <dd>
+                    <code>${api.req.ts}</code>
+                </dd>
+                <dt>响应</dt>
+                <dd>
+                    <code>${api.res.ts}</code>
+                </dd>
+            </dl>            
+        </div>
+    `).join('\n')}    
+</div>
+<div class='schemas'></div>
+            `;
+        }
+        render(tsrpcAPI);
+    </script>
+</body>
+
+</html>
