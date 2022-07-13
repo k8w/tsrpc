@@ -2,5 +2,11 @@
   "private": true,
   "devDependencies": {
     "lerna": "^5.1.8"
+  },
+  "scripts": {
+    "test": "lerna run test",
+    "build": "lerna run build",
+    "publish:dev": "",
+    "publish:latest": ""
   }
 }
