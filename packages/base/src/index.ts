@@ -1,1 +1,1 @@
-export { };
+export { BaseConnection } from "./base/BaseConnection";
