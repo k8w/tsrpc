@@ -12,7 +12,7 @@ export class BaseHttpClient<ServiceType extends BaseServiceType> extends BaseCli
     private _http: IHttpProxy;
     private _jsonServer: string;
 
-    readonly options!: Readonly<BaseHttpClientOptions>;
+    declare readonly options: Readonly<BaseHttpClientOptions>;
     constructor(proto: ServiceProto<ServiceType>, http: IHttpProxy, options?: Partial<BaseHttpClientOptions>) {
         super(proto, {
             ...defaultBaseHttpClientOptions,

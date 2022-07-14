@@ -57,7 +57,7 @@ export class Flow<T> {
                 res = await this.nodes[i](res);
             }
             catch (e) {
-                this.onError(e, res!, input, logger);
+                this.onError(e as Error, res!, input, logger);
                 return undefined;
             }
 

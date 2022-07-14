@@ -34,6 +34,7 @@
     "chai": "^4.3.6",
     "kunit": "^1.3.0",
     "rollup": "^2.75.7",
+    "rollup-plugin-dts": "^4.2.2",
     "rollup-plugin-typescript2": "^0.32.1",
     "typescript": "^4.7.4",
     "webpack-cli": "^4.10.0"

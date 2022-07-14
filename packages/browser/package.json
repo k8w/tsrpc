@@ -39,13 +39,8 @@
   "author": "k8w",
   "license": "MIT",
   "devDependencies": {
-    "@babel/preset-env": "^7.18.2",
-    "@microsoft/api-documenter": "^7.17.22",
-    "@microsoft/api-extractor": "^7.26.1",
-    "@rollup/plugin-babel": "^5.3.1",
-    "@rollup/plugin-commonjs": "^19.0.2",
-    "@rollup/plugin-node-resolve": "^13.3.0",
     "rollup": "^2.75.7",
+    "rollup-plugin-dts": "^4.2.2",
     "rollup-plugin-typescript2": "^0.32.1",
     "typescript": "^4.7.4"
   },

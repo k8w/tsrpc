@@ -15,7 +15,7 @@
     "test": "npx mocha",
     "genTestProto": "npx tsrpc-cli@latest proto --input test/proto --output test/proto/serviceProto.ts",
     "coverage": "nyc mocha test/**/*.test.ts && start coverage\\index.html",
-    "build": "npm run build:js && npm run build:dts && npm run build:doc && node scripts/postBuild && cp package.json LICENSE README.md dist/",
+    "build1": "npm run build:js && npm run build:dts && npm run build:doc && node scripts/postBuild && cp package.json LICENSE README.md dist/",
     "build:js": "rm -rf dist && npx rollup -c",
     "build:dts": "rm -rf lib && npx tsc && npx api-extractor run --local --verbose && rm -rf lib",
     "build:doc": "rm -rf docs/api && npx api-documenter markdown --input temp --output docs/api"
@@ -49,6 +49,7 @@
     "mongodb": "^4.7.0",
     "nyc": "^15.1.0",
     "rollup": "^2.75.6",
+    "rollup-plugin-dts": "^4.2.2",
     "rollup-plugin-typescript2": "^0.32.1",
     "ts-node": "^10.8.1",
     "typescript": "^4.7.3"

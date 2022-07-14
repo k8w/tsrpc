@@ -50,6 +50,7 @@
     "mocha": "^9.2.2",
     "openapi-types": "^9.3.1",
     "rollup": "^2.75.7",
+    "rollup-plugin-dts": "^4.2.2",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.32.1"
   },

@@ -17,7 +17,7 @@ export function getCustomObjectIdTypes(classObjectId: { new(id?: any): any }): {
                 return { isSucc: true };
             },
             encode: (value: string) => {
-                return new Uint8Array(Array.from({ length: 12 }, (_, i) => Number.parseInt('0x' + value.substr(i * 2, 2))));
+                return new Uint8Array(Array.from({ length: 12 }, (_, i) => parseInt('0x' + value.substr(i * 2, 2))));
             },
             decode: (buf: Uint8Array) => {
                 return Array.from(buf, v => {

@@ -13,7 +13,7 @@ export class BaseWsClient<ServiceType extends BaseServiceType> extends BaseClien
 
     protected _wsp: IWebSocketProxy;
 
-    readonly options!: Readonly<BaseWsClientOptions>;
+    declare readonly options: Readonly<BaseWsClientOptions>;
     constructor(proto: ServiceProto<ServiceType>, wsp: IWebSocketProxy, options?: Partial<BaseWsClientOptions>) {
         super(proto, {
             ...defaultBaseWsClientOptions,
@@ -240,7 +240,7 @@ export class BaseWsClient<ServiceType extends BaseServiceType> extends BaseClien
         }
         catch (e) {
             this.logger?.error(e);
-            return { isSucc: false, errMsg: e.message }
+            return { isSucc: false, errMsg: (e as Error).message }
         }
         this._status = WsClientStatus.Opening;
         this.logger?.log(`Start connecting ${this.options.server}...`);

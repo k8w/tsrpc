@@ -1,4 +1,14 @@
+import dts from 'rollup-plugin-dts';
 import typescript from 'rollup-plugin-typescript2';
+import packageJSON from './package.json';
+
+const banner = `/*!
+ * ${packageJSON.name} v${packageJSON.version}
+ * -----------------------------------------
+ * Copyright (c) King Wang.
+ * MIT License
+ * https://github.com/k8w/tsrpc
+ */`
 
 export default [
     {
@@ -6,18 +16,16 @@ export default [
         output: [{
             format: 'cjs',
             file: './dist/index.js',
-            banner: require('./scripts/copyright')
+            banner: banner
         }],
         plugins: [
             typescript({
                 tsconfigOverride: {
                     compilerOptions: {
-                        declaration: false,
-                        declarationMap: false,
-                        module: "esnext"
+                        target: "es5",
+                        lib: ["es6", "dom"]
                     }
-                },
-                objectHashIgnoreUnknownHack: true
+                }
             })
         ],
         external: ['tslib']
@@ -27,20 +35,14 @@ export default [
         output: [{
             format: 'es',
             file: './dist/index.mjs',
-            banner: require('./scripts/copyright')
+            banner: banner
         }],
-        plugins: [
-            typescript({
-                tsconfigOverride: {
-                    compilerOptions: {
-                        declaration: false,
-                        declarationMap: false,
-                        module: "esnext"
-                    },
-                    objectHashIgnoreUnknownHack: true
-                }
-            })
-        ],
+        plugins: [typescript()],
         external: ['tslib']
+    },
+    {
+        input: "./src/index.ts",
+        output: [{ file: './dist/index.d.ts', format: 'es' }],
+        plugins: [dts()],
     }
 ]

@@ -1,5 +1,5 @@
 {
-  "name": "tsrpc-base-client",
+  "name": "tsrpc-base-server",
   "version": "2.1.2",
   "description": "TSRPC Base Client",
   "main": "./dist/index.js",
@@ -14,14 +14,14 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/k8w/tsrpc.git",
-    "directory": "packages/base-client"
+    "directory": "packages/base-server"
   },
-  "author": "",
+  "author": "k8w",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/k8w/tsrpc/issues"
   },
-  "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base-client#readme",
+  "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base-server#readme",
   "dependencies": {
     "k8w-extend-native": "^1.4.6",
     "tsbuffer": "^2.2.3",

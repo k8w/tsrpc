@@ -1,5 +1,4 @@
 import 'k8w-extend-native';
-import './polyfill';
-export * from 'tsrpc-proto';
+export * from 'tsrpc-base-client';
 export * from "./client/HttpClient";
 export * from './client/WsClient';
