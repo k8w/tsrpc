@@ -26,9 +26,7 @@
   },
   "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base#readme",
   "dependencies": {
-    "k8w-extend-native": "^1.4.6",
     "tsbuffer": "^2.2.3",
-    "tslib": "*",
     "tsrpc-proto": "^1.4.2"
   },
   "devDependencies": {
@@ -38,5 +36,10 @@
     "rollup-plugin-typescript2": "^0.32.1",
     "ts-node": "^10.8.1",
     "typescript": "^4.7.3"
+  },
+  "peerDependencies": {
+    "k8w-extend-native": "^1.4.6",
+    "tsbuffer-schema": "^2.2.0",
+    "tslib": "^2.4.0"
   }
 }
