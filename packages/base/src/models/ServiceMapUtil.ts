@@ -1,4 +1,4 @@
-import { ApiServiceDef, MsgServiceDef, ServiceProto } from "tsrpc-proto";
+import { ServiceProto, ApiServiceDef, MsgServiceDef } from "../proto/ServiceProto";
 
 /** A utility for generate `ServiceMap` */
 export class ServiceMapUtil {

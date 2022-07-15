@@ -1,4 +1,4 @@
-import { Logger } from "tsrpc-proto";
+import { Logger } from "./Logger";
 
 /**
  * A manager for TSRPC receiving messages

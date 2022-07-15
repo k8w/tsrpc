@@ -1,4 +1,5 @@
-import { Logger, TsrpcError } from "tsrpc-proto";
+import { TsrpcError } from "../proto/TsrpcError";
+import { Logger } from "./Logger";
 
 /**
  * @returns 

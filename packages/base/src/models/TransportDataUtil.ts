@@ -1,6 +1,5 @@
 import { TSBuffer } from "tsbuffer";
 import { ApiReturn, ServerInputData, ServerOutputData, TransportDataProto, TsrpcError } from 'tsrpc-proto';
-import { BaseClient } from "..";
 import { ApiService, MsgService, ServiceMap } from "./ServiceMapUtil";
 
 export type ParsedServerInput = { type: 'api', service: ApiService, req: any, sn?: number } | { type: 'msg', service: MsgService, msg: any };
