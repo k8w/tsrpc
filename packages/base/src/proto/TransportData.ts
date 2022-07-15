@@ -6,79 +6,67 @@ import { int, uint } from 'tsbuffer-schema';
  */
 export type TransportData = {
     /** API Request */
-    type: 'ApiReq',
-    sn: uint,
+    type: 'req',
+    /** Short connection don't need */
+    sn?: uint,
     serviceId: uint,
     data: Uint8Array,
     header?: {
-        queryProtoInfo?: boolean,
-        queryServerInfo?: boolean,
+        /** Exchange proto info at first request */
+        protoInfo?: ProtoInfo,
         [key: string]: any
     }
 } | {
     /** API Response */
-    type: 'ApiRes',
-    sn: uint,
+    type: 'res',
+    /** Short connection don't need */
+    sn?: uint,
     data: Uint8Array,
-    header?: {
-        protoInfo?: {
-            version: uint,
-            md5: string
-        },
-        serverInfo?: {
-            tsrpcVersion: string,
-            nodeVersion: string
-        },
-        [key: string]: any
-    }
+    header?: ApiReturnHeader
 } | {
     /** API Error */
-    type: 'ApiErr',
-    sn: uint,
+    type: 'err',
+    /** Short connection don't need */
+    sn?: uint,
     error: TsrpcErrorData,
-    header?: {
-        [key: string]: any
-    }
+    header?: ApiReturnHeader
 } | {
     /** Message */
-    type: 'Msg',
+    type: 'msg',
     serviceId: uint,
     data: Uint8Array,
     header?: {
         [key: string]: any
     }
 } | {
-    type: 'Heartbeat',
+    type: 'heartbeat',
     sn: uint
-}
-
-/**
- * TSRPC Control Command
- */
-export type ControlCommand = {
-    // Query ServiceProto Information
-    type: 'ServiceProtoInfo',
-    req: {},
-    res: {
-        version: string,
-        md5: string
+} | {
+    /** First connection, exchange some info */
+    type: 'connect',
+    header?: {
+        protoInfo: ProtoInfo,
+        [key: string]: any
     }
+} | {
+    /** Preserve for custom usage */
+    type: 'custom',
+    [key: string]: any
 };
 
-/**
- * Basic transport data unit,
- * which represents data that server sent by `call.succ` or `call.error` or `conn.sendMsg`.
- */
-export interface ServerOutputData {
-    /** ApiResponse or Msg */
-    buffer?: Uint8Array,
-    /** Api Error, cannot exists at the same time with `buffer` */
-    error?: TsrpcErrorData,
+export interface ProtoInfo {
+    version: string,
+    md5: string,
+    tsrpcVersion: string,
+    nodeVersion?: string
+}
 
-    /** Short link apiRes don't need this */
-    serviceId?: uint,
-    /** Short link don't need this */
-    sn?: uint
+export interface ApiReturnHeader {
+    /** Exchange proto info if get a 'protoInfo' request header */
+    protoInfo?: ProtoInfo,
+    /** Warning message (like proto version is not the same), would `console.warn` by client */
+    warning?: string,
+    [key: string]: any
 }
 
 export interface TsrpcErrorData {
