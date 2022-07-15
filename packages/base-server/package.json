@@ -8,6 +8,9 @@
     "import": "./dist/index.mjs"
   },
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rm -rf dist && rollup -c"
   },

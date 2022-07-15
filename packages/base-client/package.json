@@ -11,6 +11,9 @@
   "scripts": {
     "build": "rm -rf dist && rollup -c"
   },
+  "files": [
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/k8w/tsrpc.git",
