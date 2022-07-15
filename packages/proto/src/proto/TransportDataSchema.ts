@@ -1,10 +1,9 @@
 import { int, uint } from 'tsbuffer-schema';
 
 /**
- * Basic transport data unit,
- * which represents data that sended by server/client.
+ * Schema for binary serialize TransportData
  */
-export type TransportData = {
+export type TransportDataSchema = {
     /** API Request */
     type: 'req',
     /** Short connection don't need */

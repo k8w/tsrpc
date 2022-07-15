@@ -1,5 +1,5 @@
 export const TransportDataProto = {
-  "TransportData": {
+  "TransportDataSchema": {
     "type": "Union",
     "members": [
       {
