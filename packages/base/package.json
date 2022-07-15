@@ -12,7 +12,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "rm -rf dist && rollup -c"
+    "build": "rm -rf dist && rollup -c",
+    "genTransportProto": "cd src/proto && npx tsbuffer-cli proto -i TransportData.ts -o TransportDataProto_temp.ts"
   },
   "repository": {
     "type": "git",
@@ -34,6 +35,7 @@
     "rollup-plugin-dts": "^4.2.2",
     "rollup-plugin-typescript2": "^0.32.1",
     "ts-node": "^10.8.1",
+    "tsbuffer-cli": "^1.3.3",
     "typescript": "^4.7.3"
   },
   "peerDependencies": {

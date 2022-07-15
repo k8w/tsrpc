@@ -1,96 +1,368 @@
-import { SchemaType, TSBufferSchema } from "tsbuffer-schema";
-
-export const TransportDataProto: {
-  ServerInputData: TSBufferSchema,
-  ServerOutputData: TSBufferSchema,
-  [key: string]: TSBufferSchema
-} = {
-  "ServerInputData": {
-    "type": SchemaType.Interface,
-    "properties": [
+export const TransportDataProto = {
+  "TransportData": {
+    "type": "Union",
+    "members": [
       {
         "id": 0,
-        "name": "serviceId",
         "type": {
-          "type": SchemaType.Number,
-          "scalarType": "uint"
+          "type": "Interface",
+          "properties": [
+            {
+              "id": 0,
+              "name": "type",
+              "type": {
+                "type": "Literal",
+                "literal": "req"
+              }
+            },
+            {
+              "id": 1,
+              "name": "sn",
+              "type": {
+                "type": "Number",
+                "scalarType": "uint"
+              },
+              "optional": true
+            },
+            {
+              "id": 2,
+              "name": "serviceId",
+              "type": {
+                "type": "Number",
+                "scalarType": "uint"
+              }
+            },
+            {
+              "id": 3,
+              "name": "data",
+              "type": {
+                "type": "Buffer",
+                "arrayType": "Uint8Array"
+              }
+            },
+            {
+              "id": 4,
+              "name": "header",
+              "type": {
+                "type": "Interface",
+                "properties": [
+                  {
+                    "id": 0,
+                    "name": "protoInfo",
+                    "type": {
+                      "type": "Reference",
+                      "target": "ProtoInfo"
+                    },
+                    "optional": true
+                  }
+                ],
+                "indexSignature": {
+                  "keyType": "String",
+                  "type": {
+                    "type": "Any"
+                  }
+                }
+              },
+              "optional": true
+            }
+          ]
         }
       },
       {
         "id": 1,
-        "name": "buffer",
         "type": {
-          "type": SchemaType.Buffer,
-          "arrayType": "Uint8Array"
+          "type": "Interface",
+          "properties": [
+            {
+              "id": 0,
+              "name": "type",
+              "type": {
+                "type": "Literal",
+                "literal": "res"
+              }
+            },
+            {
+              "id": 1,
+              "name": "sn",
+              "type": {
+                "type": "Number",
+                "scalarType": "uint"
+              },
+              "optional": true
+            },
+            {
+              "id": 2,
+              "name": "data",
+              "type": {
+                "type": "Buffer",
+                "arrayType": "Uint8Array"
+              }
+            },
+            {
+              "id": 3,
+              "name": "header",
+              "type": {
+                "type": "Reference",
+                "target": "ApiReturnHeader"
+              },
+              "optional": true
+            }
+          ]
         }
       },
       {
         "id": 2,
-        "name": "sn",
         "type": {
-          "type": SchemaType.Number,
-          "scalarType": "uint"
-        },
-        "optional": true
-      }
-    ]
-  },
-  "ServerOutputData": {
-    "type": SchemaType.Interface,
-    "properties": [
-      {
-        "id": 0,
-        "name": "buffer",
-        "type": {
-          "type": SchemaType.Buffer,
-          "arrayType": "Uint8Array"
-        },
-        "optional": true
-      },
-      {
-        "id": 1,
-        "name": "error",
-        "type": {
-          "type": SchemaType.Reference,
-          "target": "TsrpcErrorData"
-        },
-        "optional": true
-      },
-      {
-        "id": 2,
-        "name": "serviceId",
-        "type": {
-          "type": SchemaType.Number,
-          "scalarType": "uint"
-        },
-        "optional": true
+          "type": "Interface",
+          "properties": [
+            {
+              "id": 0,
+              "name": "type",
+              "type": {
+                "type": "Literal",
+                "literal": "err"
+              }
+            },
+            {
+              "id": 1,
+              "name": "sn",
+              "type": {
+                "type": "Number",
+                "scalarType": "uint"
+              },
+              "optional": true
+            },
+            {
+              "id": 2,
+              "name": "error",
+              "type": {
+                "type": "Reference",
+                "target": "TsrpcErrorData"
+              }
+            },
+            {
+              "id": 3,
+              "name": "header",
+              "type": {
+                "type": "Reference",
+                "target": "ApiReturnHeader"
+              },
+              "optional": true
+            }
+          ]
+        }
       },
       {
         "id": 3,
-        "name": "sn",
         "type": {
-          "type": SchemaType.Number,
-          "scalarType": "uint"
+          "type": "Interface",
+          "properties": [
+            {
+              "id": 0,
+              "name": "type",
+              "type": {
+                "type": "Literal",
+                "literal": "msg"
+              }
+            },
+            {
+              "id": 1,
+              "name": "serviceId",
+              "type": {
+                "type": "Number",
+                "scalarType": "uint"
+              }
+            },
+            {
+              "id": 2,
+              "name": "data",
+              "type": {
+                "type": "Buffer",
+                "arrayType": "Uint8Array"
+              }
+            },
+            {
+              "id": 3,
+              "name": "header",
+              "type": {
+                "type": "Interface",
+                "indexSignature": {
+                  "keyType": "String",
+                  "type": {
+                    "type": "Any"
+                  }
+                }
+              },
+              "optional": true
+            }
+          ]
+        }
+      },
+      {
+        "id": 4,
+        "type": {
+          "type": "Interface",
+          "properties": [
+            {
+              "id": 0,
+              "name": "type",
+              "type": {
+                "type": "Literal",
+                "literal": "heartbeat"
+              }
+            },
+            {
+              "id": 1,
+              "name": "sn",
+              "type": {
+                "type": "Number",
+                "scalarType": "uint"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": 5,
+        "type": {
+          "type": "Interface",
+          "properties": [
+            {
+              "id": 0,
+              "name": "type",
+              "type": {
+                "type": "Literal",
+                "literal": "connect"
+              }
+            },
+            {
+              "id": 1,
+              "name": "header",
+              "type": {
+                "type": "Interface",
+                "properties": [
+                  {
+                    "id": 0,
+                    "name": "protoInfo",
+                    "type": {
+                      "type": "Reference",
+                      "target": "ProtoInfo"
+                    }
+                  }
+                ],
+                "indexSignature": {
+                  "keyType": "String",
+                  "type": {
+                    "type": "Any"
+                  }
+                }
+              },
+              "optional": true
+            }
+          ]
+        }
+      },
+      {
+        "id": 6,
+        "type": {
+          "type": "Interface",
+          "properties": [
+            {
+              "id": 0,
+              "name": "type",
+              "type": {
+                "type": "Literal",
+                "literal": "custom"
+              }
+            }
+          ],
+          "indexSignature": {
+            "keyType": "String",
+            "type": {
+              "type": "Any"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "ProtoInfo": {
+    "type": "Interface",
+    "properties": [
+      {
+        "id": 0,
+        "name": "version",
+        "type": {
+          "type": "String"
+        }
+      },
+      {
+        "id": 1,
+        "name": "md5",
+        "type": {
+          "type": "String"
+        }
+      },
+      {
+        "id": 2,
+        "name": "tsrpcVersion",
+        "type": {
+          "type": "String"
+        }
+      },
+      {
+        "id": 3,
+        "name": "nodeVersion",
+        "type": {
+          "type": "String"
         },
         "optional": true
       }
     ]
   },
+  "ApiReturnHeader": {
+    "type": "Interface",
+    "properties": [
+      {
+        "id": 0,
+        "name": "protoInfo",
+        "type": {
+          "type": "Reference",
+          "target": "ProtoInfo"
+        },
+        "optional": true
+      },
+      {
+        "id": 1,
+        "name": "warning",
+        "type": {
+          "type": "String"
+        },
+        "optional": true
+      }
+    ],
+    "indexSignature": {
+      "keyType": "String",
+      "type": {
+        "type": "Any"
+      }
+    }
+  },
   "TsrpcErrorData": {
-    "type": SchemaType.Interface,
+    "type": "Interface",
     "properties": [
       {
         "id": 0,
         "name": "message",
         "type": {
-          "type": SchemaType.String
+          "type": "String"
         }
       },
       {
         "id": 1,
         "name": "type",
         "type": {
-          "type": SchemaType.Reference,
+          "type": "Reference",
           "target": "TsrpcErrorType"
         }
       },
@@ -98,18 +370,18 @@ export const TransportDataProto: {
         "id": 2,
         "name": "code",
         "type": {
-          "type": SchemaType.Union,
+          "type": "Union",
           "members": [
             {
               "id": 0,
               "type": {
-                "type": SchemaType.String
+                "type": "String"
               }
             },
             {
               "id": 1,
               "type": {
-                "type": SchemaType.Number,
+                "type": "Number",
                 "scalarType": "int"
               }
             }
@@ -121,12 +393,12 @@ export const TransportDataProto: {
     "indexSignature": {
       "keyType": "String",
       "type": {
-        "type": SchemaType.Any
+        "type": "Any"
       }
     }
   },
   "TsrpcErrorType": {
-    "type": SchemaType.Enum,
+    "type": "Enum",
     "members": [
       {
         "id": 0,
