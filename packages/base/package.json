@@ -26,8 +26,7 @@
   },
   "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base#readme",
   "dependencies": {
-    "tsbuffer": "^2.2.3",
-    "tsrpc-proto": "^1.4.2"
+    "tsbuffer": "^2.2.3"
   },
   "devDependencies": {
     "mocha": "^9.2.2",

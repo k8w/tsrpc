@@ -28,8 +28,7 @@
   "dependencies": {
     "k8w-extend-native": "^1.4.6",
     "tsbuffer": "^2.2.3",
-    "tslib": "*",
-    "tsrpc-proto": "^1.4.2"
+    "tslib": "*"
   },
   "devDependencies": {
     "mocha": "^9.2.2",

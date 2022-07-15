@@ -2,15 +2,69 @@ import { int, uint } from 'tsbuffer-schema';
 
 /**
  * Basic transport data unit,
- * which represents data that server received, which should be sent by `client.callApi` or `client.sendMsg`.
+ * which represents data that sended by server/client.
  */
-export interface ServerInputData {
+export type TransportData = {
+    /** API Request */
+    type: 'ApiReq',
+    sn: uint,
     serviceId: uint,
-    buffer: Uint8Array,
-
-    /** Short link don't need this */
-    sn?: uint
+    data: Uint8Array,
+    header?: {
+        queryProtoInfo?: boolean,
+        queryServerInfo?: boolean,
+        [key: string]: any
+    }
+} | {
+    /** API Response */
+    type: 'ApiRes',
+    sn: uint,
+    data: Uint8Array,
+    header?: {
+        protoInfo?: {
+            version: uint,
+            md5: string
+        },
+        serverInfo?: {
+            tsrpcVersion: string,
+            nodeVersion: string
+        },
+        [key: string]: any
+    }
+} | {
+    /** API Error */
+    type: 'ApiErr',
+    sn: uint,
+    error: TsrpcErrorData,
+    header?: {
+        [key: string]: any
+    }
+} | {
+    /** Message */
+    type: 'Msg',
+    serviceId: uint,
+    data: Uint8Array,
+    header?: {
+        [key: string]: any
+    }
+} | {
+    type: 'Heartbeat',
+    sn: uint
 }
+
+/**
+ * TSRPC Control Command
+ */
+export type ControlCommand = {
+    // Query ServiceProto Information
+    type: 'ServiceProtoInfo',
+    req: {},
+    res: {
+        version: string,
+        md5: string
+    }
+};
+
 /**
  * Basic transport data unit,
  * which represents data that server sent by `call.succ` or `call.error` or `conn.sendMsg`.

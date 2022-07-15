@@ -89,6 +89,10 @@ export class Flow<T> {
         return this.nodes.remove(v => v === node as any);
     }
 
+    removeAll() {
+        this.nodes = [];
+    }
+
 }
 
 export type FlowData<T extends Flow<any>> = T extends Flow<infer R> ? R : unknown;
