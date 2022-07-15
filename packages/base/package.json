@@ -30,6 +30,7 @@
     "tsbuffer": "^2.2.3"
   },
   "devDependencies": {
+    "@types/mocha": "^9.1.1",
     "mocha": "^9.2.2",
     "rollup": "^2.75.6",
     "rollup-plugin-dts": "^4.2.2",

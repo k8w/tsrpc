@@ -1,5 +1,5 @@
-import {assert} from 'chai';
-import { Logger, setLogLevel } from './Logger';
+import assert from 'assert';
+import { Logger, setLogLevel } from '../src/models/Logger';
 
 describe('Logger', function () {
     it('setLogLevel', function () {
@@ -18,7 +18,7 @@ describe('Logger', function () {
 
         logger.warn();
         assert.strictEqual(num, 1);
-        
+
         logger.error();
         assert.strictEqual(num, 2);
     })
