@@ -24,4 +24,25 @@ export interface TransportOptions {
      * ```
      */
     abortKey?: string;
+
+    /**
+     * Signal of `AbortController`.
+     * Many requests can share the same `abortSignal`, so that they can be aborted at once.
+     * @remarks
+     * This may be useful in frontend.
+     * You can specify a unified `abortSignal` to requests in a component, and abort them when the component is destroying.
+     * @example
+     * ```ts
+     * const controller = new AbortController();
+     * 
+     * // Send API request many times
+     * client.callApi('SendData', { data: 'AAA' }, { abortSignal: controller.signal });
+     * client.callApi('SendData', { data: 'BBB' }, { abortSignal: controller.signal });
+     * client.callApi('SendData', { data: 'CCC' }, { abortSignal: controller.signal });
+     * 
+     * // And abort the at once
+     * controller.abort();
+     * ```
+     */
+    abortSignal?: AbortSignal;
 }
