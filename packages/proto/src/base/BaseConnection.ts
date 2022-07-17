@@ -322,7 +322,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Validate
         if (!this.getOption('skipSendTypeCheck')) {
             // TODO
-        }        
+        }
 
         // Do Send
         return this._doSendTransportData(transportData);
@@ -349,13 +349,17 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 transportData.serviceId
                 break;
             }
-            case 'res': {
-
-                break;
-            }
+            case 'res':
             case 'err': {
                 break;
             }
+            case 'msg': {
+                break;
+            }
+            case 'heartbeat': {
+                break;
+            }
+
         }
     };
     // #endregion
