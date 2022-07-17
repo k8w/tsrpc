@@ -38,6 +38,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     serviceMap: ServiceMap;
     logger?: Logger;
     chalk: Chalk;
+    protected _localProtoInfo: ProtoInfo;
+    protected _remoteProtoInfo?: ProtoInfo;
 
     constructor(options: Partial<BaseConnectionOptions>) {
         this.options = options;
@@ -50,11 +52,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         this._localProtoInfo = null!;
     }
 
-    // #region API
+    // #region API Client
 
     protected _callApiSn = new Counter(1);
     protected _pendingApis = new Map<number, PendingApiItem>;
-    protected _apiImplementations?: Map<any, any>;
 
     get lastSn() {
         return this._callApiSn.last;
@@ -82,6 +83,13 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             service: this.serviceMap.apiName2Service[apiName as string]!
         };
         this._pendingApis.set(sn, pendingItem);
+
+        // AbortSignal
+        if (options?.abortSignal) {
+            options.abortSignal.addEventListener('abort', () => {
+                this.abort(sn);
+            })
+        }
 
         // Pre Call Flow
         let pre = await this.flows.preCallApiFlow.exec({
@@ -125,8 +133,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         return post.return;
     }
 
-    protected _localProtoInfo: ProtoInfo;
-    protected _remoteProtoInfo?: ProtoInfo;
     protected async _doCallApi<T extends string & keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], pendingItem: PendingApiItem, options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
         this.getOption('logApi') && this.logger?.log(`[callApi] [#${pendingItem.sn}] ${this.chalk('[Req]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.getOption('logReqBody') ? req : '');
 
@@ -217,10 +223,58 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         });
     }
 
-    abort(sn: number) { }
-    abortByKey(abortKey: string) { }
-    abortAll() { }
+    /**
+     * Abort a pending API request, it makes the promise returned by `callApi()` neither resolved nor rejected forever.
+     * @param sn - Every api request has a unique `sn` number, you can get it by `this.lastSN` 
+     */
+    abort(sn: number): void {
+        // Find and Clear
+        let pendingItem = this._pendingApis.get(sn);
+        if (!pendingItem) {
+            return;
+        }
+        this._pendingApis.delete(sn);
 
+        // Log
+        this.getOption('logApi') && this.logger?.log(`[callApi] [#${pendingItem.sn}] ${this.chalk('[Abort]', ['info'])} ${this.chalk(`[${pendingItem.service.name}]`, ['gray'])}`);
+
+        // onAbort
+        pendingItem.onReturn = undefined;
+        pendingItem.isAborted = true;
+        pendingItem.onAbort?.();
+    }
+    /**
+     * Abort all API requests that has the `abortKey`.
+     * It makes the promise returned by `callApi` neither resolved nor rejected forever.
+     * @param abortKey - The `abortKey` of options when `callApi()`, see {@link TransportOptions.abortKey}.
+     * @example
+     * ```ts
+     * // Send API request many times
+     * client.callApi('SendData', { data: 'AAA' }, { abortKey: 'Session#123' });
+     * client.callApi('SendData', { data: 'BBB' }, { abortKey: 'Session#123' });
+     * client.callApi('SendData', { data: 'CCC' }, { abortKey: 'Session#123' });
+     *
+     * // And abort the at once
+     * client.abortByKey('Session#123');
+     * ```
+     */
+    abortByKey(abortKey: string) {
+        this._pendingApis.forEach(v => {
+            if (v.abortKey === abortKey) {
+                this.abort(v.sn)
+            }
+        })
+    }
+    /**
+     * Abort all pending API requests.
+     * It makes the promise returned by `callApi` neither resolved nor rejected forever.
+     */
+    abortAll() {
+        this._pendingApis.forEach(v => this.abort(v.sn));
+    }
+    // #endregion
+
+    // #region API Server
     implementApi() { }
     // #endregion
 
