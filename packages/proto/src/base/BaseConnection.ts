@@ -10,6 +10,7 @@ import { ApiReturn } from "../proto/ApiReturn";
 import { BaseServiceType } from "../proto/BaseServiceType";
 import { ProtoInfo, TransportDataSchema, TsrpcErrorType } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
+import { ApiCall } from "./ApiCall";
 import { BaseConnectionFlows } from "./FlowData";
 
 const PROMISE_ABORTED = new Promise<any>(rs => { });
@@ -275,7 +276,23 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // #endregion
 
     // #region API Server
-    implementApi() { }
+
+    protected _apiHandlers: Record<string, ApiHandler<this> | undefined> = {};
+
+    /**
+     * Associate a `ApiHandler` to a specific `apiName`.
+     * So that when `ApiCall` is receiving, it can be handled correctly.
+     * @param apiName
+     * @param handler
+     */
+    implementApi<Api extends string & keyof ServiceType['api']>(apiName: Api, handler: ApiHandler<any>): void {
+        if (this._apiHandlers[apiName as string]) {
+            throw new Error('Already exist handler for API: ' + apiName);
+        }
+        this._apiHandlers[apiName as string] = handler;
+        this.logger?.log(`API implemented succ: ${this.chalk(apiName, ['underline'])}`);
+    };
+
     // #endregion
 
     // #region Message
@@ -286,6 +303,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // #endregion
 
     // #region Transport
+
     // 到这一步已经经过类型检测
     // DataFlow 面向二进制 Payload
     // TODO 序列化过程应该是在 Transport 之内的，不同信道（HTTP、WS、Obj）序列化方式不同
@@ -293,8 +311,53 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // HTTP BUF: fetch all in body
     // WS JSON: all in json body, serviceId -> service: {'data/AddData'}
     // WS BUF: all in body
-    protected abstract _sendTransportData(transportData: TransportData): Promise<OpResult<void>>;
-    protected abstract _recvTransportData(transportData: TransportData): void;
+
+    protected _validateTransportData(transportData: TransportData) { }
+
+    /**
+     * Achieved by the implemented Connection.
+     * @param transportData Type haven't been checked, need to be done inside.
+     */
+    protected _sendTransportData(transportData: TransportData): Promise<OpResult<void>> {
+        // Validate
+        if (!this.getOption('skipSendTypeCheck')) {
+            // TODO
+        }        
+
+        // Do Send
+        return this._doSendTransportData(transportData);
+    }
+
+    /**
+     * Encode and send
+     * @param transportData Already checked the type
+     */
+    protected abstract _doSendTransportData(transportData: TransportData): Promise<OpResult<void>>;
+
+    /**
+     * Called by the implemented Connection.
+     * @param transportData Type haven't been checked, need to be done inside.
+     */
+    protected _recvTransportData(transportData: TransportData): void {
+        // Validate
+        if (!this.getOption('skipRecvTypeCheck')) {
+            // TODO
+        }
+
+        switch (transportData.type) {
+            case 'req': {
+                transportData.serviceId
+                break;
+            }
+            case 'res': {
+
+                break;
+            }
+            case 'err': {
+                break;
+            }
+        }
+    };
     // #endregion
 }
 
@@ -344,4 +407,8 @@ export interface PendingApiItem {
     onAbort?: () => void,
     onReturn?: (ret: ApiReturn<any>) => void
 }
+
+export type ApiHandler<Conn extends BaseConnection> = (call: ApiCall<any, any, Conn>) => (void | Promise<void>);
+// export type MsgHandler<Call extends MsgCall = MsgCall> = (call: Call) => void | Promise<void>;
+
 

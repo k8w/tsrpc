@@ -302,7 +302,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }
     }
 
-    protected async _handleApiCall(call: ApiCall) {
+    protected async  _handleApiCall(call: ApiCall) {
         ++this._pendingApiCallNum;
         await this._onApiCall(call);
         if (--this._pendingApiCallNum === 0) {
