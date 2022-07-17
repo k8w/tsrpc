@@ -10,7 +10,7 @@ export type TransportDataSchema = {
     sn?: uint,
     serviceId: uint,
     data: Uint8Array,
-    header?: {
+    headers?: {
         /** Exchange proto info at first request */
         protoInfo?: ProtoInfo,
         [key: string]: any
@@ -54,7 +54,7 @@ export type TransportDataSchema = {
 };
 
 export interface ProtoInfo {
-    version: string,
+    lastModified: string,
     md5: string,
     tsrpcVersion: string,
     nodeVersion?: string

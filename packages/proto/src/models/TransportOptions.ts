@@ -45,4 +45,6 @@ export interface TransportOptions {
      * ```
      */
     abortSignal?: AbortSignal;
+
+    headers: { [key: string]: any };
 }

@@ -53,9 +53,8 @@ export type ServiceDef = ApiServiceDef | MsgServiceDef;
  * @typeParam ServiceType - API request and response types, and Msg types.
  */
 export interface ServiceProto<ServiceType extends BaseServiceType = any> {
-    /** To judge which proto is newer */
-    version?: number,
-
+    /** Last modified time, e.g. "2022-07-17 16:21:15" */
+    lastModified: string,
     /** To compare whether 2 proto are the same */
     md5: string,
 

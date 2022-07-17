@@ -1,43 +1,68 @@
 import { Overwrite } from "k8w-extend-native";
+import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { Flow } from "../models/Flow";
+import { Logger, LogLevel } from "../models/Logger";
+import { OpResult } from "../models/OpResult";
 import { ApiService, ServiceMap } from "../models/ServiceMapUtil";
+import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturn } from "../proto/ApiReturn";
 import { BaseServiceType } from "../proto/BaseServiceType";
-import { TransportDataSchema } from "../proto/TransportDataSchema";
+import { ProtoInfo, TransportDataSchema, TsrpcErrorType } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
 import { BaseConnectionFlows } from "./FlowData";
 
+const PROMISE_ABORTED = new Promise<any>(rs => { });
+
+/**
+ * BaseConnection
+ * - Server have many connections (BaseConnection)
+ *   - Http/Ws/Udp Connection
+ * - Client is a BaseConnection
+ *   - Http/Ws/Udp Client
+ *     - HttpClient don't have `listenMsg` and `implementApi`
+ */
 export abstract class BaseConnection<ServiceType extends BaseServiceType = any> {
 
     declare ServiceType: ServiceType;
+
+    options?: Partial<BaseConnectionOptions>;
+    getOption<T extends keyof BaseConnectionOptions>(key: T): BaseConnectionOptions[T] {
+        return this.options?.[key] ?? defaultBaseConnectionOptions[key];
+    }
 
     /**
      * {@link Flow} to process `callApi`, `sendMsg`, buffer input/output, etc...
      */
     protected flows: BaseConnectionFlows<this>;
     serviceMap: ServiceMap;
+    logger?: Logger;
+    chalk: Chalk;
 
-    constructor(private _baseOptions: BaseConnectionOptions) {
+    constructor(options: Partial<BaseConnectionOptions>) {
+        this.options = options;
         // TODO
         // TEST
         this.serviceMap = null as any;
         this.flows = null as any;
+        this.logger = null as any;
+        this.chalk = null as any;
+        this._localProtoInfo = null!;
     }
 
     // #region API
-    protected _apiSnCounter = new Counter(1);
-    get lastSN() {
-        return this._apiSnCounter.last;
-    }
-    get nextSN() {
-        return this._apiSnCounter.getNext(true);
+
+    protected _callApiSn = new Counter(1);
+    protected _pendingApis = new Map<number, PendingApiItem>;
+    protected _apiImplementations?: Map<any, any>;
+
+    get lastSn() {
+        return this._callApiSn.last;
     }
 
-    /**
-     * Pending API Requests
-     */
-    protected _pendingApis = new Map<number, PendingApiItem>;
+    get nextSn() {
+        return this._callApiSn.getNext(true);
+    }
 
     /**
      * Send request and wait for the return
@@ -48,8 +73,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * The promise is never rejected, so you just need to process all error in one place.
      */
     async callApi<T extends string & keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
-        // Add pendingItem
-        let sn = this._apiSnCounter.getNext();
+        // Create PendingApiItem
+        let sn = this._callApiSn.getNext();
         let pendingItem: PendingApiItem = {
             sn: sn,
             abortKey: options?.abortKey,
@@ -58,69 +83,145 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         };
         this._pendingApis.set(sn, pendingItem);
 
-        // Call & Flow
-        let promise = new Promise<ApiReturn<ServiceType['api'][T]['res']>>(async rs => {
-            // Pre Call Flow
-            let pre = await this.flows.preCallApiFlow.exec({
-                apiName: apiName,
-                req: req,
-                options: options
-            }, this.logger);
-            if (!pre || pendingItem.isAborted) {
-                this.abort(pendingItem.sn);
-                return;
-            }
+        // Pre Call Flow
+        let pre = await this.flows.preCallApiFlow.exec({
+            apiName: apiName,
+            req: req,
+            options: options,
+            conn: this
+        }, this.logger);
+        if (!pre || pendingItem.isAborted) {
+            this.abort(pendingItem.sn);
+            return PROMISE_ABORTED;
+        }
 
-            // Do call (send -> wait -> recv -> return)
-            let ret: ApiReturn<ServiceType['api'][T]['res']>;
-            // return by pre flow
-            if (pre.return) {
-                ret = pre.return;
-            }
-            else {
-                // do call means it will send buffer via network
-                ret = await this._doCallApi(pre.apiName, pre.req, pre.options, pendingItem);
-            }
-            if (pendingItem.isAborted) {
-                return;
-            }
+        // Get Return
+        let ret = pre.return ?? await this._doCallApi(pre.apiName, pre.req, pendingItem, pre.options);
 
-            // Log Original Return
-            if (ret.isSucc) {
-                this.options.logApi && this.logger?.log(`[ApiRes] #${pendingItem.sn} ${apiName}`, ret.res);
-            }
-            else {
-                this.options.logApi && this.logger?.[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`[ApiErr] #${pendingItem.sn} ${apiName}`, ret.err);
-            }
+        // Aborted, skip return.
+        if (pendingItem.isAborted) {
+            return PROMISE_ABORTED;
+        }
 
-            // Pre Return Flow
-            let preReturn = await this.flows.preApiReturnFlow.exec({
-                ...pre,
-                return: ret
-            }, this.logger);
-            if (!preReturn) {
-                this.abort(pendingItem.sn);
-                return;
-            }
+        // Log Original Return
+        if (ret.isSucc) {
+            this.getOption('logApi') && this.logger?.log(`[callApi] [#${pendingItem.sn}] ${this.chalk('[Res]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.getOption('logResBody') ? ret.res : '');
+        }
+        else {
+            this.getOption('logApi') && this.logger?.[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`[callApi] [#${pendingItem.sn}] ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, ret.err);
+        }
 
-            rs(preReturn.return!);
+        // Post Flow (before return)
+        let post = await this.flows.postCallApiFlow.exec({
+            ...pre,
+            return: ret
+        }, this.logger);
+        if (!post || pendingItem.isAborted) {
+            this.abort(pendingItem.sn);
+            return PROMISE_ABORTED;
+        }
 
-            // Post Flow
-            this.flows.postApiReturnFlow.exec(preReturn, this.logger);
-        });
-
-        // Finally clear pendings
-        promise.catch().then(() => {
-            this._pendingApis.removeOne(v => v.sn === pendingItem.sn);
-        })
-
-        return promise;
+        this._pendingApis.delete(pendingItem.sn);
+        return post.return;
     }
 
-    implementApi() { }
-    abort() { }
-    abortByKey() { }
+    protected _localProtoInfo: ProtoInfo;
+    protected _remoteProtoInfo?: ProtoInfo;
+    protected async _doCallApi<T extends string & keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], pendingItem: PendingApiItem, options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
+        this.getOption('logApi') && this.logger?.log(`[callApi] [#${pendingItem.sn}] ${this.chalk('[Req]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.getOption('logReqBody') ? req : '');
+
+        // GetService
+        let service = this.serviceMap.apiName2Service[apiName as string];
+        if (!service) {
+            return {
+                isSucc: false,
+                err: new TsrpcError('Invalid api name: ' + apiName, {
+                    code: 'INVALID_API_NAME',
+                    type: TsrpcErrorType.ClientError
+                })
+            };
+        }
+        pendingItem.service = service;
+
+        // Make TransportData
+        let transportData: TransportData = {
+            type: 'req',
+            sn: this.nextSn,
+            serviceId: service.id,
+            data: req
+        }
+        if (options?.headers) {
+            transportData.headers = options.headers;
+        }
+        // Exchange Proto Info
+        if (!this._remoteProtoInfo) {
+            if (transportData.headers) {
+                transportData.headers.protoInfo = this._localProtoInfo;
+            }
+            else {
+                transportData.headers = { protoInfo: this._localProtoInfo }
+            }
+        }
+
+        // Send & Recv
+        let promiseSend = this._sendTransportData(transportData);
+        let promiseReturn = this._waitApiReturn(pendingItem, options?.timeout ?? this.getOption('apiTimeout'));
+
+        // Encode Error
+        let opSend = await promiseSend;
+        if (!opSend.isSucc) {
+            return {
+                isSucc: false,
+                err: opSend.err
+            };
+        }
+
+        // Wait ApiReturn
+        let ret = await promiseReturn;
+        return pendingItem.isAborted ? PROMISE_ABORTED : ret;
+    }
+
+    /**
+     * @param sn 
+     * @param timeout 
+     * @returns `undefined` 代表 canceled
+     */
+    protected async _waitApiReturn(pendingItem: PendingApiItem, timeout?: number): Promise<ApiReturn<any>> {
+        return new Promise<ApiReturn<any>>(rs => {
+            // Timeout
+            let timer: ReturnType<typeof setTimeout> | undefined;
+
+            if (timeout) {
+                timer = setTimeout(() => {
+                    timer = undefined;
+                    this._pendingApis.delete(pendingItem.sn);
+                    rs({
+                        isSucc: false,
+                        err: new TsrpcError('Request Timeout', {
+                            type: TsrpcErrorType.NetworkError,
+                            code: 'TIMEOUT'
+                        })
+                    })
+                }, timeout);
+            }
+
+            // Listener (trigger by `this._onRecvBuf`)
+            pendingItem.onReturn = ret => {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = undefined;
+                }
+                this._pendingApis.delete(pendingItem.sn);
+                rs(ret);
+            }
+        });
+    }
+
+    abort(sn: number) { }
+    abortByKey(abortKey: string) { }
     abortAll() { }
+
+    implementApi() { }
     // #endregion
 
     // #region Message
@@ -138,22 +239,37 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // HTTP BUF: fetch all in body
     // WS JSON: all in json body, serviceId -> service: {'data/AddData'}
     // WS BUF: all in body
-    abstract sendTransportData(transportData: TransportData): void;
-    abstract recvTransportData(transportData: TransportData): void;
+    protected abstract _sendTransportData(transportData: TransportData): Promise<OpResult<void>>;
+    protected abstract _recvTransportData(transportData: TransportData): void;
     // #endregion
 }
 
+export const defaultBaseConnectionOptions: BaseConnectionOptions = {
+
+} as any
+
 export interface BaseConnectionOptions {
-    // Validate
-    skipReqValidate?: boolean;
-    skipResValidate?: boolean;
-    skipMsgValidate?: boolean;
+    // Log
+    logger: Logger,
+    chalk: Chalk,
+    logLevel: LogLevel,
+    logApi: boolean,
+    logMsg: boolean,
+    logReqBody: boolean,
+    logResBody: boolean,
+    debugBuf: boolean,
+
+    // Runtime Type Check
+    skipSendTypeCheck: boolean;
+    skipRecvTypeCheck: boolean;
 
     // Serialization
-    jsonEncoder?: any;
-    jsonDecoder?: any;
-    bufferEncoder?: any;
-    bufferDecoder?: any;
+    jsonEncoder: any;
+    jsonDecoder: any;
+    bufferEncoder: any;
+    bufferDecoder: any;
+
+    apiTimeout: number; // 兼容 timeout
 }
 
 /**
@@ -161,7 +277,8 @@ export interface BaseConnectionOptions {
  * The transport-layer should implement its serialization and transportation.
  */
 export type TransportData = TransportData_RPC | TransportData_NonRPC;
-export type TransportData_RPC = Overwrite<TransportDataSchema & { type: 'req' | 'res' | 'err' | 'msg' }, { data: any }>;
+export type TransportData_RPC = Overwrite<TransportDataSchema & { type: 'req' | 'res' | 'err' }, { data: any, sn: number }>
+    | Overwrite<TransportDataSchema & { type: 'msg' }, { data: any }>;
 export type TransportData_NonRPC = TransportDataSchema & { type: Exclude<TransportDataSchema['type'], TransportData_RPC['type']> };
 
 export interface PendingApiItem {
@@ -173,3 +290,4 @@ export interface PendingApiItem {
     onAbort?: () => void,
     onReturn?: (ret: ApiReturn<any>) => void
 }
+
