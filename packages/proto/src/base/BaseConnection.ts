@@ -3,6 +3,7 @@ import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { Flow } from "../models/Flow";
 import { Logger, LogLevel } from "../models/Logger";
+import { MsgHandlerManager } from "../models/MsgHandlerManager";
 import { OpResult } from "../models/OpResult";
 import { ApiService, ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
@@ -12,6 +13,7 @@ import { ProtoInfo, TransportDataSchema, TsrpcErrorType } from "../proto/Transpo
 import { TsrpcError } from "../proto/TsrpcError";
 import { ApiCall } from "./ApiCall";
 import { BaseConnectionFlows } from "./FlowData";
+import { MsgCall } from "./MsgCall";
 
 const PROMISE_ABORTED = new Promise<any>(rs => { });
 
@@ -157,21 +159,13 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             serviceId: service.id,
             data: req
         }
-        if (options?.headers) {
-            transportData.headers = options.headers;
-        }
         // Exchange Proto Info
         if (!this._remoteProtoInfo) {
-            if (transportData.headers) {
-                transportData.headers.protoInfo = this._localProtoInfo;
-            }
-            else {
-                transportData.headers = { protoInfo: this._localProtoInfo }
-            }
+            transportData.protoInfo = this._localProtoInfo;
         }
 
         // Send & Recv
-        let promiseSend = this._sendTransportData(transportData);
+        let promiseSend = this._sendTransportData(transportData, options);
         let promiseReturn = this._waitApiReturn(pendingItem, options?.timeout ?? this.getOption('apiTimeout'));
 
         // Encode Error
@@ -296,10 +290,116 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // #endregion
 
     // #region Message
-    sendMsg() { }
-    listenMsg() { }
-    unlistenMsg() { }
-    unlistenMsgAll() { }
+
+    protected _msgHandlers = new MsgHandlerManager();
+
+    /**
+     * Send message, without response, not ensuring the server is received and processed correctly.
+     * @param msgName
+     * @param msg - Message body
+     * @param options - Transport options
+     * @returns If the promise is resolved, it means the request is sent to system kernel successfully.
+     * Notice that not means the server received and processed the message correctly.
+     */
+    async sendMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options?: TransportOptions): Promise<{ isSucc: true } | { isSucc: false, err: TsrpcError }> {
+        let op = await this._doSendMsg(msgName, msg, options);
+        if (!op.isSucc) {
+            this.logger?.error(this.chalk('[SendMsgErr]', ['error']), op.err);
+        }
+        return op;
+    }
+    protected async _doSendMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options?: TransportOptions): Promise<{ isSucc: true } | { isSucc: false, err: TsrpcError }> {
+        // Pre Flow
+        let pre = await this.flows.preSendMsgFlow.exec({
+            msgName: msgName,
+            msg: msg,
+            options: options,
+            conn: this
+        }, this.logger);
+        if (!pre) {
+            return PROMISE_ABORTED;
+        }
+        msgName = pre.msgName as any;
+        msg = pre.msg as any;
+        options = pre.options;
+
+        // The msg is not prevented by pre flow
+        this.getOption('logMsg') && this.logger?.log(`[SendMsg]`, msgName, msg);
+
+        // GetService
+        let service = this.serviceMap.msgName2Service[msgName as string];
+        if (!service) {
+            return {
+                isSucc: false,
+                err: new TsrpcError('Invalid msg name: ' + msgName, {
+                    code: 'INVALID_MSG_NAME',
+                    type: TsrpcErrorType.ClientError
+                })
+            };
+        }
+
+        // Encode & Send
+        let opSend = await this._sendTransportData({
+            type: 'msg',
+            serviceId: service.id,
+            data: msg
+        }, options)
+        if (!opSend.isSucc) {
+            return opSend;
+        }
+
+        return { isSucc: true }
+    }
+
+    /**
+     * Add a message handler,
+     * duplicate handlers to the same `msgName` would be ignored.
+     * @param msgName
+     * @param handler
+     * @returns
+     */
+    listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<this, T>): MsgHandler<this, T>;
+    listenMsg(msgName: RegExp, handler: MsgHandler<this, any>): MsgHandler<this, any>;
+    listenMsg(msgName: string | RegExp, handler: MsgHandler<this, any>): MsgHandler<this, any> {
+        if (msgName instanceof RegExp) {
+            Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
+                this._msgHandlers.addHandler(k, handler)
+            })
+        }
+        else {
+            this._msgHandlers.addHandler(msgName, handler)
+        }
+
+        return handler;
+    }
+    /**
+     * Remove a message handler
+     */
+    unlistenMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp, handler: Function) {
+        if (msgName instanceof RegExp) {
+            Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
+                this._msgHandlers.removeHandler(k, handler)
+            })
+        }
+        else {
+            this._msgHandlers.removeHandler(msgName, handler)
+        }
+    }
+
+    /**
+     * Remove all handlers from a message
+     */
+    unlistenMsgAll<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp) {
+        if (msgName instanceof RegExp) {
+            Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
+                this._msgHandlers.removeAllHandlers(k)
+            })
+        }
+        else {
+            this._msgHandlers.removeAllHandlers(msgName)
+        }
+    }
+
     // #endregion
 
     // #region Transport
@@ -318,7 +418,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Achieved by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
-    protected _sendTransportData(transportData: TransportData): Promise<OpResult<void>> {
+    protected _sendTransportData(transportData: TransportData, options: TransportOptions | undefined): Promise<OpResult<void>> {
         // Validate
         if (!this.getOption('skipSendTypeCheck')) {
             // TODO
@@ -413,6 +513,5 @@ export interface PendingApiItem {
 }
 
 export type ApiHandler<Conn extends BaseConnection> = (call: ApiCall<any, any, Conn>) => (void | Promise<void>);
-// export type MsgHandler<Call extends MsgCall = MsgCall> = (call: Call) => void | Promise<void>;
-
-
+export type MsgHandler<Conn extends BaseConnection, MsgName extends keyof Conn['ServiceType']['msg']>
+    = (call: MsgCall<MsgName, Conn>) => void | Promise<void>;

@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "build": "rm -rf dist && rollup -c",
-    "genTransportProto": "cd src/proto && npx tsbuffer-cli proto -i TransportData.ts -o TransportDataProto_temp.ts"
+    "genTransportProto": "cd src/proto && npx tsbuffer-cli proto -i TransportDataSchema.ts -o TransportDataProto_temp.ts"
   },
   "repository": {
     "type": "git",

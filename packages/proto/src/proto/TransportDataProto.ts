@@ -42,26 +42,10 @@ export const TransportDataProto = {
             },
             {
               "id": 4,
-              "name": "header",
+              "name": "protoInfo",
               "type": {
-                "type": "Interface",
-                "properties": [
-                  {
-                    "id": 0,
-                    "name": "protoInfo",
-                    "type": {
-                      "type": "Reference",
-                      "target": "ProtoInfo"
-                    },
-                    "optional": true
-                  }
-                ],
-                "indexSignature": {
-                  "keyType": "String",
-                  "type": {
-                    "type": "Any"
-                  }
-                }
+                "type": "Reference",
+                "target": "ProtoInfo"
               },
               "optional": true
             }
@@ -100,10 +84,10 @@ export const TransportDataProto = {
             },
             {
               "id": 3,
-              "name": "header",
+              "name": "protoInfo",
               "type": {
                 "type": "Reference",
-                "target": "ApiReturnHeader"
+                "target": "ProtoInfo"
               },
               "optional": true
             }
@@ -142,10 +126,10 @@ export const TransportDataProto = {
             },
             {
               "id": 3,
-              "name": "header",
+              "name": "protoInfo",
               "type": {
                 "type": "Reference",
-                "target": "ApiReturnHeader"
+                "target": "ProtoInfo"
               },
               "optional": true
             }
@@ -180,20 +164,6 @@ export const TransportDataProto = {
                 "type": "Buffer",
                 "arrayType": "Uint8Array"
               }
-            },
-            {
-              "id": 3,
-              "name": "header",
-              "type": {
-                "type": "Interface",
-                "indexSignature": {
-                  "keyType": "String",
-                  "type": {
-                    "type": "Any"
-                  }
-                }
-              },
-              "optional": true
             }
           ]
         }
@@ -291,7 +261,7 @@ export const TransportDataProto = {
     "properties": [
       {
         "id": 0,
-        "name": "version",
+        "name": "lastModified",
         "type": {
           "type": "String"
         }
@@ -319,34 +289,6 @@ export const TransportDataProto = {
         "optional": true
       }
     ]
-  },
-  "ApiReturnHeader": {
-    "type": "Interface",
-    "properties": [
-      {
-        "id": 0,
-        "name": "protoInfo",
-        "type": {
-          "type": "Reference",
-          "target": "ProtoInfo"
-        },
-        "optional": true
-      },
-      {
-        "id": 1,
-        "name": "warning",
-        "type": {
-          "type": "String"
-        },
-        "optional": true
-      }
-    ],
-    "indexSignature": {
-      "keyType": "String",
-      "type": {
-        "type": "Any"
-      }
-    }
   },
   "TsrpcErrorData": {
     "type": "Interface",

@@ -10,33 +10,29 @@ export type TransportDataSchema = {
     sn?: uint,
     serviceId: uint,
     data: Uint8Array,
-    headers?: {
-        /** Exchange proto info at first request */
-        protoInfo?: ProtoInfo,
-        [key: string]: any
-    }
+    /** Exchange proto info at first request */
+    protoInfo?: ProtoInfo
 } | {
     /** API Response */
     type: 'res',
     /** Short connection don't need */
     sn?: uint,
     data: Uint8Array,
-    header?: ApiReturnHeader
+    /** Exchange proto info if get a 'protoInfo' request header */
+    protoInfo?: ProtoInfo,
 } | {
     /** API Error */
     type: 'err',
     /** Short connection don't need */
     sn?: uint,
     error: TsrpcErrorData,
-    header?: ApiReturnHeader
+    /** Exchange proto info if get a 'protoInfo' request header */
+    protoInfo?: ProtoInfo,
 } | {
     /** Message */
     type: 'msg',
     serviceId: uint,
-    data: Uint8Array,
-    header?: {
-        [key: string]: any
-    }
+    data: Uint8Array
 } | {
     type: 'heartbeat',
     sn: uint
@@ -58,14 +54,6 @@ export interface ProtoInfo {
     md5: string,
     tsrpcVersion: string,
     nodeVersion?: string
-}
-
-export interface ApiReturnHeader {
-    /** Exchange proto info if get a 'protoInfo' request header */
-    protoInfo?: ProtoInfo,
-    /** Warning message (like proto version is not the same), would `console.warn` by client */
-    warning?: string,
-    [key: string]: any
 }
 
 export interface TsrpcErrorData {
