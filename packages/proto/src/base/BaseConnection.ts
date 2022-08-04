@@ -412,16 +412,21 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // WS JSON: all in json body, serviceId -> service: {'data/AddData'}
     // WS BUF: all in body
 
-    protected _validateTransportData(transportData: TransportData) { }
+    protected _validateTransportData(transportData: TransportData): OpResult<void> {
+        throw new Error('TODO')
+    }
 
     /**
      * Achieved by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
-    protected _sendTransportData(transportData: TransportData, options: TransportOptions | undefined): Promise<OpResult<void>> {
+    protected async _sendTransportData(transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
         // Validate
         if (!this.getOption('skipSendTypeCheck')) {
-            // TODO
+            let op = await this._validateTransportData(transportData);
+            if (!op.isSucc) {
+                return op;
+            }
         }
 
         // Do Send
@@ -430,7 +435,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     /**
      * Encode and send
-     * @param transportData Already checked the type
+     * @param transportData Type has been checked already
      */
     protected abstract _doSendTransportData(transportData: TransportData): Promise<OpResult<void>>;
 
@@ -438,10 +443,13 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Called by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
-    protected _recvTransportData(transportData: TransportData): void {
+    protected async _recvTransportData(transportData: TransportData): void {
         // Validate
         if (!this.getOption('skipRecvTypeCheck')) {
-            // TODO
+            let op = await this._validateTransportData(transportData);
+            if (!op.isSucc) {
+                return;
+            }
         }
 
         switch (transportData.type) {
