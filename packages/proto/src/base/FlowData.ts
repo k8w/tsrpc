@@ -31,7 +31,7 @@ export interface BaseConnectionFlows<Conn extends BaseConnection<any>> {
 
     /**
      * Duplex Message Flows
-     * sendMsg() -> 【preSendMsgFlow】 -> send data
+     * sendMsg() -> 【preSendMsgFlow】 -> send data -> 【postSendMsgFlow】
      * recv MsgCall -> 【preRecvMsgFlow】 -> msg listeners
      */
     preSendMsgFlow: Flow<SendMsgFlowData<Conn>>,
