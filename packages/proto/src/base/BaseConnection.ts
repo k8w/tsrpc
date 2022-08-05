@@ -440,23 +440,28 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         if (!this.getOption('skipRecvTypeCheck')) {
             let op = await this._validateTransportData(transportData);
             if (!op.isSucc) {
+                // TODO Log
                 return;
             }
         }
 
         switch (transportData.type) {
             case 'req': {
+                // TODO API Handler
                 transportData.serviceId
                 break;
             }
             case 'res':
             case 'err': {
+                // TODO pendingApiItem
                 break;
             }
             case 'msg': {
+                // TODO msgHandler.emit
                 break;
             }
             case 'heartbeat': {
+                // TODO heartbeat manager
                 break;
             }
 
