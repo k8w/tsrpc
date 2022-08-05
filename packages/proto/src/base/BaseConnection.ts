@@ -1,9 +1,9 @@
 import { Overwrite } from "k8w-extend-native";
 import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
+import { EventEmitter } from "../models/EventEmitter";
 import { Flow } from "../models/Flow";
 import { Logger, LogLevel } from "../models/Logger";
-import { MsgHandlerManager } from "../models/MsgHandlerManager";
 import { OpResult } from "../models/OpResult";
 import { ApiService, ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
@@ -291,7 +291,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // #region Message
 
-    protected _msgHandlers = new MsgHandlerManager();
+    protected _msgHandlers = new EventEmitter<ServiceType['msg']>();
 
     /**
      * Send message, without response, not ensuring the server is received and processed correctly.
@@ -360,35 +360,35 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param handler
      * @returns
      */
-    onMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<this, T>): MsgHandler<this, T>;
-    onMsg(msgName: RegExp, handler: MsgHandler<this, keyof ServiceType['msg']>): MsgHandler<this, any>;
-    onMsg(msgName: string | RegExp, handler: MsgHandler<this, any>): MsgHandler<this, any> {
+    onMsg<T extends string & keyof ServiceType['msg'], U extends MsgHandler<this, T>>(msgName: T | RegExp, handler: U, context?: any): U {
         if (msgName instanceof RegExp) {
             Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
-                this._msgHandlers.addHandler(k, handler)
+                this._msgHandlers.on(k, handler, context)
             })
+            return handler;
         }
         else {
-            this._msgHandlers.addHandler(msgName, handler)
+            return this._msgHandlers.on(msgName, handler, context)
         }
-
-        return handler;
     }
-    onceMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<this, T>): MsgHandler<this, T> {
-        // TODO
-        throw new Error('TODO')
+
+    onceMsg<T extends string & keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<this, T>, context?: any): MsgHandler<this, T> {
+        return this._msgHandlers.once(msgName, handler, context);
     };
+
     /**
      * Remove a message handler
      */
-    offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp, handler?: Function) {
+    offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp): void;
+    offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp, handler: Function, context?: any): void;
+    offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp, handler?: Function, context?: any) {
         if (msgName instanceof RegExp) {
             Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
-                this._msgHandlers.removeHandler(k, handler)
+                handler ? this._msgHandlers.off(k, handler, context) : this._msgHandlers.off(k)
             })
         }
         else {
-            this._msgHandlers.removeHandler(msgName, handler)
+            handler ? this._msgHandlers.off(msgName, handler, context) : this._msgHandlers.off(msgName)
         }
     }
 
