@@ -4,6 +4,7 @@
     "lerna": "^5.1.8"
   },
   "scripts": {
+    "init": "npm i && lerna bootstrap",
     "test": "lerna run test",
     "build": "lerna run build",
     "publish:dev": "",

@@ -358,9 +358,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param handler
      * @returns
      */
-    listenMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<this, T>): MsgHandler<this, T>;
-    listenMsg(msgName: RegExp, handler: MsgHandler<this, any>): MsgHandler<this, any>;
-    listenMsg(msgName: string | RegExp, handler: MsgHandler<this, any>): MsgHandler<this, any> {
+    onMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<this, T>): MsgHandler<this, T>;
+    onMsg(msgName: RegExp, handler: MsgHandler<this, keyof ServiceType['msg']>): MsgHandler<this, any>;
+    onMsg(msgName: string | RegExp, handler: MsgHandler<this, any>): MsgHandler<this, any> {
         if (msgName instanceof RegExp) {
             Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
                 this._msgHandlers.addHandler(k, handler)
@@ -372,10 +372,14 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         return handler;
     }
+    onceMsg<T extends keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<this, T>): MsgHandler<this, T> {
+        // TODO
+        throw new Error('TODO')
+    };
     /**
      * Remove a message handler
      */
-    unlistenMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp, handler: Function) {
+    offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp, handler?: Function) {
         if (msgName instanceof RegExp) {
             Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
                 this._msgHandlers.removeHandler(k, handler)
@@ -383,20 +387,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
         else {
             this._msgHandlers.removeHandler(msgName, handler)
-        }
-    }
-
-    /**
-     * Remove all handlers from a message
-     */
-    unlistenMsgAll<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp) {
-        if (msgName instanceof RegExp) {
-            Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
-                this._msgHandlers.removeAllHandlers(k)
-            })
-        }
-        else {
-            this._msgHandlers.removeAllHandlers(msgName)
         }
     }
 
