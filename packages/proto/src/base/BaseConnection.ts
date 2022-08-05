@@ -520,3 +520,8 @@ export interface PendingApiItem {
 export type ApiHandler<Conn extends BaseConnection> = (call: ApiCall<any, any, Conn>) => (void | Promise<void>);
 export type MsgHandler<Conn extends BaseConnection, MsgName extends keyof Conn['ServiceType']['msg']>
     = (call: MsgCall<MsgName, Conn>) => void | Promise<void>;
+
+export interface IHeartbeatManager {
+    // TODO
+    // TCP / UDP 机制不同
+}
