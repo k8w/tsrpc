@@ -1,8 +1,11 @@
 # CHANGELOG
 
-## [3.4.2-dev.-1] - 2022-06-28
+## [3.4.2] - 2022-06-28
 ### Added
 - New options `logConnect` for `WsServer`
+- Protect `WebSocketProxy.onClose` executed duplicately.
+### Fixed
+- Bug: `WebSocketProxy.onClose` is not executed when heartbeat timeout when WIFI is broken
 
 ## [3.4.1] - 2022-06-25
 ### Added
