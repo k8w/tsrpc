@@ -15,7 +15,7 @@ import { ApiCall } from "./ApiCall";
 import { BaseConnectionFlows } from "./FlowData";
 import { MsgCall } from "./MsgCall";
 
-const PROMISE_ABORTED = new Promise<any>(rs => { });
+export const PROMISE_ABORTED = new Promise<any>(rs => { });
 
 /**
  * BaseConnection
@@ -339,16 +339,18 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
 
         // Encode & Send
-        let opSend = await this._sendTransportData({
+        let opResult = await this._sendTransportData({
             type: 'msg',
             serviceId: service.id,
             data: msg
         }, options)
-        if (!opSend.isSucc) {
-            return opSend;
+
+        // Post Flow
+        if (opResult.isSucc) {
+            this.flows.postSendMsgFlow.exec(pre!, this.logger);
         }
 
-        return { isSucc: true }
+        return opResult;
     }
 
     /**

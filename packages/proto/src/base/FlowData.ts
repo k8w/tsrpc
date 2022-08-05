@@ -34,7 +34,8 @@ export interface BaseConnectionFlows<Conn extends BaseConnection<any>> {
      * sendMsg() -> 【preSendMsgFlow】 -> send data
      * recv MsgCall -> 【preRecvMsgFlow】 -> msg listeners
      */
-    preSendMsgFlow: Flow<PreSendMsgFlowData<Conn>>,
+    preSendMsgFlow: Flow<SendMsgFlowData<Conn>>,
+    postSendMsgFlow: Flow<SendMsgFlowData<Conn>>,
     preRecvMsgFlow: Flow<PreRecvMsgFlowData<Conn>>,
 
     /**
@@ -82,7 +83,7 @@ export type PostApiCallFlowData<Conn extends BaseConnection<any>> = {
     }
 }[keyof Conn['ServiceType']['api']];
 
-export type PreSendMsgFlowData<Conn extends BaseConnection<any>> = {
+export type SendMsgFlowData<Conn extends BaseConnection<any>> = {
     [K in keyof Conn['ServiceType']['msg']]: {
         msgName: K & string,
         msg: Conn['ServiceType']['msg'][K],
