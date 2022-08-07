@@ -9,7 +9,7 @@ export type TransportDataSchema = {
     /** Short connection don't need */
     sn?: uint,
     serviceId: uint,
-    data: Uint8Array,
+    req: Uint8Array,
     /** Exchange proto info at first request */
     protoInfo?: ProtoInfo
 } | {
@@ -17,7 +17,7 @@ export type TransportDataSchema = {
     type: 'res',
     /** Short connection don't need */
     sn?: uint,
-    data: Uint8Array,
+    res: Uint8Array,
     /** Exchange proto info if get a 'protoInfo' request header */
     protoInfo?: ProtoInfo,
 } | {
@@ -25,14 +25,14 @@ export type TransportDataSchema = {
     type: 'err',
     /** Short connection don't need */
     sn?: uint,
-    error: TsrpcErrorData,
+    err: TsrpcErrorData,
     /** Exchange proto info if get a 'protoInfo' request header */
     protoInfo?: ProtoInfo,
 } | {
     /** Message */
     type: 'msg',
     serviceId: uint,
-    data: Uint8Array
+    msg: Uint8Array
 } | {
     type: 'heartbeat',
     sn: uint

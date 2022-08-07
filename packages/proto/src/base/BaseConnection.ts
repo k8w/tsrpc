@@ -1,4 +1,3 @@
-import { Overwrite } from "k8w-extend-native";
 import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { EventEmitter } from "../models/EventEmitter";
@@ -9,7 +8,8 @@ import { ApiService, ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturn } from "../proto/ApiReturn";
 import { BaseServiceType } from "../proto/BaseServiceType";
-import { ProtoInfo, TransportDataSchema, TsrpcErrorType } from "../proto/TransportDataSchema";
+import { TransportData } from "../proto/TransportData";
+import { ProtoInfo, TsrpcErrorType } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
 import { ApiCall } from "./ApiCall";
 import { BaseConnectionFlows } from "./FlowData";
@@ -94,8 +94,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             })
         }
 
-        // Pre Call Flow
-        let pre = await this.flows.preCallApiFlow.exec({
+        // Pre Flow
+        let pre = await this.flows.preSendReqFlow.exec({
             apiName: apiName,
             req: req,
             options: options,
@@ -156,8 +156,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         let transportData: TransportData = {
             type: 'req',
             sn: this.nextSn,
-            serviceId: service.id,
-            data: req
+            apiName: apiName,
+            req: req
         }
         // Exchange Proto Info
         if (!this._remoteProtoInfo) {
@@ -341,8 +341,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Encode & Send
         let opResult = await this._sendTransportData({
             type: 'msg',
-            serviceId: service.id,
-            data: msg
+            msgName: msgName,
+            msg: msg
         }, options)
 
         // Post Flow
@@ -435,7 +435,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Called by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
-    protected async _recvTransportData(transportData: TransportData): void {
+    protected async _recvTransportData(transportData: TransportData) {
         // Validate
         if (!this.getOption('skipRecvTypeCheck')) {
             let op = await this._validateTransportData(transportData);
@@ -445,14 +445,34 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             }
         }
 
+        if ((transportData.type === 'req' || transportData.type === 'ret') && transportData.protoInfo) {
+            this._remoteProtoInfo = transportData.protoInfo;
+        }
+
         switch (transportData.type) {
             case 'req': {
                 // TODO API Handler
-                transportData.serviceId
+                let service = this.serviceMap.apiName2Service[transportData.apiName];
+                if (!service) {
+                    // TODO proto 版本不一致时的友好提示
+                    this._sendTransportData({
+                        type: 'ret',
+                        sn: transportData.sn,
+                        protoInfo: transportData.protoInfo ? this._localProtoInfo : undefined,
+                        ret: {
+                            isSucc: false,
+                            err: new TsrpcError(`Invalid api name: '${transportData.apiName}'`)
+                        }
+                    })
+                    return;
+                }
+
+                // Make Call
+                let call = new ApiCall(this, transportData.apiName);
+
                 break;
             }
-            case 'res':
-            case 'err': {
+            case 'ret': {
                 // TODO pendingApiItem
                 break;
             }
@@ -467,6 +487,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         }
     };
+
     // #endregion
 }
 
@@ -497,15 +518,6 @@ export interface BaseConnectionOptions {
 
     apiTimeout: number; // 兼容 timeout
 }
-
-/**
- * Basic transport unit, for transport-indepentent architecture.
- * The transport-layer should implement its serialization and transportation.
- */
-export type TransportData = TransportData_RPC | TransportData_NonRPC;
-export type TransportData_RPC = Overwrite<TransportDataSchema & { type: 'req' | 'res' | 'err' }, { data: any, sn: number }>
-    | Overwrite<TransportDataSchema & { type: 'msg' }, { data: any }>;
-export type TransportData_NonRPC = TransportDataSchema & { type: Exclude<TransportDataSchema['type'], TransportData_RPC['type']> };
 
 export interface PendingApiItem {
     sn: number,
