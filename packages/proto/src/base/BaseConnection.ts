@@ -429,6 +429,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 const service = this.serviceMap.apiName2Service[transportData.apiName];
                 if (!service) {
                     // TODO
+                    // call.error('Undefined api name: xxxxx')
                     // this._sendTransportData({});
                     return;
                 }
