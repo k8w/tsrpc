@@ -5,7 +5,6 @@ logs
 .rpt2_cache
 .nyc_output
 coverage
-docs
 temp
 lib
 .ds_store
