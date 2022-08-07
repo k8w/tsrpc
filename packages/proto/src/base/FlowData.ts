@@ -15,9 +15,9 @@ export interface BaseConnectionFlows<Conn extends BaseConnection<any>> {
      *   -> 【preRecvRetFlow】
      * -> return
      */
-    preSendReqFlow: Flow<SendReqFlowData<Conn>>,
-    postSendReqFlow: Flow<SendReqFlowData<Conn>>,
-    preRecvRetFlow: Flow<RecvRetFlowData<Conn>>,
+    preSendReqFlow: Flow<PreSendReqFlowData<Conn>>,
+    postSendReqFlow: Flow<PostSendReqFlowData<Conn>>,
+    preRecvRetFlow: Flow<PreRecvRetFlowData<Conn>>,
 
     /**
      * API Server Flows (ApiCall)
@@ -29,7 +29,7 @@ export interface BaseConnectionFlows<Conn extends BaseConnection<any>> {
      *          -> send response
      *          -> 【postSendRetFlow】
      */
-    preRecvReqFlow: Flow<RecvReqFlow<Conn>>,
+    preRecvReqFlow: Flow<PreRecvReqFlow<Conn>>,
     preSendRetFlow: Flow<SendRetFlow<Conn>>,
     postSendRetFlow: Flow<SendRetFlow<Conn>>,
 
@@ -52,44 +52,40 @@ export interface BaseConnectionFlows<Conn extends BaseConnection<any>> {
     // preRecvTransportDataFlow: Flow<TransportDataFlowData<Conn>>,
 }
 
-export type SendReqFlowData<Conn extends BaseConnection<any>> = {
+export type PreSendReqFlowData<Conn extends BaseConnection<any>> = {
     [K in keyof Conn['ServiceType']['api']]: {
         apiName: K & string,
         req: Conn['ServiceType']['api'][K]['req'],
         ret?: ApiReturn<Conn['ServiceType']['api'][K]['res']>,
-        options?: TransportOptions,
-        readonly conn: Conn,
-
-        /** @deprecated Use `ret` instead */
-        return?: ApiReturn<Conn['ServiceType']['api'][K]['res']>,
+        readonly conn: Conn
     }
 }[keyof Conn['ServiceType']['api']];
 
-export type RecvRetFlowData<Conn extends BaseConnection<any>> = {
+export type PostSendReqFlowData<Conn extends BaseConnection<any>> = {
+    [K in keyof Conn['ServiceType']['api']]: {
+        apiName: K & string,
+        req: Conn['ServiceType']['api'][K]['req'],
+        readonly conn: Conn
+    }
+}[keyof Conn['ServiceType']['api']];
+
+export type PreRecvRetFlowData<Conn extends BaseConnection<any>> = {
     [K in keyof Conn['ServiceType']['api']]: {
         apiName: K & string,
         req: Conn['ServiceType']['api'][K]['req'],
         ret: ApiReturn<Conn['ServiceType']['api'][K]['res']>,
-        options?: TransportOptions,
-        readonly conn: Conn,
-
-        /** @deprecated Use `ret` instead */
-        return: ApiReturn<Conn['ServiceType']['api'][K]['res']>,
+        readonly conn: Conn
     }
 }[keyof Conn['ServiceType']['api']];
 
-export type RecvReqFlow<Conn extends BaseConnection<any>> = {
-    [K in keyof Conn['ServiceType']['api']]: {
-        call: ApiCall<Conn['ServiceType']['api'][K]['req'], Conn['ServiceType']['api'][K]['res'], Conn>,
-        readonly conn: Conn,
-    }
+export type PreRecvReqFlow<Conn extends BaseConnection<any>> = {
+    [K in keyof Conn['ServiceType']['api']]: ApiCall<Conn['ServiceType']['api'][K]['req'], Conn['ServiceType']['api'][K]['res'], Conn>
 }[keyof Conn['ServiceType']['api']];
 
 export type SendRetFlow<Conn extends BaseConnection<any>> = {
     [K in keyof Conn['ServiceType']['api']]: {
         call: ApiCall<Conn['ServiceType']['api'][K]['req'], Conn['ServiceType']['api'][K]['res'], Conn> & {
             ret: ApiReturn<Conn['ServiceType']['api'][K]['res']>
-
             /** @deprecated Use `ret` instead */
             return: ApiReturn<Conn['ServiceType']['api'][K]['res']>
         },
@@ -101,7 +97,6 @@ export type SendMsgFlowData<Conn extends BaseConnection<any>> = {
     [K in keyof Conn['ServiceType']['msg']]: {
         msgName: K & string,
         msg: Conn['ServiceType']['msg'][K],
-        options?: TransportOptions,
         readonly conn: Conn,
     }
 }[keyof Conn['ServiceType']['msg']];
@@ -118,9 +113,3 @@ export type RecvMsgFlowData<Conn extends BaseConnection<any>> = {
 //     transportData: TransportData,
 //     readonly conn: Conn,
 // };
-
-
-// TEST
-export type ApiFlowData<Conn extends BaseConnection<any>> = {
-    [K in keyof Conn['ServiceType']['api']]: ApiCall<Conn['ServiceType']['api'][K]['req'], Conn['ServiceType']['api'][K]['res'], Conn>
-}[keyof Conn['ServiceType']['api']];

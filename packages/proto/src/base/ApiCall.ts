@@ -1,6 +1,7 @@
 import { Logger } from "../models/Logger";
 import { ApiService } from "../models/ServiceMapUtil";
 import { ApiReturn } from "../proto/ApiReturn";
+import { TransportData } from "../proto/TransportData";
 import { BaseConnection } from "./BaseConnection";
 
 // 每一次 Api 调用都会生成一个 ApiCall（Server & Client）
@@ -11,15 +12,15 @@ import { BaseConnection } from "./BaseConnection";
 
 export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseConnection> {
 
+    public req!: Req;
+    public sn!: number;
     ret?: ApiReturn<Res>;
     logger?: Logger;
 
     constructor(
         public conn: Conn,
-        public service: ApiService,
-        public req: Req,
-        public sn: number,
-        public readonly role: 'server' | 'client'
+        public transportData: TransportData & { type: 'req' },
+        public readonly service: ApiService
     ) {
         // TODO
         // log [ApiReq]
@@ -37,34 +38,21 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
     succ() {
         // this.conn['_sendTransportData']({type: 'ret'});
         // log [ApiRes]
+        // TODO protoInfo
     }
 
-    error() {
+    error(message: string, params?: any) {
         // this.conn['_sendTransportData']({type: 'ret'});
         // log [ApiErr]
+        // this.conn['_sendTransportData']({
+        //     type: 'ret',
+        //     sn: transportData.sn,
+        //     // TODO
+        //     ret: { isSucc: false, err: new TsrpcError('xxx') },
+        //     protoInfo: transportData.protoInfo && this._localProtoInfo
+        // });
     }
 
+    protected _sendRet(){}
+
 }
-
-// 双向调用时如何区分 log
-
-// 不好
-// [RecvReq] #1 ...
-// [SendReq] #1 ...
-// [RecvRet] #1 ...
-// [SendRet] #1 ...
-
-// 好
-// Server [ApiReq] #1 ...
-// Client [ApiReq] #1 ...
-// Client [ApiRes] #1 ...
-// Server [ApiRes] #1 ...
-
-// xxx.preSendReqFlow.push(call => {
-//     if (call.req.xxx && call.service.xxx) {
-//         call.error('aaaaa');
-//         return undefined;
-//     }
-
-//     return call;
-// })

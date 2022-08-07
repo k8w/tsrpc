@@ -4,7 +4,7 @@ import { EventEmitter } from "../models/EventEmitter";
 import { Flow } from "../models/Flow";
 import { Logger, LogLevel } from "../models/Logger";
 import { OpResult } from "../models/OpResult";
-import { ApiService, ServiceMap } from "../models/ServiceMapUtil";
+import { ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturn } from "../proto/ApiReturn";
 import { BaseServiceType } from "../proto/BaseServiceType";
@@ -77,13 +77,17 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * The promise is never rejected, so you just need to process all error in one place.
      */
     async callApi<T extends string & keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
-        // Create PendingApiItem
+        // SN & Log
         let sn = this._callApiSn.getNext();
+        this.getOption('logApi') && this.logger?.log(`[CallApi] [#${sn}] ${this.chalk('[Req]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.getOption('logReqBody') ? req : '');
+
+        // Create PendingApiItem
         let pendingItem: PendingApiItem = {
-            sn: sn,
+            sn,
+            apiName,
+            req,
             abortKey: options?.abortKey,
             abortSignal: options?.abortSignal,
-            service: this.serviceMap.apiName2Service[apiName as string]!
         };
         this._pendingApis.set(sn, pendingItem);
 
@@ -94,69 +98,52 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             })
         }
 
-        // Pre Flow
-        let pre = await this.flows.preSendReqFlow.exec({
-            apiName: apiName,
-            req: req,
-            options: options,
-            conn: this
-        }, this.logger);
-        if (!pre || pendingItem.isAborted) {
+        // PreSend Flow
+        let preSend = await this.flows.preSendReqFlow.exec({ apiName, req, conn: this }, this.logger);
+        if (!preSend || pendingItem.isAborted) {
             this.abort(pendingItem.sn);
             return PROMISE_ABORTED;
         }
 
         // Get Return
-        let ret = pre.return ?? await this._doCallApi(pre.apiName, pre.req, pendingItem, pre.options);
+        let ret = preSend.ret ?? await this._doCallApi(preSend.apiName, preSend.req, pendingItem, options);
 
         // Aborted, skip return.
         if (pendingItem.isAborted) {
             return PROMISE_ABORTED;
         }
 
-        // Log Original Return
-        if (ret.isSucc) {
-            this.getOption('logApi') && this.logger?.log(`[callApi] [#${pendingItem.sn}] ${this.chalk('[Res]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.getOption('logResBody') ? ret.res : '');
-        }
-        else {
-            this.getOption('logApi') && this.logger?.[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`[callApi] [#${pendingItem.sn}] ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, ret.err);
-        }
-
-        // Post Flow (before return)
-        let post = await this.flows.postCallApiFlow.exec({
-            ...pre,
-            return: ret
+        // PreRecv Flow (before return)
+        let preRecv = await this.flows.preRecvRetFlow.exec({
+            ...preSend,
+            ret: ret
         }, this.logger);
-        if (!post || pendingItem.isAborted) {
+        if (!preRecv || pendingItem.isAborted) {
             this.abort(pendingItem.sn);
             return PROMISE_ABORTED;
         }
+        ret = preRecv.ret;
+
+        // Log Return
+        if (this.getOption('logApi')) {
+            if (ret.isSucc) {
+                this.logger?.log(`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Res]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.getOption('logResBody') ? ret.res : '');
+            }
+            else {
+                this.logger?.[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, ret.err);
+            }
+        }
 
         this._pendingApis.delete(pendingItem.sn);
-        return post.return;
+        return ret;
     }
 
     protected async _doCallApi<T extends string & keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], pendingItem: PendingApiItem, options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
-        this.getOption('logApi') && this.logger?.log(`[callApi] [#${pendingItem.sn}] ${this.chalk('[Req]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.getOption('logReqBody') ? req : '');
-
-        // GetService
-        let service = this.serviceMap.apiName2Service[apiName as string];
-        if (!service) {
-            return {
-                isSucc: false,
-                err: new TsrpcError('Invalid api name: ' + apiName, {
-                    code: 'INVALID_API_NAME',
-                    type: TsrpcErrorType.ClientError
-                })
-            };
-        }
-        pendingItem.service = service;
-
         // Make TransportData
         let transportData: TransportData = {
             type: 'req',
+            apiName,
             sn: this.nextSn,
-            apiName: apiName,
             req: req
         }
         // Exchange Proto Info
@@ -168,7 +155,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         let promiseSend = this._sendTransportData(transportData, options);
         let promiseReturn = this._waitApiReturn(pendingItem, options?.timeout ?? this.getOption('apiTimeout'));
 
-        // Encode Error
+        // Encode or Send Error
         let opSend = await promiseSend;
         if (!opSend.isSucc) {
             return {
@@ -176,6 +163,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 err: opSend.err
             };
         }
+
+        // PostSend Flow
+        this.flows.postSendReqFlow.exec({ apiName, req, conn: this }, this.logger);
 
         // Wait ApiReturn
         let ret = await promiseReturn;
@@ -231,7 +221,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         this._pendingApis.delete(sn);
 
         // Log
-        this.getOption('logApi') && this.logger?.log(`[callApi] [#${pendingItem.sn}] ${this.chalk('[Abort]', ['info'])} ${this.chalk(`[${pendingItem.service.name}]`, ['gray'])}`);
+        this.getOption('logApi') && this.logger?.log(`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Abort]', ['info'])} ${this.chalk(`[${pendingItem.apiName}]`, ['gray'])}`);
 
         // onAbort
         pendingItem.onReturn = undefined;
@@ -313,7 +303,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         let pre = await this.flows.preSendMsgFlow.exec({
             msgName: msgName,
             msg: msg,
-            options: options,
             conn: this
         }, this.logger);
         if (!pre) {
@@ -321,28 +310,15 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
         msgName = pre.msgName as any;
         msg = pre.msg as any;
-        options = pre.options;
 
         // The msg is not prevented by pre flow
         this.getOption('logMsg') && this.logger?.log(`[SendMsg]`, msgName, msg);
 
-        // GetService
-        let service = this.serviceMap.msgName2Service[msgName as string];
-        if (!service) {
-            return {
-                isSucc: false,
-                err: new TsrpcError('Invalid msg name: ' + msgName, {
-                    code: 'INVALID_MSG_NAME',
-                    type: TsrpcErrorType.ClientError
-                })
-            };
-        }
-
         // Encode & Send
         let opResult = await this._sendTransportData({
             type: 'msg',
-            msgName: msgName,
-            msg: msg
+            msgName,
+            msg
         }, options)
 
         // Post Flow
@@ -404,7 +380,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // WS JSON: all in json body, serviceId -> service: {'data/AddData'}
     // WS BUF: all in body
 
-    protected _validateTransportData(transportData: TransportData): OpResult<void> {
+    protected _validateTransportData(transportData: TransportData, skipTypeCheck?: boolean): OpResult<void> {
+        // req msg type safe?
         throw new Error('TODO')
     }
 
@@ -414,11 +391,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      */
     protected async _sendTransportData(transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
         // Validate
-        if (!this.getOption('skipSendTypeCheck')) {
-            let op = await this._validateTransportData(transportData);
-            if (!op.isSucc) {
-                return op;
-            }
+        let op = await this._validateTransportData(transportData, this.getOption('skipSendTypeCheck'));
+        if (!op.isSucc) {
+            return op;
         }
 
         // Do Send
@@ -435,45 +410,81 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Called by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
-    protected async _recvTransportData(transportData: TransportData) {
+    protected async _recvTransportData(transportData: TransportData): Promise<void> {
         // Validate
-        if (!this.getOption('skipRecvTypeCheck')) {
-            let op = await this._validateTransportData(transportData);
-            if (!op.isSucc) {
-                // TODO Log
-                return;
-            }
+        let op = await this._validateTransportData(transportData, this.getOption('skipRecvTypeCheck'));
+        if (!op.isSucc) {
+            // TODO Log
+            return;
         }
 
+        // Sync remote protoInfo
         if ((transportData.type === 'req' || transportData.type === 'ret') && transportData.protoInfo) {
             this._remoteProtoInfo = transportData.protoInfo;
         }
 
         switch (transportData.type) {
             case 'req': {
-                // TODO API Handler
-                let service = this.serviceMap.apiName2Service[transportData.apiName];
+                // Get Service
+                const service = this.serviceMap.apiName2Service[transportData.apiName];
                 if (!service) {
-                    // TODO proto 版本不一致时的友好提示
-                    this._sendTransportData({
-                        type: 'ret',
-                        sn: transportData.sn,
-                        protoInfo: transportData.protoInfo ? this._localProtoInfo : undefined,
-                        ret: {
-                            isSucc: false,
-                            err: new TsrpcError(`Invalid api name: '${transportData.apiName}'`)
-                        }
-                    })
+                    // TODO
+                    // this._sendTransportData({});
                     return;
                 }
 
                 // Make Call
-                let call = new ApiCall(this, transportData.apiName);
+                let call = new ApiCall(this, transportData, service);
 
+                // TODO PreFlow
+                let pre = await this.flows.preRecvReqFlow.exec(call, this.logger)
+                if (!pre) {
+                    // TODO
+                    return;
+                }
+                // Return by pre flow
+                call = pre;
+                if (call.ret) {
+                    // TODO
+                    return;
+                }
+
+                // Get Handler
+                const handler = this._apiHandlers[transportData.apiName];
+                if (!handler) {
+                    // TODO
+                    call.error('API not implemented', { type: TsrpcErrorType.ServerError })
+                    return;
+                }
+
+                // Exec
+                handler(call);
                 break;
             }
             case 'ret': {
                 // TODO pendingApiItem
+                const item = this._pendingApis.get(transportData.sn);
+                if (!item) {
+                    // TODO
+                    console.error('Invalid SN');
+                    return;
+                }
+                if (item.isAborted) {
+                    return;
+                }
+
+                // Pre Flow
+                let pre = await this.flows.preRecvRetFlow.exec({
+                    apiName: item.apiName,
+                    req: item.req,
+                    ret: transportData.ret,
+                    conn: this
+                }, this.logger);
+                if (!pre || item.isAborted) {
+                    return;
+                }
+
+                item.onReturn?.(pre.ret)
                 break;
             }
             case 'msg': {
@@ -521,7 +532,8 @@ export interface BaseConnectionOptions {
 
 export interface PendingApiItem {
     sn: number,
-    service: ApiService,
+    apiName: string,
+    req: any,
     isAborted?: boolean,
     abortKey?: string,
     abortSignal?: AbortSignal,
