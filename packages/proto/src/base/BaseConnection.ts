@@ -488,11 +488,14 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 break;
             }
             case 'msg': {
-                // TODO msgHandler.emit
+                // TODO
+                // preRecvMsgFlow
+                // MsgHandlers
                 break;
             }
             case 'heartbeat': {
-                // TODO heartbeat manager
+                // TODO
+                // this.heartbeatManager.recv(heartbeatSn)
                 break;
             }
 
