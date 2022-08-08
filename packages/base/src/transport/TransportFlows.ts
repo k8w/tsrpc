@@ -1,23 +1,20 @@
 import { Flow } from "../models/Flow";
-import { TransportOptions } from "../models/TransportOptions";
+import { ApiCall } from "../proto/ApiCall";
 import { ApiReturn } from "../proto/ApiReturn";
-import { ApiCall } from "./ApiCall";
-import { BaseConnection } from "./BaseConnection";
+import { BaseTransport } from "./BaseTransport";
 
-export interface BaseConnectionFlows<Conn extends BaseConnection<any>> {
+export interface TransportFlows<Conn extends BaseTransport<any>> {
     /**
      * API Client Flows (callApi)
      * callApi() 
-     *   -> 【preSendReqFlow】
+     *   -> 【preCallApiFlow】
      *   -> send req
-     *   -> 【postSendReqFlow】
      *   -> recv res/err
-     *   -> 【preRecvRetFlow】
+     *   -> 【preCallApiReturnFlow】
      * -> return
      */
-    preSendReqFlow: Flow<PreSendReqFlowData<Conn>>,
-    postSendReqFlow: Flow<PostSendReqFlowData<Conn>>,
-    preRecvRetFlow: Flow<PreRecvRetFlowData<Conn>>,
+    preCallApiFlow: Flow<PreCallApiFlow<Conn>>,
+    preCallApiReturnFlow: Flow<PreCallApiReturnFlow<Conn>>,
 
     /**
      * API Server Flows (ApiCall)
@@ -25,13 +22,12 @@ export interface BaseConnectionFlows<Conn extends BaseConnection<any>> {
      *   -> 【preRecvReqFlow】
      *   -> execute API implementation
      *      -> call.succ() or call.error()
-     *          -> 【preSendRetFlow】
+     *          -> 【prePreApiReturnFlow】
      *          -> send response
-     *          -> 【postSendRetFlow】
+     *          -> 【postPreApiReturnFlow】
      */
-    preRecvReqFlow: Flow<PreRecvReqFlow<Conn>>,
-    preSendRetFlow: Flow<SendRetFlow<Conn>>,
-    postSendRetFlow: Flow<SendRetFlow<Conn>>,
+    preApiCallFlow: Flow<PreApiCallFlow<Conn>>,
+    preApiReturnFlow: Flow<PreApiReturnFlow<Conn>>,
 
     /**
      * Duplex Message Flows
@@ -39,20 +35,18 @@ export interface BaseConnectionFlows<Conn extends BaseConnection<any>> {
      * recv MsgCall -> 【preRecvMsgFlow】 -> msg listeners
      */
     preSendMsgFlow: Flow<SendMsgFlowData<Conn>>,
-    postSendMsgFlow: Flow<SendMsgFlowData<Conn>>,
     preRecvMsgFlow: Flow<RecvMsgFlowData<Conn>>,
-    // postRecvMsgFlow: Flow<RecvMsgFlowData<Conn>>,
 
     /**
      * Duplex TransportData Flows
      * sendTransportData() -> 【preSendTransportDataFlow】 -> send data
      * recv TransportData -> 【preRecvTransportDataFlow】 -> ApiCall or MsgCall or commands ...
      */
-    // preSendTransportDataFlow: Flow<TransportDataFlowData<Conn>>,
-    // preRecvTransportDataFlow: Flow<TransportDataFlowData<Conn>>,
+    // preSendDataFlow: Flow<TransportDataFlowData<Conn>>,
+    // preRecvDataFlow: Flow<TransportDataFlowData<Conn>>,
 }
 
-export type PreSendReqFlowData<Conn extends BaseConnection<any>> = {
+export type PreCallApiFlow<Conn extends BaseTransport<any>> = {
     [K in keyof Conn['ServiceType']['api']]: {
         apiName: K & string,
         req: Conn['ServiceType']['api'][K]['req'],
@@ -61,15 +55,7 @@ export type PreSendReqFlowData<Conn extends BaseConnection<any>> = {
     }
 }[keyof Conn['ServiceType']['api']];
 
-export type PostSendReqFlowData<Conn extends BaseConnection<any>> = {
-    [K in keyof Conn['ServiceType']['api']]: {
-        apiName: K & string,
-        req: Conn['ServiceType']['api'][K]['req'],
-        readonly conn: Conn
-    }
-}[keyof Conn['ServiceType']['api']];
-
-export type PreRecvRetFlowData<Conn extends BaseConnection<any>> = {
+export type PreCallApiReturnFlow<Conn extends BaseTransport<any>> = {
     [K in keyof Conn['ServiceType']['api']]: {
         apiName: K & string,
         req: Conn['ServiceType']['api'][K]['req'],
@@ -78,11 +64,11 @@ export type PreRecvRetFlowData<Conn extends BaseConnection<any>> = {
     }
 }[keyof Conn['ServiceType']['api']];
 
-export type PreRecvReqFlow<Conn extends BaseConnection<any>> = {
+export type PreApiCallFlow<Conn extends BaseTransport<any>> = {
     [K in keyof Conn['ServiceType']['api']]: ApiCall<Conn['ServiceType']['api'][K]['req'], Conn['ServiceType']['api'][K]['res'], Conn>
 }[keyof Conn['ServiceType']['api']];
 
-export type SendRetFlow<Conn extends BaseConnection<any>> = {
+export type PreApiReturnFlow<Conn extends BaseTransport<any>> = {
     [K in keyof Conn['ServiceType']['api']]: {
         call: ApiCall<Conn['ServiceType']['api'][K]['req'], Conn['ServiceType']['api'][K]['res'], Conn> & {
             ret: ApiReturn<Conn['ServiceType']['api'][K]['res']>
@@ -93,7 +79,7 @@ export type SendRetFlow<Conn extends BaseConnection<any>> = {
     }
 }[keyof Conn['ServiceType']['api']];
 
-export type SendMsgFlowData<Conn extends BaseConnection<any>> = {
+export type SendMsgFlowData<Conn extends BaseTransport<any>> = {
     [K in keyof Conn['ServiceType']['msg']]: {
         msgName: K & string,
         msg: Conn['ServiceType']['msg'][K],
@@ -101,7 +87,7 @@ export type SendMsgFlowData<Conn extends BaseConnection<any>> = {
     }
 }[keyof Conn['ServiceType']['msg']];
 
-export type RecvMsgFlowData<Conn extends BaseConnection<any>> = {
+export type RecvMsgFlowData<Conn extends BaseTransport<any>> = {
     [K in keyof Conn['ServiceType']['msg']]: {
         msgName: K & string,
         msg: Conn['ServiceType']['msg'][K],
@@ -109,7 +95,7 @@ export type RecvMsgFlowData<Conn extends BaseConnection<any>> = {
     }
 }[keyof Conn['ServiceType']['msg']];
 
-// export type TransportDataFlowData<Conn extends BaseConnection<any>> = {
+// export type TransportDataFlowData<Conn extends BaseTransport<any>> = {
 //     transportData: TransportData,
 //     readonly conn: Conn,
 // };

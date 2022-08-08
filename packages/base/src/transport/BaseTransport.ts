@@ -11,40 +11,38 @@ import { BaseServiceType } from "../proto/BaseServiceType";
 import { TransportData } from "../proto/TransportData";
 import { ProtoInfo, TsrpcErrorType } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
-import { ApiCall } from "./ApiCall";
-import { BaseConnectionFlows } from "./FlowData";
-import { MsgCall } from "./MsgCall";
+import { TransportFlows } from "./TransportFlows";
 
 export const PROMISE_ABORTED = new Promise<any>(rs => { });
 
 /**
- * BaseConnection
- * - Server have many connections (BaseConnection)
+ * BaseTransport
+ * - Server have many connections (BaseTransport)
  *   - Http/Ws/Udp Connection
- * - Client is a BaseConnection
+ * - Client is a BaseTransport
  *   - Http/Ws/Udp Client
  *     - HttpClient don't have `listenMsg` and `implementApi`
  */
-export abstract class BaseConnection<ServiceType extends BaseServiceType = any> {
+export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
 
     declare ServiceType: ServiceType;
 
-    options?: Partial<BaseConnectionOptions>;
-    getOption<T extends keyof BaseConnectionOptions>(key: T): BaseConnectionOptions[T] {
-        return this.options?.[key] ?? defaultBaseConnectionOptions[key];
+    options?: Partial<BaseTransportOptions>;
+    getOption<T extends keyof BaseTransportOptions>(key: T): BaseTransportOptions[T] {
+        return this.options?.[key] ?? defaultBaseTransportOptions[key];
     }
 
     /**
      * {@link Flow} to process `callApi`, `sendMsg`, buffer input/output, etc...
      */
-    protected flows: BaseConnectionFlows<this>;
+    protected flows: TransportFlows<this>;
     serviceMap: ServiceMap;
     logger?: Logger;
     chalk: Chalk;
     protected _localProtoInfo: ProtoInfo;
     protected _remoteProtoInfo?: ProtoInfo;
 
-    constructor(options: Partial<BaseConnectionOptions>) {
+    constructor(options: Partial<BaseTransportOptions>) {
         this.options = options;
         // TODO
         // TEST
@@ -506,11 +504,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // #endregion
 }
 
-export const defaultBaseConnectionOptions: BaseConnectionOptions = {
+export const defaultBaseTransportOptions: BaseTransportOptions = {
 
 } as any
 
-export interface BaseConnectionOptions {
+export interface BaseTransportOptions {
     // Log
     logger: Logger,
     chalk: Chalk,
@@ -545,8 +543,8 @@ export interface PendingApiItem {
     onReturn?: (ret: ApiReturn<any>) => void
 }
 
-export type ApiHandler<Conn extends BaseConnection> = (call: ApiCall<any, any, Conn>) => (void | Promise<void>);
-export type MsgHandler<Conn extends BaseConnection, MsgName extends keyof Conn['ServiceType']['msg']>
+export type ApiHandler<Conn extends BaseTransport> = (call: ApiCall<any, any, Conn>) => (void | Promise<void>);
+export type MsgHandler<Conn extends BaseTransport, MsgName extends keyof Conn['ServiceType']['msg']>
     = (call: MsgCall<MsgName, Conn>) => void | Promise<void>;
 
 export interface IHeartbeatManager {

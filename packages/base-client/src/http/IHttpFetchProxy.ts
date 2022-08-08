@@ -1,0 +1,1 @@
+export type IHttpFetchProxy = () => Promise<any>;

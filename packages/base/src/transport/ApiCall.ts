@@ -2,7 +2,7 @@ import { Logger } from "../models/Logger";
 import { ApiService } from "../models/ServiceMapUtil";
 import { ApiReturn } from "../proto/ApiReturn";
 import { TransportData } from "../proto/TransportData";
-import { BaseConnection } from "./BaseConnection";
+import { BaseTransport } from "./BaseTransport";
 
 // 每一次 Api 调用都会生成一个 ApiCall（Server & Client）
 // call.succ & call.error 可用于返回
@@ -10,7 +10,7 @@ import { BaseConnection } from "./BaseConnection";
 // Client 的 call.succ / call.error ：拦截请求，本地 mock
 // Call 分角色（Req or Ret）（Server or Client）
 
-export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseConnection> {
+export class ApiCall<Req = any, Res = any, Conn extends BaseTransport = BaseTransport> {
 
     public req!: Req;
     public sn!: number;

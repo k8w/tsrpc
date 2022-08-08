@@ -1,7 +1,7 @@
 {
-  "name": "tsrpc-proto",
+  "name": "tsrpc-base",
   "version": "2.1.2",
-  "description": "TSRPC Base Proto",
+  "description": "TSRPC Base",
   "main": "./dist/index.js",
   "exports": {
     "require": "./dist/index.js",
