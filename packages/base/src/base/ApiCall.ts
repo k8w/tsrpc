@@ -1,7 +1,7 @@
 import { Logger } from "../models/Logger";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { ApiService } from "../models/ServiceMapUtil";
-import { ApiReturn, ApiReturnError, ApiReturnSucc } from "../proto/ApiReturn";
+import { ApiReturn } from "../proto/ApiReturn";
 import { TsrpcError } from "../proto/TsrpcError";
 import { BaseConnection, PROMISE_ABORTED } from "./BaseConnection";
 import { ProtoInfo, TsrpcErrorData, TsrpcErrorType } from "./TransportDataSchema";
@@ -14,9 +14,9 @@ import { ProtoInfo, TsrpcErrorData, TsrpcErrorType } from "./TransportDataSchema
 
 export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseConnection> {
 
-    service!: ApiService;
     logger: Logger;
     return?: ApiReturn<Res>;
+    service?: ApiService;
 
     constructor(
         public readonly conn: Conn,
@@ -28,13 +28,13 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
         this.logger = new PrefixLogger({
             logger: conn.logger,
             prefixs: [conn.chalk(`[ApiCall] [#${sn}] [${apiName}]`, ['gray'])]
-        })
-        this.service = conn.serviceMap.apiName2Service[apiName]!;
+        });
     }
 
     protected _rsExecute?: (ret: ApiReturn<Res>) => void;;
     async execute(): Promise<ApiReturn<Res>> {
         // Get Service
+        this.service = this.conn.serviceMap.apiName2Service[this.apiName];
         if (!this.service) {
             return this.error(`Undefined API name: ${this.apiName}`, {
                 type: TsrpcErrorType.RemoteError
@@ -47,6 +47,14 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
         // ApiCall timeout
         if (this.conn.options.apiCallTimeout) {
             this._startTimeout(this.conn.options.apiCallTimeout);
+        }
+
+        // Validate
+        if (!this.conn.options.skipRecvTypeCheck) {
+            let vRes = this.conn.tsbuffer.validate(this.req, this.service.reqSchemaId);
+            if (!vRes.isSucc) {
+                return this.error(`[ReqTypeError] vRes.errMsg`, { type: TsrpcErrorType.RemoteError, code: 'REQ_TYPE_ERR' });
+            }
         }
 
         // Pre Flow
@@ -81,52 +89,54 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
         return promise;
     }
 
-    async succ(res: Res): Promise<ApiReturnSucc<Res>> {
-        this._stopTimeout();
-
-        const ret: ApiReturn<Res> = { isSucc: true, res };
-        this._rsExecute?.(ret);
-
-        let op = await this.conn['_sendTransportData']({} as any);
-        if (!op.isSucc) {
-            // TODO
-            // log encode error
-            this.logger.error('Encode return error', 'res:', res, 'err:', op.err);
-            await this._internalError(op.err);
-            this.return;
-        }
-
-        this.logger.log(this.conn.chalk('[Res]', ['info']), this.conn.options.logResBody ? res : '');
-
-        // this.conn['_sendTransportData']({type: 'ret'});
-        // log [ApiRes]
-        // TODO protoInfo
-        throw new Error('TODO')
+    async succ(res: Res): Promise<ApiReturn<Res>> {
+        return this._sendReturn({ isSucc: true, res: res });
     }
 
-    error(message: string, info?: Partial<TsrpcErrorData>): Promise<ApiReturnError>;
-    error(err: TsrpcError): Promise<ApiReturnError>;
-    error(errOrMsg: string | TsrpcError, data?: Partial<TsrpcErrorData>): Promise<ApiReturnError> {
-        this._stopTimeout();
-
-        const ret: ApiReturn<Res> = {
+    error(message: string, info?: Partial<TsrpcErrorData>): Promise<ApiReturn<Res>>;
+    error(err: TsrpcError): Promise<ApiReturn<Res>>;
+    error(errOrMsg: string | TsrpcError, data?: Partial<TsrpcErrorData>): Promise<ApiReturn<Res>> {
+        return this._sendReturn({
             isSucc: false,
             err: typeof errOrMsg === 'string' ? new TsrpcError(errOrMsg, data) : errOrMsg
-        };
+        });
+    }
+
+    protected async _sendReturn(ret: ApiReturn<Res>): Promise<ApiReturn<Res>> {
+        if (this.return) {
+            return this.return;
+        }
+
+        this._stopTimeout();
+        this.return = ret;
         this._rsExecute?.(ret);
 
-        this.logger.log(this.conn.chalk('[Err]', [ret.err.type === TsrpcErrorType.ApiError ? 'info' : 'error']), ret.err);
+        // PreReturn Flow
+        let pre = await this.conn.flows.preApiCallReturnFlow.exec(this as this & { return: ApiReturn<Res> }, this.logger);
+        if (!pre) {
+            return PROMISE_ABORTED;
+        }
+        ret = this.return = pre.return;
 
-        // this.conn['_sendTransportData']({type: 'ret'});
-        // log [ApiErr]
-        // this.conn['_sendTransportData']({
-        //     type: 'ret',
-        //     sn: transportData.sn,
-        //     // TODO
-        //     ret: { isSucc: false, err: new TsrpcError('xxx') },
-        //     protoInfo: transportData.protoInfo && this._localProtoInfo
-        // });
-        throw new Error('TODO')
+        // Send
+        let op = await this.conn['_sendTransportData']({} as any);
+        if (!op.isSucc) {
+            this.logger.error(`[SendReturnErr] XXXXXXX`, ret);
+            this.return = undefined;
+            return await this._internalError({ message: op.errMsg });
+        }
+
+        if (ret.isSucc) {
+            this.logger.log(this.conn.chalk('[Res]', ['info']), this.conn.options.logResBody ? ret.res : '');
+        }
+        else {
+            this.logger.log(this.conn.chalk('[Err]', [ret.err.type === TsrpcErrorType.ApiError ? 'info' : 'error']), ret.err);
+        }
+
+        // PostReturn Flow
+        this.conn.flows.postApiCallReturnFlow.exec(this as this & { return: ApiReturn<Res> }, this.logger);
+
+        return ret;
     }
 
     // Timeout
@@ -159,7 +169,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
             return this.error(err);
         }
 
-        this.logger.error(err);
+        this.logger.error(this.conn.chalk('[InternalError]', ['error']), err);
         return this.error('Remote internal error', {
             code: 'INTERNAL_ERR',
             type: TsrpcErrorType.RemoteError,

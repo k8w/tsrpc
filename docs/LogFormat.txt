@@ -27,4 +27,6 @@
 [221.15.24.68] [Conn#2] [ApiCall] [#4] [Order/Post] [Err] {...}
 [221.15.24.68] [Conn#1] [ApiCall] [#4] [Order/Post] Custom logs...
 [221.15.24.68] [Conn#1] [SendMsg] [Order/MsgOrder] {...}
+[221.15.24.68] [Conn#1] [SendMsgErr] [Order/MsgOrder] Property 's' should be string {...}
 [221.15.24.68] [Conn#2] [RecvMsg] [Order/MsgOrder] {...}
+[221.15.24.68] [Conn#1] [RecvMsgErr] Property 's' should be string {...}

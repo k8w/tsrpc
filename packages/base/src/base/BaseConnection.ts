@@ -1,3 +1,4 @@
+import { TSBuffer } from "tsbuffer";
 import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { EventEmitter } from "../models/EventEmitter";
@@ -44,6 +45,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Server: all connections shared single options
         public options: BaseConnectionOptions,
         public readonly serviceMap: ServiceMap,
+        public readonly tsbuffer: TSBuffer,
         protected readonly _localProtoInfo: ProtoInfo
     ) {
         this._setDefaultFlowOnError();
@@ -154,7 +156,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         if (!opSend.isSucc) {
             return {
                 isSucc: false,
-                err: opSend.err
+                err: new TsrpcError(opSend.errMsg, { type: TsrpcErrorType.LocalError })
             };
         }
 
@@ -208,6 +210,18 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
         if (item.isAborted) {
             return;
+        }
+
+        // Validate
+        if (!this.options.skipRecvTypeCheck && transportData.ret.isSucc) {
+            let vRes = this.tsbuffer.validate(transportData.ret.res, this.serviceMap.apiName2Service[item.apiName]!.resSchemaId);
+            if (!vRes.isSucc) {
+                item.onReturn?.({
+                    isSucc: false,
+                    err: new TsrpcError(`[ResTypeError] ${vRes.errMsg}`, { type: TsrpcErrorType.LocalError })
+                });
+                return;
+            }
         }
 
         // Pre Flow
@@ -314,13 +328,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         };
     }
 
-
-
     // #endregion
 
     // #region Message
 
-    protected _msgHandlers = new EventEmitter<{ [K in keyof ServiceType['msg']]: [ServiceType['msg'][K], K, this] }>();
+    protected _msgListeners = new EventEmitter<{ [K in keyof ServiceType['msg']]: [ServiceType['msg'][K], K, this] }>();
 
     /**
      * Send message, without response, not ensuring the server is received and processed correctly.
@@ -330,14 +342,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @returns If the promise is resolved, it means the request is sent to system kernel successfully.
      * Notice that not means the server received and processed the message correctly.
      */
-    async sendMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options?: TransportOptions): Promise<{ isSucc: true } | { isSucc: false, err: TsrpcError }> {
-        let op = await this._doSendMsg(msgName, msg, options);
-        if (!op.isSucc) {
-            this.logger.error(this.chalk('[SendMsgErr]', ['error']), op.err);
-        }
-        return op;
-    }
-    protected async _doSendMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options?: TransportOptions): Promise<{ isSucc: true } | { isSucc: false, err: TsrpcError }> {
+    async sendMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options?: TransportOptions): Promise<OpResult<void>> {
         // Pre Flow
         let pre = await this.flows.preSendMsgFlow.exec({
             msgName: msgName,
@@ -350,9 +355,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         msgName = pre.msgName as any;
         msg = pre.msg as any;
 
-        // The msg is not prevented by pre flow
-        this.options.logMsg && this.logger.log(`[SendMsg]`, msgName, msg);
-
         // Encode & Send
         let opResult = await this._sendTransportData({
             type: 'msg',
@@ -360,7 +362,44 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             msg
         }, options)
 
+        // Log
+        if (opResult.isSucc) {
+            this.options.logMsg && this.logger.log(`[SendMsg]`, msgName, msg);
+        }
+        else {
+            this.logger.error(`[SendMsgErr] [${msgName}] XXXXXXXX`, msg);
+        }
+
         return opResult;
+    }
+
+    protected async _recvMsg(transportData: TransportData & { type: 'msg' }) {
+        // Validate
+        if (!this.options.skipRecvTypeCheck) {
+            const service = this.serviceMap.msgName2Service[transportData.msgName];
+            if (!service) {
+                this.logger.error(`[RecvMsg] Invalid msgName: ${transportData.msgName}`)
+                return;
+            }
+            let vRes = this.tsbuffer.validate(transportData.msg, service.msgSchemaId);
+            if (!vRes.isSucc) {
+                this.logger.error(`[RecvMsg] [MsgTypeError] ${vRes.errMsg}`, transportData.msg)
+                return;
+            }
+        }
+
+        // PreRecv Flow
+        let pre = await this.flows.preRecvMsgFlow.exec({
+            conn: this,
+            msgName: transportData.msgName,
+            msg: transportData.msg
+        }, this.logger);
+        if (!pre) {
+            return;
+        }
+
+        // MsgHandlers
+        this._msgListeners.emit(transportData.msgName, transportData.msg, transportData.msgName, this);
     }
 
     /**
@@ -373,17 +412,17 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     onMsg<T extends string & keyof ServiceType['msg'], U extends MsgHandler<this, T>>(msgName: T | RegExp, handler: U, context?: any): U {
         if (msgName instanceof RegExp) {
             Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
-                this._msgHandlers.on(k as T, handler, context)
+                this._msgListeners.on(k as T, handler, context)
             })
             return handler;
         }
         else {
-            return this._msgHandlers.on(msgName, handler, context)
+            return this._msgListeners.on(msgName, handler, context)
         }
     }
 
     onceMsg<T extends string & keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<this, T>, context?: any): MsgHandler<this, T> {
-        return this._msgHandlers.once(msgName, handler, context);
+        return this._msgListeners.once(msgName, handler, context);
     };
 
     /**
@@ -394,11 +433,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp, handler?: Function, context?: any) {
         if (msgName instanceof RegExp) {
             Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
-                handler ? this._msgHandlers.off(k, handler, context) : this._msgHandlers.off(k)
+                handler ? this._msgListeners.off(k, handler, context) : this._msgListeners.off(k)
             })
         }
         else {
-            handler ? this._msgHandlers.off(msgName, handler, context) : this._msgHandlers.off(msgName)
+            handler ? this._msgListeners.off(msgName, handler, context) : this._msgListeners.off(msgName)
         }
     }
 
@@ -406,39 +445,40 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // #region Transport
 
-    // 到这一步已经经过类型检测
-    // DataFlow 面向二进制 Payload
-    // TODO 序列化过程应该是在 Transport 之内的，不同信道（HTTP、WS、Obj）序列化方式不同
-    // HTTP JSON：fetch data->body header->header serviceId->URL
-    // HTTP BUF: fetch all in body
-    // WS JSON: all in json body, serviceId -> service: {'data/AddData'}
-    // WS BUF: all in body
-
-    protected _validateData(transportData: TransportData): OpResult<void> {
-        // req msg type safe?
-        throw new Error('TODO')
-    }
-
     protected _encodeData(data: TransportData, dataType: 'text' | 'buffer'): OpResult<string | Uint8Array> { throw new Error('TODO') }
 
     // HTTP JSON override this
-    protected _decodeData(data: string | Uint8Array): OpResult<TransportData> { throw new Error('TODO') }
+    protected _decodeData(data: string | Uint8Array, meta?: any): OpResult<TransportData> {
+        throw new Error('TODO')
+
+        // decode 外层错误
+        // return { isSucc: false, errMsg: `Decoding fails. Please check if you are using custom encoding/decoding Flow, you can enable 'debugBuf: true' to check if the data is the same before encoding and after decoding.` }
+        // req 内层错误 Parsing API request fails. TODO { proto version compare } You need resync
+        // ret 内层错误 Parsing ApiReturn fails. TODO { proto version compare } You need resync
+        // msg 内层错误 Parsing Msg fails. TODO { proto version compare } You need resync
+    }
 
     /**
      * Achieved by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
     protected async _sendTransportData(transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
-        // PreReturn Flow
-        // if (transportData.type === 'ret') {
-        //     let pre = await this.flows.preApiCallReturnFlow.exec({}, this.)
-        // }
-
         // Validate
         if (!this.options.skipSendTypeCheck) {
-            let op = await this._validateData(transportData);
-            if (!op.isSucc) {
-                return op;
+            // TODO
+            switch (transportData.type) {
+                case 'req': {
+                    // if ('false') {
+                    //     logger.error(`[SendReqErr] XXXXXXXX`, transportData.req);
+                    // }
+                    break;
+                };
+                case 'ret': {
+                    break;
+                }
+                case 'msg': {
+                    break;
+                }
             }
         }
 
@@ -472,15 +512,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param transportData Type haven't been checked, need to be done inside.
      */
     protected async _recvTransportData(transportData: TransportData): Promise<void> {
-        // Validate
-        if (!this.options.skipRecvTypeCheck) {
-            let op = await this._validateData(transportData);
-            if (!op.isSucc) {
-                // TODO Log
-                return;
-            }
-        }
-
         // Sync remote protoInfo
         if ('protoInfo' in transportData && transportData.protoInfo) {
             this._remoteProtoInfo = transportData.protoInfo;
@@ -496,9 +527,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 break;
             }
             case 'msg': {
-                // TODO
-                // preRecvMsgFlow
-                // MsgHandlers
+                this._recvMsg(transportData)
                 break;
             }
             case 'heartbeat': {
@@ -510,7 +539,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
     };
 
-    protected async _recvData(data: string | Uint8Array) {
+    protected async _recvData(data: string | Uint8Array, meta?: any) {
         // Pre Flow
         const pre = await this.flows.preRecvDataFlow.exec({
             conn: this,
@@ -522,9 +551,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Decode
         if (!pre.parsedTransportData) {
-            const op = this._decodeData(data);
+            const op = this._decodeData(data, meta);
             if (!op.isSucc) {
-                // TODO LOG
+                this.logger.error(`[RecvData] [DecodeError] ${op.errMsg}`, 'data:', data, ...(meta ? ['meta:', meta] : []));
                 return op;
             }
             pre.parsedTransportData = op.res;
