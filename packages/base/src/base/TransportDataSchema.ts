@@ -71,7 +71,7 @@ export enum TsrpcErrorType {
     /** Network error, like connection broken, network timeout, etc. */
     NetworkError = 'NetworkError',
     /** 
-     * Server exception, for example "request format error", "database exception", etc.
+     * Remote exception, for example "request format error", "database exception", etc.
      * 
      * @remarks
      * This error message may be not suitable to show to user,
@@ -79,14 +79,19 @@ export enum TsrpcErrorType {
      * So you can show a user-friendly message to user (like "System error, please contact XXX"),
      * and report some debug info at the same time.
      */
-    ServerError = 'ServerError',
-    /** Client exception, for example parse server output error. 
+    RemoteError = 'RemoteError',
+    /** Local exception, for example parse server output error. 
      * (May because of the proto file is not the same between server and client)
      */
-    ClientError = 'ClientError',
+    LocalError = 'LocalError',
     /**
      * The business error returned by `call.error`.
      * It is always business-relatived, for example `call.error('Password is incorrect')`, `call.error('Not enough credit')`, etc.
      */
     ApiError = 'ApiError',
+
+    /** @deprecated Use 'RemoteError' instead */
+    ServerError = 'RemoteError',
+    /** @deprecated Use 'LocalError' instead */
+    ClientError = 'LocalError',
 }

@@ -10,15 +10,19 @@ export interface Logger {
     error(...args: any[]): void;
 }
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 
-const logOrder = ['debug', 'log', 'warn', 'error'] as const;
+const loggerFunNames = ['debug', 'log', 'warn', 'error'] as const;
 
-export function setLogLevel(logger: Logger, logLevel: LogLevel) {
-    let level: (typeof logOrder)[number] = logLevel === 'info' ? 'log' : logLevel;
-    let order = logOrder.indexOf(level);
-    for (let i = 0; i < logOrder.length; ++i) {
-        let level = logOrder[i];
-        logger[level] = i >= order ? logger[level] : () => { };
-    }
+const emptyFunc = () => { };
+
+export function setLogLevel(logger: Logger, logLevel: LogLevel): Logger {
+    const levelIndex = logLevel === 'none' ? 99 : loggerFunNames.indexOf(logLevel === 'info' ? 'log' : logLevel);
+
+    // New logger
+    let output: Logger = {} as any;
+    loggerFunNames.forEach((v, i) => {
+        output[v] = i >= levelIndex ? logger[v].bind(logger) : emptyFunc
+    })
+    return output
 }

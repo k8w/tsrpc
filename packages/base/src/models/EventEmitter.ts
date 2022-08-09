@@ -1,4 +1,4 @@
-export class EventEmitter<EventType = any> {
+export class EventEmitter<EventType extends Record<string, any[]> = any> {
 
     private _listeners: {
         [type: string]: {
@@ -22,12 +22,12 @@ export class EventEmitter<EventType = any> {
         }
     }
 
-    on<T extends string & keyof EventType, U extends (e: EventType[T]) => any>(type: T, listener: U, context?: any): U {
+    on<T extends string & keyof EventType, U extends (...params: EventType[T]) => any>(type: T, listener: U, context?: any): U {
         this._addListener(type, { listener, context });
         return listener;
     }
 
-    once<T extends string & keyof EventType, U extends (e: EventType[T]) => any>(type: T, listener: U, context?: any): U {
+    once<T extends string & keyof EventType, U extends (...params: EventType[T]) => any>(type: T, listener: U, context?: any): U {
         this._addListener(type, { listener, context, once: true });
         return listener;
     }
@@ -48,7 +48,7 @@ export class EventEmitter<EventType = any> {
         listeners.removeOne(v => v.listener === listener && v.context === context);
     }
 
-    emit<T extends string & keyof EventType>(type: T, event: EventType[T]) {
+    emit<T extends string & keyof EventType>(type: T, ...event: EventType[T]) {
         const listeners = this._getListeners(type);
         for (let i = 0; i < listeners.length; ++i) {
             const item = listeners[i];

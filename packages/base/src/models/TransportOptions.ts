@@ -45,4 +45,6 @@ export interface TransportOptions {
      * ```
      */
     abortSignal?: AbortSignal;
+
+    dataType: 'text' | 'buffer';
 }

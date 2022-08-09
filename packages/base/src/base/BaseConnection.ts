@@ -8,49 +8,45 @@ import { ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturn } from "../proto/ApiReturn";
 import { BaseServiceType } from "../proto/BaseServiceType";
-import { TransportData } from "../proto/TransportData";
-import { ProtoInfo, TsrpcErrorType } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
-import { TransportFlows } from "./TransportFlows";
+import { ApiCall } from "./ApiCall";
+import { BaseConnectionFlows } from "./BaseConnectionFlows";
+import { TransportData } from "./TransportData";
+import { ProtoInfo, TsrpcErrorType } from "./TransportDataSchema";
 
 export const PROMISE_ABORTED = new Promise<any>(rs => { });
 
 /**
- * BaseTransport
- * - Server have many connections (BaseTransport)
+ * BaseConnection
+ * - Server have many BaseConnections
  *   - Http/Ws/Udp Connection
- * - Client is a BaseTransport
+ * - Client is a BaseConnection
  *   - Http/Ws/Udp Client
- *     - HttpClient don't have `listenMsg` and `implementApi`
  */
-export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
+export abstract class BaseConnection<ServiceType extends BaseServiceType = any> {
 
     declare ServiceType: ServiceType;
 
-    options?: Partial<BaseTransportOptions>;
-    getOption<T extends keyof BaseTransportOptions>(key: T): BaseTransportOptions[T] {
-        return this.options?.[key] ?? defaultBaseTransportOptions[key];
-    }
+    // Options
+    get logger() { return this.options.logger };
+    get chalk() { return this.options.chalk };
 
     /**
      * {@link Flow} to process `callApi`, `sendMsg`, buffer input/output, etc...
+     * Server: all shared server flows
+     * Client: independent flows
      */
-    protected flows: TransportFlows<this>;
-    serviceMap: ServiceMap;
-    logger?: Logger;
-    chalk: Chalk;
-    protected _localProtoInfo: ProtoInfo;
+    abstract flows: BaseConnectionFlows<this>;
+
     protected _remoteProtoInfo?: ProtoInfo;
 
-    constructor(options: Partial<BaseTransportOptions>) {
-        this.options = options;
-        // TODO
-        // TEST
-        this.serviceMap = null as any;
-        this.flows = null as any;
-        this.logger = null as any;
-        this.chalk = null as any;
-        this._localProtoInfo = null!;
+    constructor(
+        // Server: all connections shared single options
+        public options: BaseConnectionOptions,
+        public readonly serviceMap: ServiceMap,
+        protected readonly _localProtoInfo: ProtoInfo
+    ) {
+        this._setDefaultFlowOnError();
     }
 
     // #region API Client
@@ -62,7 +58,7 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
         return this._callApiSn.last;
     }
 
-    get nextSn() {
+    protected get _nextSn() {
         return this._callApiSn.getNext(true);
     }
 
@@ -77,7 +73,7 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
     async callApi<T extends string & keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
         // SN & Log
         let sn = this._callApiSn.getNext();
-        this.getOption('logApi') && this.logger?.log(`[CallApi] [#${sn}] ${this.chalk('[Req]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.getOption('logReqBody') ? req : '');
+        this.options.logApi && this.logger.log(`[CallApi] [#${sn}] ${this.chalk('[Req]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logReqBody ? req : '');
 
         // Create PendingApiItem
         let pendingItem: PendingApiItem = {
@@ -96,39 +92,39 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
             })
         }
 
-        // PreSend Flow
-        let preSend = await this.flows.preSendReqFlow.exec({ apiName, req, conn: this }, this.logger);
-        if (!preSend || pendingItem.isAborted) {
+        // PreCall Flow
+        let preCall = await this.flows.preCallApiFlow.exec({ apiName, req, conn: this }, this.logger);
+        if (!preCall || pendingItem.isAborted) {
             this.abort(pendingItem.sn);
             return PROMISE_ABORTED;
         }
 
         // Get Return
-        let ret = preSend.ret ?? await this._doCallApi(preSend.apiName, preSend.req, pendingItem, options);
+        let ret = preCall.ret ?? await this._doCallApi(preCall.apiName, preCall.req, pendingItem, options);
 
         // Aborted, skip return.
         if (pendingItem.isAborted) {
             return PROMISE_ABORTED;
         }
 
-        // PreRecv Flow (before return)
-        let preRecv = await this.flows.preRecvRetFlow.exec({
-            ...preSend,
-            ret: ret
+        // PreReturn Flow (before return)
+        let preReturn = await this.flows.preCallApiReturnFlow.exec({
+            ...preCall,
+            return: ret
         }, this.logger);
-        if (!preRecv || pendingItem.isAborted) {
+        if (!preReturn || pendingItem.isAborted) {
             this.abort(pendingItem.sn);
             return PROMISE_ABORTED;
         }
-        ret = preRecv.ret;
+        ret = preReturn.return;
 
         // Log Return
-        if (this.getOption('logApi')) {
+        if (this.options.logApi) {
             if (ret.isSucc) {
-                this.logger?.log(`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Res]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.getOption('logResBody') ? ret.res : '');
+                this.logger.log(`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Res]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logResBody ? ret.res : '');
             }
             else {
-                this.logger?.[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, ret.err);
+                this.logger[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, ret.err);
             }
         }
 
@@ -141,7 +137,7 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
         let transportData: TransportData = {
             type: 'req',
             apiName,
-            sn: this.nextSn,
+            sn: this._nextSn,
             req: req
         }
         // Exchange Proto Info
@@ -151,7 +147,7 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
 
         // Send & Recv
         let promiseSend = this._sendTransportData(transportData, options);
-        let promiseReturn = this._waitApiReturn(pendingItem, options?.timeout ?? this.getOption('apiTimeout'));
+        let promiseReturn = this._waitApiReturn(pendingItem, options?.timeout ?? this.options.callApiTimeout);
 
         // Encode or Send Error
         let opSend = await promiseSend;
@@ -161,9 +157,6 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
                 err: opSend.err
             };
         }
-
-        // PostSend Flow
-        this.flows.postSendReqFlow.exec({ apiName, req, conn: this }, this.logger);
 
         // Wait ApiReturn
         let ret = await promiseReturn;
@@ -206,6 +199,31 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
         });
     }
 
+    protected async _recvApiReturn(transportData: TransportData & { type: 'ret' }) {
+        // Parse PendingApiItem
+        const item = this._pendingApis.get(transportData.sn);
+        if (!item) {
+            this.logger.error('Invalid SN in return of callApi: ' + transportData.sn, transportData);
+            return;
+        }
+        if (item.isAborted) {
+            return;
+        }
+
+        // Pre Flow
+        let pre = await this.flows.preCallApiReturnFlow.exec({
+            apiName: item.apiName,
+            req: item.req,
+            return: transportData.ret,
+            conn: this
+        }, this.logger);
+        if (!pre || item.isAborted) {
+            return;
+        }
+
+        item.onReturn?.(pre.return)
+    }
+
     /**
      * Abort a pending API request, it makes the promise returned by `callApi()` neither resolved nor rejected forever.
      * @param sn - Every api request has a unique `sn` number, you can get it by `this.lastSN` 
@@ -219,7 +237,7 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
         this._pendingApis.delete(sn);
 
         // Log
-        this.getOption('logApi') && this.logger?.log(`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Abort]', ['info'])} ${this.chalk(`[${pendingItem.apiName}]`, ['gray'])}`);
+        this.options.logApi && this.logger.log(`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Abort]', ['info'])} ${this.chalk(`[${pendingItem.apiName}]`, ['gray'])}`);
 
         // onAbort
         pendingItem.onReturn = undefined;
@@ -269,17 +287,40 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
      */
     implementApi<Api extends string & keyof ServiceType['api']>(apiName: Api, handler: ApiHandler<any>): void {
         if (this._apiHandlers[apiName as string]) {
-            throw new Error('Already exist handler for API: ' + apiName);
+            throw new Error('implementApi duplicately for: ' + apiName);
         }
         this._apiHandlers[apiName as string] = handler;
-        this.logger?.log(`API implemented succ: ${this.chalk(apiName, ['underline'])}`);
+        this.logger.log(`API implemented succ: ${this.chalk(apiName, ['underline'])}`);
     };
+
+    protected async _recvApiReq(transportData: TransportData & { type: 'req' }) {
+        // Make ApiCall
+        const call = new ApiCall(this, transportData.apiName, transportData.sn, transportData.req, transportData.protoInfo);
+        return call.execute();
+    }
+
+    protected _setDefaultFlowOnError() {
+        // API Flow Error: return "Remote internal error"
+        this.flows.preApiCallFlow.onError = (e, call) => {
+            call['_internalError'](e)
+        };
+        this.flows.preApiCallReturnFlow.onError = (e, call) => {
+            if (!call.return) {
+                call['_internalError'](e)
+            }
+            else {
+                call.logger.error('postApiCallFlow Error:', e);
+            }
+        };
+    }
+
+
 
     // #endregion
 
     // #region Message
 
-    protected _msgHandlers = new EventEmitter<ServiceType['msg']>();
+    protected _msgHandlers = new EventEmitter<{ [K in keyof ServiceType['msg']]: [ServiceType['msg'][K], K, this] }>();
 
     /**
      * Send message, without response, not ensuring the server is received and processed correctly.
@@ -292,7 +333,7 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
     async sendMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options?: TransportOptions): Promise<{ isSucc: true } | { isSucc: false, err: TsrpcError }> {
         let op = await this._doSendMsg(msgName, msg, options);
         if (!op.isSucc) {
-            this.logger?.error(this.chalk('[SendMsgErr]', ['error']), op.err);
+            this.logger.error(this.chalk('[SendMsgErr]', ['error']), op.err);
         }
         return op;
     }
@@ -310,7 +351,7 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
         msg = pre.msg as any;
 
         // The msg is not prevented by pre flow
-        this.getOption('logMsg') && this.logger?.log(`[SendMsg]`, msgName, msg);
+        this.options.logMsg && this.logger.log(`[SendMsg]`, msgName, msg);
 
         // Encode & Send
         let opResult = await this._sendTransportData({
@@ -318,11 +359,6 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
             msgName,
             msg
         }, options)
-
-        // Post Flow
-        if (opResult.isSucc) {
-            this.flows.postSendMsgFlow.exec(pre!, this.logger);
-        }
 
         return opResult;
     }
@@ -337,7 +373,7 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
     onMsg<T extends string & keyof ServiceType['msg'], U extends MsgHandler<this, T>>(msgName: T | RegExp, handler: U, context?: any): U {
         if (msgName instanceof RegExp) {
             Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
-                this._msgHandlers.on(k, handler, context)
+                this._msgHandlers.on(k as T, handler, context)
             })
             return handler;
         }
@@ -378,31 +414,58 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
     // WS JSON: all in json body, serviceId -> service: {'data/AddData'}
     // WS BUF: all in body
 
-    protected _validateTransportData(transportData: TransportData, skipTypeCheck?: boolean): OpResult<void> {
+    protected _validateData(transportData: TransportData): OpResult<void> {
         // req msg type safe?
         throw new Error('TODO')
     }
+
+    protected _encodeData(data: TransportData, dataType: 'text' | 'buffer'): OpResult<string | Uint8Array> { throw new Error('TODO') }
+
+    // HTTP JSON override this
+    protected _decodeData(data: string | Uint8Array): OpResult<TransportData> { throw new Error('TODO') }
 
     /**
      * Achieved by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
     protected async _sendTransportData(transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
+        // PreReturn Flow
+        // if (transportData.type === 'ret') {
+        //     let pre = await this.flows.preApiCallReturnFlow.exec({}, this.)
+        // }
+
         // Validate
-        let op = await this._validateTransportData(transportData, this.getOption('skipSendTypeCheck'));
-        if (!op.isSucc) {
-            return op;
+        if (!this.options.skipSendTypeCheck) {
+            let op = await this._validateData(transportData);
+            if (!op.isSucc) {
+                return op;
+            }
+        }
+
+        // Encode
+        const opEncode = this._encodeData(transportData, options?.dataType ?? this.options.dataType)
+        if (!opEncode.isSucc) {
+            return opEncode;
+        }
+
+        // Pre Flow
+        const pre = await this.flows.preSendDataFlow.exec({
+            conn: this,
+            data: opEncode.res
+        }, this.logger);
+        if (!pre) {
+            return PROMISE_ABORTED;
         }
 
         // Do Send
-        return this._doSendTransportData(transportData);
+        return this._sendData(pre.data, transportData, options);
     }
 
     /**
      * Encode and send
      * @param transportData Type has been checked already
      */
-    protected abstract _doSendTransportData(transportData: TransportData): Promise<OpResult<void>>;
+    protected abstract _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>>;
 
     /**
      * Called by the implemented Connection.
@@ -410,80 +473,26 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
      */
     protected async _recvTransportData(transportData: TransportData): Promise<void> {
         // Validate
-        let op = await this._validateTransportData(transportData, this.getOption('skipRecvTypeCheck'));
-        if (!op.isSucc) {
-            // TODO Log
-            return;
+        if (!this.options.skipRecvTypeCheck) {
+            let op = await this._validateData(transportData);
+            if (!op.isSucc) {
+                // TODO Log
+                return;
+            }
         }
 
         // Sync remote protoInfo
-        if ((transportData.type === 'req' || transportData.type === 'ret') && transportData.protoInfo) {
+        if ('protoInfo' in transportData && transportData.protoInfo) {
             this._remoteProtoInfo = transportData.protoInfo;
         }
 
         switch (transportData.type) {
             case 'req': {
-                // Get Service
-                const service = this.serviceMap.apiName2Service[transportData.apiName];
-                if (!service) {
-                    // TODO
-                    // call.error('Undefined api name: xxxxx')
-                    // this._sendTransportData({});
-                    return;
-                }
-
-                // Make Call
-                let call = new ApiCall(this, transportData, service);
-
-                // TODO PreFlow
-                let pre = await this.flows.preRecvReqFlow.exec(call, this.logger)
-                if (!pre) {
-                    // TODO
-                    return;
-                }
-                // Return by pre flow
-                call = pre;
-                if (call.ret) {
-                    // TODO
-                    return;
-                }
-
-                // Get Handler
-                const handler = this._apiHandlers[transportData.apiName];
-                if (!handler) {
-                    // TODO
-                    call.error('API not implemented', { type: TsrpcErrorType.ServerError })
-                    return;
-                }
-
-                // Exec
-                handler(call);
+                this._recvApiReq(transportData);
                 break;
             }
             case 'ret': {
-                // TODO pendingApiItem
-                const item = this._pendingApis.get(transportData.sn);
-                if (!item) {
-                    // TODO
-                    console.error('Invalid SN');
-                    return;
-                }
-                if (item.isAborted) {
-                    return;
-                }
-
-                // Pre Flow
-                let pre = await this.flows.preRecvRetFlow.exec({
-                    apiName: item.apiName,
-                    req: item.req,
-                    ret: transportData.ret,
-                    conn: this
-                }, this.logger);
-                if (!pre || item.isAborted) {
-                    return;
-                }
-
-                item.onReturn?.(pre.ret)
+                this._recvApiReturn(transportData);
                 break;
             }
             case 'msg': {
@@ -501,35 +510,80 @@ export abstract class BaseTransport<ServiceType extends BaseServiceType = any> {
         }
     };
 
+    protected async _recvData(data: string | Uint8Array) {
+        // Pre Flow
+        const pre = await this.flows.preRecvDataFlow.exec({
+            conn: this,
+            data: data
+        }, this.logger);
+        if (!pre) {
+            return;
+        }
+
+        // Decode
+        if (!pre.parsedTransportData) {
+            const op = this._decodeData(data);
+            if (!op.isSucc) {
+                // TODO LOG
+                return op;
+            }
+            pre.parsedTransportData = op.res;
+        }
+
+        this._recvTransportData(pre.parsedTransportData);
+    };
+
     // #endregion
 }
 
-export const defaultBaseTransportOptions: BaseTransportOptions = {
-
+export const defaultBaseConnectionOptions: BaseConnectionOptions = {
+    logger: {
+        debug: console.debug.bind(console),
+        log: console.log.bind(console),
+        warn: console.warn.bind(console),
+        error: console.error.bind(console),
+    }
 } as any
 
-export interface BaseTransportOptions {
+/**
+ * Server: all connections shared 1 options
+ * Client: each is independent options
+ */
+export interface BaseConnectionOptions {
+    dataType: 'text' | 'buffer',
+    apiReturnInnerError: boolean,
+
     // Log
     logger: Logger,
-    chalk: Chalk,
     logLevel: LogLevel,
+    chalk: Chalk,
     logApi: boolean,
     logMsg: boolean,
     logReqBody: boolean,
     logResBody: boolean,
     debugBuf: boolean,
 
+    // Timeout
+    callApiTimeout: number,
+    apiCallTimeout: number,
+
     // Runtime Type Check
     skipSendTypeCheck: boolean;
     skipRecvTypeCheck: boolean;
 
-    // Serialization
-    jsonEncoder: any;
-    jsonDecoder: any;
-    bufferEncoder: any;
-    bufferDecoder: any;
+    // Heartbeat
+    heartbeat?: {
+        sendInterval: number,
+        recvTimeout: number
+    },
 
-    apiTimeout: number; // 兼容 timeout
+    // Serialization
+    encodeReturnText?: (ret: ApiReturn<any>) => string,
+    decodeReturnText?: (data: string) => ApiReturn<any>,
+    // jsonEncoder: any;
+    // jsonDecoder: any;
+    // bufferEncoder: any;
+    // bufferDecoder: any;
 }
 
 export interface PendingApiItem {
@@ -543,9 +597,9 @@ export interface PendingApiItem {
     onReturn?: (ret: ApiReturn<any>) => void
 }
 
-export type ApiHandler<Conn extends BaseTransport> = (call: ApiCall<any, any, Conn>) => (void | Promise<void>);
-export type MsgHandler<Conn extends BaseTransport, MsgName extends keyof Conn['ServiceType']['msg']>
-    = (call: MsgCall<MsgName, Conn>) => void | Promise<void>;
+export type ApiHandler<Conn extends BaseConnection> = (call: ApiCall<any, any, Conn>) => (void | Promise<void>);
+export type MsgHandler<Conn extends BaseConnection, MsgName extends keyof Conn['ServiceType']['msg']>
+    = (msg: Conn['ServiceType']['msg'][MsgName], msgName: MsgName, conn: Conn) => void | Promise<void>;
 
 export interface IHeartbeatManager {
     // TODO
