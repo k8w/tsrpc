@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.5] - 2022-08-10
+### Fixed
+- Ignore incoming data after heartbeat timeout
+
 ## [3.4.2] - 2022-06-28
 ### Added
 - New options `logConnect` for `WsServer`
