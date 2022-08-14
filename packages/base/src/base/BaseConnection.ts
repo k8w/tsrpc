@@ -32,6 +32,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     get logger() { return this.options.logger };
     get chalk() { return this.options.chalk };
 
+    // Status
+    protected abstract _status: ConnectionStatus;
+
     /**
      * {@link Flow} to process `callApi`, `sendMsg`, buffer input/output, etc...
      * Server: all shared server flows
@@ -463,6 +466,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param transportData Type haven't been checked, need to be done inside.
      */
     protected async _sendTransportData(transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
+        if (this._status !== ConnectionStatus.Opened) {
+            return { isSucc: false, errMsg: `Connection status is not opened, cannot send any data.` }
+        }
+
         // Validate
         if (!this.options.skipSendTypeCheck) {
             // TODO
@@ -540,6 +547,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     };
 
     protected async _recvData(data: string | Uint8Array, meta?: any) {
+        // Ignore all data if connection is not opened
+        if (this._status !== ConnectionStatus.Opened) {
+            return;
+        }
+
         // Pre Flow
         const pre = await this.flows.preRecvDataFlow.exec({
             conn: this,
@@ -629,6 +641,13 @@ export interface PendingApiItem {
 export type ApiHandler<Conn extends BaseConnection> = (call: ApiCall<any, any, Conn>) => (void | Promise<void>);
 export type MsgHandler<Conn extends BaseConnection, MsgName extends keyof Conn['ServiceType']['msg']>
     = (msg: Conn['ServiceType']['msg'][MsgName], msgName: MsgName, conn: Conn) => void | Promise<void>;
+
+export enum ConnectionStatus {
+    Opening = 'Opening',
+    Opened = 'Opened',
+    Closing = 'Closing',
+    Closed = 'Closed',
+}
 
 export interface IHeartbeatManager {
     // TODO
