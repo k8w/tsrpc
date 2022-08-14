@@ -1,3 +1,4 @@
+
 export const TransportDataProto = {
   "TransportDataSchema": {
     "type": "Union",
@@ -17,15 +18,6 @@ export const TransportDataProto = {
             },
             {
               "id": 1,
-              "name": "sn",
-              "type": {
-                "type": "Number",
-                "scalarType": "uint"
-              },
-              "optional": true
-            },
-            {
-              "id": 2,
               "name": "serviceId",
               "type": {
                 "type": "Number",
@@ -33,12 +25,21 @@ export const TransportDataProto = {
               }
             },
             {
-              "id": 3,
+              "id": 2,
               "name": "data",
               "type": {
                 "type": "Buffer",
                 "arrayType": "Uint8Array"
               }
+            },
+            {
+              "id": 3,
+              "name": "sn",
+              "type": {
+                "type": "Number",
+                "scalarType": "uint"
+              },
+              "optional": true
             },
             {
               "id": 4,
@@ -118,7 +119,7 @@ export const TransportDataProto = {
             },
             {
               "id": 2,
-              "name": "error",
+              "name": "err",
               "type": {
                 "type": "Reference",
                 "target": "TsrpcErrorData"
@@ -188,6 +189,14 @@ export const TransportDataProto = {
                 "type": "Number",
                 "scalarType": "uint"
               }
+            },
+            {
+              "id": 2,
+              "name": "isReply",
+              "type": {
+                "type": "Boolean"
+              },
+              "optional": true
             }
           ]
         }
@@ -202,56 +211,32 @@ export const TransportDataProto = {
               "name": "type",
               "type": {
                 "type": "Literal",
-                "literal": "connect"
+                "literal": "custom"
               }
             },
             {
               "id": 1,
-              "name": "header",
+              "name": "data",
               "type": {
-                "type": "Interface",
-                "properties": [
+                "type": "Union",
+                "members": [
                   {
                     "id": 0,
-                    "name": "protoInfo",
                     "type": {
-                      "type": "Reference",
-                      "target": "ProtoInfo"
+                      "type": "Buffer",
+                      "arrayType": "Uint8Array"
+                    }
+                  },
+                  {
+                    "id": 1,
+                    "type": {
+                      "type": "String"
                     }
                   }
-                ],
-                "indexSignature": {
-                  "keyType": "String",
-                  "type": {
-                    "type": "Any"
-                  }
-                }
-              },
-              "optional": true
-            }
-          ]
-        }
-      },
-      {
-        "id": 6,
-        "type": {
-          "type": "Interface",
-          "properties": [
-            {
-              "id": 0,
-              "name": "type",
-              "type": {
-                "type": "Literal",
-                "literal": "custom"
+                ]
               }
             }
-          ],
-          "indexSignature": {
-            "keyType": "String",
-            "type": {
-              "type": "Any"
-            }
-          }
+          ]
         }
       }
     ]
@@ -348,16 +333,34 @@ export const TransportDataProto = {
       },
       {
         "id": 1,
-        "value": "ServerError"
+        "value": "RemoteError"
       },
       {
         "id": 2,
-        "value": "ClientError"
+        "value": "LocalError"
       },
       {
         "id": 3,
         "value": "ApiError"
+      },
+      {
+        "id": 1,
+        "value": "RemoteError"
+      },
+      {
+        "id": 2,
+        "value": "LocalError"
       }
     ]
   }
 };
+
+// JSON data is any (json obj)
+export const TransportDataProtoJson: typeof TransportDataProto = Object.merge({}, TransportDataProto);
+TransportDataProtoJson.TransportDataSchema.members.forEach(v => {
+  v.type.properties.forEach(p => {
+    if (p.name === 'data') {
+      p.type = { type: 'Any' }
+    }
+  })
+})

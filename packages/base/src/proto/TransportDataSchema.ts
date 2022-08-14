@@ -6,18 +6,18 @@ import { int, uint } from 'tsbuffer-schema';
 export type TransportDataSchema = {
     /** API Request */
     type: 'req',
+    serviceId: uint,
+    data: Uint8Array,
     /** Short connection don't need */
     sn?: uint,
-    serviceId: uint,
-    req: Uint8Array,
     /** Exchange proto info at first request */
-    protoInfo?: ProtoInfo
+    protoInfo?: ProtoInfo,
 } | {
     /** API Response */
     type: 'res',
     /** Short connection don't need */
     sn?: uint,
-    res: Uint8Array,
+    data: Uint8Array,
     /** Exchange proto info if get a 'protoInfo' request header */
     protoInfo?: ProtoInfo,
 } | {
@@ -32,21 +32,15 @@ export type TransportDataSchema = {
     /** Message */
     type: 'msg',
     serviceId: uint,
-    msg: Uint8Array
+    data: Uint8Array
 } | {
     type: 'heartbeat',
-    sn: uint
-} | {
-    /** First connection, exchange some info */
-    type: 'connect',
-    header?: {
-        protoInfo: ProtoInfo,
-        [key: string]: any
-    }
+    sn: uint,
+    isReply?: boolean
 } | {
     /** Preserve for custom usage */
     type: 'custom',
-    [key: string]: any
+    data: Uint8Array | string,
 };
 
 export interface ProtoInfo {

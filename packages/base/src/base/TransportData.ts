@@ -1,6 +1,5 @@
 import { ApiReturn } from "../proto/ApiReturn";
-import { ApiCall } from "./ApiCall";
-import { ProtoInfo } from "./TransportDataSchema";
+import { ProtoInfo } from "../proto/TransportDataSchema";
 
 /**
  * Schema for binary serialize TransportData
@@ -9,8 +8,8 @@ export type TransportData = {
     /** API Request */
     type: 'req',
     apiName: string,
-    sn: number,
     req: any,
+    sn: number,
     /** Exchange proto info at first request */
     protoInfo?: ProtoInfo
 } | {
@@ -27,7 +26,12 @@ export type TransportData = {
     msg: any
 } | {
     type: 'heartbeat',
-    sn: number
+    sn: number,
+    /**
+     * false | undefined: req (ping)
+     * true: reply (pong)
+     */
+    isReply?: boolean
 } | {
     /** Preserve for custom usage */
     type: 'custom',

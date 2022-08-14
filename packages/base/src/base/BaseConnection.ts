@@ -448,9 +448,27 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // #region Transport
 
-    protected _encodeData(data: TransportData, dataType: 'text' | 'buffer'): OpResult<string | Uint8Array> { throw new Error('TODO') }
+    // HTTP JSON override this
+    /**
+     * Encode data to sendable format, type of data is checked already
+     * @param data 
+     * @param dataType 
+     */
+    protected _encodeData(data: TransportData, dataType: 'text' | 'buffer'): OpResult<string | Uint8Array> {
+        // Req
+        // Ret
+        // Msg
+        // Heartbeat
+        // Custom
+        throw new Error('TODO');
+    }
 
     // HTTP JSON override this
+    /**
+     * Decode binary data to TransportData.
+     * @param data 
+     * @param meta HTTP JSON may decode `apiName` `protoInfo` from HTTP header instead of `data`
+     */
     protected _decodeData(data: string | Uint8Array, meta?: any): OpResult<TransportData> {
         throw new Error('TODO')
 
