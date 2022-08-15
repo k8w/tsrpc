@@ -1,4 +1,3 @@
-
 export const TransportDataProto = {
   "TransportDataSchema": {
     "type": "Union",

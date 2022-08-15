@@ -5,7 +5,7 @@ import { EventEmitter } from "../models/EventEmitter";
 import { Flow } from "../models/Flow";
 import { Logger, LogLevel } from "../models/Logger";
 import { OpResult } from "../models/OpResult";
-import { ServiceMap } from "../models/ServiceMapUtil";
+import { ApiService, ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturn } from "../proto/ApiReturn";
 import { BaseServiceType } from "../proto/BaseServiceType";
@@ -14,6 +14,7 @@ import { ApiCall } from "./ApiCall";
 import { BaseConnectionFlows } from "./BaseConnectionFlows";
 import { TransportData } from "./TransportData";
 import { ProtoInfo, TsrpcErrorType } from "./TransportDataSchema";
+import { TransportDataUtil } from "./TransportDataUtil";
 
 export const PROMISE_ABORTED = new Promise<any>(rs => { });
 
@@ -57,7 +58,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // #region API Client
 
     protected _callApiSn = new Counter(1);
-    protected _pendingApis = new Map<number, PendingApiItem>;
+    protected _pendingCallApis = new Map<number, PendingApiItem>;
 
     get lastSn() {
         return this._callApiSn.last;
@@ -88,7 +89,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             abortKey: options?.abortKey,
             abortSignal: options?.abortSignal,
         };
-        this._pendingApis.set(sn, pendingItem);
+        this._pendingCallApis.set(sn, pendingItem);
 
         // AbortSignal
         if (options?.abortSignal) {
@@ -133,7 +134,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             }
         }
 
-        this._pendingApis.delete(pendingItem.sn);
+        this._pendingCallApis.delete(pendingItem.sn);
         return ret;
     }
 
@@ -181,7 +182,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             if (timeout) {
                 timer = setTimeout(() => {
                     timer = undefined;
-                    this._pendingApis.delete(pendingItem.sn);
+                    this._pendingCallApis.delete(pendingItem.sn);
                     rs({
                         isSucc: false,
                         err: new TsrpcError('Request Timeout', {
@@ -198,7 +199,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                     clearTimeout(timer);
                     timer = undefined;
                 }
-                this._pendingApis.delete(pendingItem.sn);
+                this._pendingCallApis.delete(pendingItem.sn);
                 rs(ret);
             }
         });
@@ -206,7 +207,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     protected async _recvApiReturn(transportData: TransportData & { type: 'ret' }) {
         // Parse PendingApiItem
-        const item = this._pendingApis.get(transportData.sn);
+        const item = this._pendingCallApis.get(transportData.sn);
         if (!item) {
             this.logger.error('Invalid SN in return of callApi: ' + transportData.sn, transportData);
             return;
@@ -247,11 +248,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      */
     abort(sn: number): void {
         // Find and Clear
-        let pendingItem = this._pendingApis.get(sn);
+        let pendingItem = this._pendingCallApis.get(sn);
         if (!pendingItem) {
             return;
         }
-        this._pendingApis.delete(sn);
+        this._pendingCallApis.delete(sn);
 
         // Log
         this.options.logApi && this.logger.log(`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Abort]', ['info'])} ${this.chalk(`[${pendingItem.apiName}]`, ['gray'])}`);
@@ -277,7 +278,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * ```
      */
     abortByKey(abortKey: string) {
-        this._pendingApis.forEach(v => {
+        this._pendingCallApis.forEach(v => {
             if (v.abortKey === abortKey) {
                 this.abort(v.sn)
             }
@@ -288,7 +289,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * It makes the promise returned by `callApi` neither resolved nor rejected forever.
      */
     abortAll() {
-        this._pendingApis.forEach(v => this.abort(v.sn));
+        this._pendingCallApis.forEach(v => this.abort(v.sn));
     }
     // #endregion
 
@@ -488,23 +489,52 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             return { isSucc: false, errMsg: `Connection status is not opened, cannot send any data.` }
         }
 
+        const dataType = options?.dataType ?? this.options.dataType;
+
         // Validate
         if (!this.options.skipSendTypeCheck) {
             // TODO
+            let vRes: OpResult<any> | undefined;
             switch (transportData.type) {
                 case 'req': {
-                    // if ('false') {
-                    //     logger.error(`[SendReqErr] XXXXXXXX`, transportData.req);
-                    // }
+                    const service = this.serviceMap.apiName2Service[transportData.apiName];
+                    if (!service) {
+                        return { isSucc: false, errMsg: `Undefined API name: ${transportData.apiName}` };
+                    }
+                    vRes = this._validateBeforeSend(dataType, transportData.req, service.reqSchemaId);
                     break;
                 };
                 case 'ret': {
+                    const service = transportData.call!.service as ApiService;
+                    // res
+                    if (transportData.ret.isSucc) {
+                        vRes = this._validateBeforeSend(dataType, transportData.ret.res, service.resSchemaId);
+                    }
+                    // err
+                    else {
+                        vRes = TransportDataUtil.tsbuffer.validate(transportData.ret.err, 'TsrpcErrorData')
+                    }
                     break;
                 }
                 case 'msg': {
+                    const service = this.serviceMap.msgName2Service[transportData.msgName];
+                    if (!service) {
+                        return { isSucc: false, errMsg: `Undefined Msg name: ${transportData.msgName}` };
+                    }
+                    vRes = this._validateBeforeSend(dataType, transportData.msg, service.msgSchemaId);
                     break;
                 }
             }
+
+            if (vRes && !vRes.isSucc) {
+                return vRes;
+            }
+
+            // pruneOutput TODO
+
+            // encode 流程
+            // buffer encode(validate -> encode)
+            // text encodeJSON(prune -> encodeJSON) -> JSON.stringify （可能自定义）
         }
 
         // Encode
@@ -524,6 +554,30 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Do Send
         return this._sendData(pre.data, transportData, options);
+    }
+
+    private _validateBeforeSend<T = any>(dataType: BaseConnectionOptions['dataType'], data: T, schemaId: string): OpResult<T>;
+    private _validateBeforeSend<T = any>(dataType: BaseConnectionOptions['dataType'], data: T, schemaId: string): OpResult<T>;
+    private _validateBeforeSend(dataType: BaseConnectionOptions['dataType'], data: any, schemaId: string): OpResult<any> {
+        if (dataType === 'buffer') {
+            let vRes = this.tsbuffer.validate(data, schemaId, {
+                // 禁用excessPropertyChecks，因为二进制不会编码 excess property
+                excessPropertyChecks: false
+            });
+            if (!vRes.isSucc) {
+                return vRes;
+            }
+            return { isSucc: true, res: data }
+        }
+        else if (dataType === 'text') {
+            let vRes = this.tsbuffer.prune(data, schemaId);
+            if (!vRes.isSucc) {
+                return vRes;
+            }
+            return { isSucc: true, res: vRes.pruneOutput }
+        }
+
+        throw new Error(`Invalid dataType: ${dataType}`);
     }
 
     /**
@@ -636,9 +690,10 @@ export interface BaseConnectionOptions {
         recvTimeout: number
     },
 
-    // Serialization
-    encodeReturnText?: (ret: ApiReturn<any>) => string,
-    decodeReturnText?: (data: string) => ApiReturn<any>,
+    // Serialization (Only for HTTP)
+    // encodeReturnText?: (ret: ApiReturn<any>) => string,
+    // decodeReturnText?: (data: string) => ApiReturn<any>,
+
     // jsonEncoder: any;
     // jsonDecoder: any;
     // bufferEncoder: any;

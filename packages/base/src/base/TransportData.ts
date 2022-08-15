@@ -1,5 +1,6 @@
 import { ApiReturn } from "../proto/ApiReturn";
 import { ProtoInfo } from "../proto/TransportDataSchema";
+import { ApiCall } from "./ApiCall";
 
 /**
  * Schema for binary serialize TransportData
@@ -19,6 +20,8 @@ export type TransportData = {
     ret: ApiReturn<any>,
     /** Exchange proto info if get a 'protoInfo' request header */
     protoInfo?: ProtoInfo,
+    // 不参与编码
+    call?: ApiCall<any, any>
 } | {
     /** Message */
     type: 'msg',

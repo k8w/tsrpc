@@ -119,7 +119,11 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
         ret = this.return = pre.return;
 
         // Send
-        let op = await this.conn['_sendTransportData']({} as any);
+        // TODO
+        let op = await this.conn['_sendTransportData']({
+            type: 'ret',
+            call: this
+        } as any);
         if (!op.isSucc) {
             this.logger.error(`[SendReturnErr] XXXXXXX`, ret);
             this.return = undefined;
