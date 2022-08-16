@@ -1,50 +1,26 @@
-import { ApiReturn } from "../proto/ApiReturn";
-import { ProtoInfo } from "../proto/TransportDataSchema";
-import { ApiCall } from "./ApiCall";
+import { Overwrite, uint } from "tsbuffer-schema";
+import { TransportDataSchema } from "../proto/TransportDataSchema";
+import { TsrpcError } from "../proto/TsrpcError";
+
+export type TransportData =
+    Overwrite<Omit<TransportDataSchema & { type: 'req' }, 'serviceId'>, { serviceName: string, body: unknown }>
+    | Overwrite<TransportDataSchema & { type: 'res' }, { body: unknown, serviceName: string }>
+    | Overwrite<TransportDataSchema & { type: 'err' }, { err: TsrpcError }>
+    | Overwrite<Omit<TransportDataSchema & { type: 'msg' }, 'serviceId'>, { serviceName: string, body: unknown }>
+    | TransportDataSchema & { type: 'heartbeat' | 'custom' };
 
 /**
- * Schema for binary serialize TransportData
+ * TransportData -> BoxBuffer_Encoding
+ * - serviceName -> serviceId (req res msg)
+ * - body -> Uint8Array (req res msg)
  */
-export type TransportData = {
-    /** API Request */
-    type: 'req',
-    apiName: string,
-    req: any,
-    sn: number,
-    /** Exchange proto info at first request */
-    protoInfo?: ProtoInfo
-} | {
-    /** API Return */
-    type: 'ret',
-    sn: number,
-    ret: ApiReturn<any>,
-    /** Exchange proto info if get a 'protoInfo' request header */
-    protoInfo?: ProtoInfo,
-    // 不参与编码
-    call?: ApiCall<any, any>
-} | {
-    /** Message */
-    type: 'msg',
-    msgName: string,
-    msg: any
-} | {
-    type: 'heartbeat',
-    sn: number,
-    /**
-     * false | undefined: req (ping)
-     * true: reply (pong)
-     */
-    isReply?: boolean
-} | {
-    /** Preserve for custom usage */
-    type: 'custom',
-    data: string | Uint8Array
-};
+export type BoxBuffer = TransportDataSchema & { type: 'res', serviceId: uint }
+    | TransportDataSchema & { type: Exclude<TransportDataSchema['type'], 'res'> };
 
-export type TransportDataWithData = (
-    Omit<TransportData & { type: 'req' }, 'req'>
-    | Omit<TransportData & { type: 'ret' }, 'ret'>
-    | Omit<TransportData & { type: 'msg' }, 'msg'>
-    | Omit<TransportData & { type: 'custom' }, 'data'>
-) & ({ dataType: 'text', data: string } | { dataType: 'buffer', data: Uint8Array });
-export type SendableTransportData = TransportDataWithData | Exclude<TransportData, TransportData & { type: TransportDataWithData['type'] }>;
+// body -> string
+export type BoxText_Encoding = Overwrite<TransportData & { type: 'req' | 'res' | 'msg' }, { body: string }>
+    | TransportData & { type: Exclude<TransportData['type'], 'req' | 'res' | 'msg'> };
+
+// body -> object
+export type BoxText_Decoding = Overwrite<TransportData & { type: 'req' | 'res' | 'msg' }, { body: object }>
+    | TransportData & { type: Exclude<TransportData['type'], 'req' | 'res' | 'msg'> };

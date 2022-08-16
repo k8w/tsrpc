@@ -6,41 +6,42 @@ import { int, uint } from 'tsbuffer-schema';
 export type TransportDataSchema = {
     /** API Request */
     type: 'req',
+    body: Uint8Array,
     serviceId: uint,
-    data: Uint8Array,
-    /** Short connection don't need */
-    sn?: uint,
+    sn: uint,
     /** Exchange proto info at first request */
-    protoInfo?: ProtoInfo,
+    protoInfo?: ProtoInfo
 } | {
-    /** API Response */
+    /** API Return */
     type: 'res',
-    /** Short connection don't need */
-    sn?: uint,
-    data: Uint8Array,
+    body: Uint8Array,
+    sn: uint,
     /** Exchange proto info if get a 'protoInfo' request header */
-    protoInfo?: ProtoInfo,
+    protoInfo?: ProtoInfo
 } | {
-    /** API Error */
+    /** API Return */
     type: 'err',
-    /** Short connection don't need */
-    sn?: uint,
     err: TsrpcErrorData,
+    sn: uint,
     /** Exchange proto info if get a 'protoInfo' request header */
     protoInfo?: ProtoInfo,
 } | {
     /** Message */
     type: 'msg',
+    body: Uint8Array,
     serviceId: uint,
-    data: Uint8Array
 } | {
     type: 'heartbeat',
     sn: uint,
+    /**
+     * false | undefined: req (ping)
+     * true: reply (pong)
+     */
     isReply?: boolean
 } | {
     /** Preserve for custom usage */
     type: 'custom',
-    data: Uint8Array | string,
+    [key: string]: any
 };
 
 export interface ProtoInfo {

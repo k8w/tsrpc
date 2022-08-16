@@ -1,5 +1,7 @@
-export const TransportDataProto = {
-  "TransportDataSchema": {
+import { InterfaceTypeSchema, TSBufferProto, UnionTypeSchema } from "tsbuffer-schema";
+
+export const TransportDataProto: TSBufferProto = {
+  "BoxBuffer": {
     "type": "Union",
     "members": [
       {
@@ -17,28 +19,25 @@ export const TransportDataProto = {
             },
             {
               "id": 1,
-              "name": "serviceId",
-              "type": {
-                "type": "Number",
-                "scalarType": "uint"
-              }
-            },
-            {
-              "id": 2,
-              "name": "data",
+              "name": "body",
               "type": {
                 "type": "Buffer",
                 "arrayType": "Uint8Array"
               }
             },
             {
+              "id": 2,
+              "name": "apiName",
+              "type": {
+                "type": "String"
+              }
+            },
+            {
               "id": 3,
               "name": "sn",
               "type": {
-                "type": "Number",
-                "scalarType": "uint"
-              },
-              "optional": true
+                "type": "Number"
+              }
             },
             {
               "id": 4,
@@ -67,19 +66,17 @@ export const TransportDataProto = {
             },
             {
               "id": 1,
-              "name": "sn",
-              "type": {
-                "type": "Number",
-                "scalarType": "uint"
-              },
-              "optional": true
-            },
-            {
-              "id": 2,
-              "name": "data",
+              "name": "body",
               "type": {
                 "type": "Buffer",
                 "arrayType": "Uint8Array"
+              }
+            },
+            {
+              "id": 2,
+              "name": "sn",
+              "type": {
+                "type": "Number"
               }
             },
             {
@@ -109,19 +106,17 @@ export const TransportDataProto = {
             },
             {
               "id": 1,
-              "name": "sn",
-              "type": {
-                "type": "Number",
-                "scalarType": "uint"
-              },
-              "optional": true
-            },
-            {
-              "id": 2,
               "name": "err",
               "type": {
                 "type": "Reference",
                 "target": "TsrpcErrorData"
+              }
+            },
+            {
+              "id": 2,
+              "name": "sn",
+              "type": {
+                "type": "Number"
               }
             },
             {
@@ -151,18 +146,17 @@ export const TransportDataProto = {
             },
             {
               "id": 1,
-              "name": "serviceId",
+              "name": "body",
               "type": {
-                "type": "Number",
-                "scalarType": "uint"
+                "type": "Buffer",
+                "arrayType": "Uint8Array"
               }
             },
             {
               "id": 2,
-              "name": "data",
+              "name": "msgName",
               "type": {
-                "type": "Buffer",
-                "arrayType": "Uint8Array"
+                "type": "String"
               }
             }
           ]
@@ -185,8 +179,7 @@ export const TransportDataProto = {
               "id": 1,
               "name": "sn",
               "type": {
-                "type": "Number",
-                "scalarType": "uint"
+                "type": "Number"
               }
             },
             {
@@ -212,30 +205,14 @@ export const TransportDataProto = {
                 "type": "Literal",
                 "literal": "custom"
               }
-            },
-            {
-              "id": 1,
-              "name": "data",
-              "type": {
-                "type": "Union",
-                "members": [
-                  {
-                    "id": 0,
-                    "type": {
-                      "type": "Buffer",
-                      "arrayType": "Uint8Array"
-                    }
-                  },
-                  {
-                    "id": 1,
-                    "type": {
-                      "type": "String"
-                    }
-                  }
-                ]
-              }
             }
-          ]
+          ],
+          "indexSignature": {
+            "keyType": "String",
+            "type": {
+              "type": "Any"
+            }
+          }
         }
       }
     ]
@@ -355,11 +332,19 @@ export const TransportDataProto = {
 };
 
 // JSON data is any (json obj)
-export const TransportDataProtoJson: typeof TransportDataProto = Object.merge({}, TransportDataProto);
-TransportDataProtoJson.TransportDataSchema.members.forEach(v => {
-  v.type.properties.forEach(p => {
-    if (p.name === 'data') {
+TransportDataProto['BoxJsonObject'] = Object.merge({}, TransportDataProto['BoxBuffer']);
+(TransportDataProto['BoxJsonObject'] as UnionTypeSchema).members.forEach(v => {
+  (v.type as InterfaceTypeSchema).properties!.forEach(p => {
+    // body -> any
+    if (p.name === 'body') {
       p.type = { type: 'Any' }
+    }
+    // serviceId -> serviceName
+    else if (p.name === 'serviceId') {
+      p.name = 'serviceName';
+      p.type = {
+        type: 'String'
+      }
     }
   })
 })

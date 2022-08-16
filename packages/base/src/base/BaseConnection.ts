@@ -5,15 +5,15 @@ import { EventEmitter } from "../models/EventEmitter";
 import { Flow } from "../models/Flow";
 import { Logger, LogLevel } from "../models/Logger";
 import { OpResult } from "../models/OpResult";
-import { ApiService, ServiceMap } from "../models/ServiceMapUtil";
+import { ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturn } from "../proto/ApiReturn";
 import { BaseServiceType } from "../proto/BaseServiceType";
+import { ProtoInfo, TransportDataSchema, TsrpcErrorType } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
 import { ApiCall } from "./ApiCall";
 import { BaseConnectionFlows } from "./BaseConnectionFlows";
 import { TransportData } from "./TransportData";
-import { ProtoInfo, TsrpcErrorType } from "./TransportDataSchema";
 import { TransportDataUtil } from "./TransportDataUtil";
 
 export const PROMISE_ABORTED = new Promise<any>(rs => { });
@@ -449,13 +449,59 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // #region Transport
 
+    // send
+    // buffer encode -> boxBuffer
+    // text encodeJSON -> boxJSON (http text custom)
+    // recv
+    // buffer unboxBuffer -> decode
+    // text unboxText (http text custom) -> decodeJSON
+
     // HTTP JSON override this
+    // reuse buffer
+    // text: custom encode (only req ret)
     /**
      * Encode data to sendable format, type of data is checked already
      * @param data 
      * @param dataType 
      */
-    protected _encodeData(data: TransportData, dataType: 'text' | 'buffer'): OpResult<string | Uint8Array> {
+    protected _encodeData(transportData: TransportData, dataType: 'text' | 'buffer'): OpResult<string | Uint8Array> {
+        if (dataType === 'buffer') {
+            // make TransportDataSchema
+            let wrapper: TransportDataSchema;
+            if (transportData.type === 'req') {
+                // encode data
+            }
+            else if (transportData.type === 'ret' && transportData.ret.isSucc) {
+                // encode data
+            }
+            else if (transportData.type === 'msg') {
+                // encode data
+            }
+
+            // encode TransportDataSchema
+            return TransportDataUtil.encodeBuffer(wrapper);
+        }
+        else if (dataType === 'text') {
+            // make TransportDataSchemaJSON
+            // req
+            //  encodeJSON
+            // res
+            //  encodeJSON
+            // err
+            // msg
+            // heartbeat
+            // custom
+
+            // JSON.stringify
+        }
+
+        throw new Error(`Invalid dataType: ${dataType}`)
+        // encode innerData
+
+        // encode 流程
+        // buffer encode(validate -> encode)
+        // text encodeJSON(prune -> encodeJSON) -> JSON.stringify （可能自定义）
+
         // Req
         // Ret
         // Msg
@@ -487,54 +533,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     protected async _sendTransportData(transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
         if (this._status !== ConnectionStatus.Opened) {
             return { isSucc: false, errMsg: `Connection status is not opened, cannot send any data.` }
-        }
-
-        const dataType = options?.dataType ?? this.options.dataType;
-
-        // Validate
-        if (!this.options.skipSendTypeCheck) {
-            // TODO
-            let vRes: OpResult<any> | undefined;
-            switch (transportData.type) {
-                case 'req': {
-                    const service = this.serviceMap.apiName2Service[transportData.apiName];
-                    if (!service) {
-                        return { isSucc: false, errMsg: `Undefined API name: ${transportData.apiName}` };
-                    }
-                    vRes = this._validateBeforeSend(dataType, transportData.req, service.reqSchemaId);
-                    break;
-                };
-                case 'ret': {
-                    const service = transportData.call!.service as ApiService;
-                    // res
-                    if (transportData.ret.isSucc) {
-                        vRes = this._validateBeforeSend(dataType, transportData.ret.res, service.resSchemaId);
-                    }
-                    // err
-                    else {
-                        vRes = TransportDataUtil.tsbuffer.validate(transportData.ret.err, 'TsrpcErrorData')
-                    }
-                    break;
-                }
-                case 'msg': {
-                    const service = this.serviceMap.msgName2Service[transportData.msgName];
-                    if (!service) {
-                        return { isSucc: false, errMsg: `Undefined Msg name: ${transportData.msgName}` };
-                    }
-                    vRes = this._validateBeforeSend(dataType, transportData.msg, service.msgSchemaId);
-                    break;
-                }
-            }
-
-            if (vRes && !vRes.isSucc) {
-                return vRes;
-            }
-
-            // pruneOutput TODO
-
-            // encode 流程
-            // buffer encode(validate -> encode)
-            // text encodeJSON(prune -> encodeJSON) -> JSON.stringify （可能自定义）
         }
 
         // Encode
@@ -681,8 +679,8 @@ export interface BaseConnectionOptions {
     apiCallTimeout: number,
 
     // Runtime Type Check
-    skipSendTypeCheck: boolean;
-    skipRecvTypeCheck: boolean;
+    skipEncodeTypeCheck: boolean;
+    skipDecodeTypeCheck: boolean;
 
     // Heartbeat
     heartbeat?: {
