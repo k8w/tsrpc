@@ -18,9 +18,12 @@ export type BoxBuffer = TransportDataSchema & { type: 'res', serviceId: uint }
     | TransportDataSchema & { type: Exclude<TransportDataSchema['type'], 'res'> };
 
 // body -> string
-export type BoxText_Encoding = Overwrite<TransportData & { type: 'req' | 'res' | 'msg' }, { body: string }>
+export type BoxTextEncoding = Overwrite<TransportData & { type: 'req' | 'res' | 'msg' }, { body: string }>
     | TransportData & { type: Exclude<TransportData['type'], 'req' | 'res' | 'msg'> };
 
 // body -> object
-export type BoxText_Decoding = Overwrite<TransportData & { type: 'req' | 'res' | 'msg' }, { body: object }>
+export type BoxTextDecoding = Overwrite<TransportData & { type: 'req' | 'res' | 'msg' }, { body: object }>
     | TransportData & { type: Exclude<TransportData['type'], 'req' | 'res' | 'msg'> };
+
+export type BoxEncoding = BoxBuffer | BoxTextEncoding;
+export type BoxDecoding = BoxBuffer | BoxTextDecoding;

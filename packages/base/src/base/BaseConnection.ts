@@ -13,7 +13,7 @@ import { ProtoInfo, TransportDataSchema, TsrpcErrorType } from "../proto/Transpo
 import { TsrpcError } from "../proto/TsrpcError";
 import { ApiCall } from "./ApiCall";
 import { BaseConnectionFlows } from "./BaseConnectionFlows";
-import { TransportData } from "./TransportData";
+import { BoxBuffer, BoxTextDecoding, BoxTextEncoding, TransportData } from "./TransportData";
 import { TransportDataUtil } from "./TransportDataUtil";
 
 export const PROMISE_ABORTED = new Promise<any>(rs => { });
@@ -138,13 +138,13 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         return ret;
     }
 
-    protected async _doCallApi<T extends string & keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], pendingItem: PendingApiItem, options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
+    protected async _doCallApi<T extends string & keyof ServiceType['api']>(serviceName: T, req: ServiceType['api'][T]['req'], pendingItem: PendingApiItem, options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
         // Make TransportData
         let transportData: TransportData = {
             type: 'req',
-            apiName,
+            serviceName,
             sn: this._nextSn,
-            req: req
+            body: req
         }
         // Exchange Proto Info
         if (!this._remoteProtoInfo) {
@@ -205,34 +205,22 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         });
     }
 
-    protected async _recvApiReturn(transportData: TransportData & { type: 'ret' }) {
+    protected async _recvApiReturn(transportData: TransportData & { type: 'res' | 'err' }) {
         // Parse PendingApiItem
         const item = this._pendingCallApis.get(transportData.sn);
         if (!item) {
-            this.logger.error('Invalid SN in return of callApi: ' + transportData.sn, transportData);
+            this.logger.error('Invalid SN for callApi return: ' + transportData.sn, transportData);
             return;
         }
         if (item.isAborted) {
             return;
         }
 
-        // Validate
-        if (!this.options.skipRecvTypeCheck && transportData.ret.isSucc) {
-            let vRes = this.tsbuffer.validate(transportData.ret.res, this.serviceMap.apiName2Service[item.apiName]!.resSchemaId);
-            if (!vRes.isSucc) {
-                item.onReturn?.({
-                    isSucc: false,
-                    err: new TsrpcError(`[ResTypeError] ${vRes.errMsg}`, { type: TsrpcErrorType.LocalError })
-                });
-                return;
-            }
-        }
-
         // Pre Flow
         let pre = await this.flows.preCallApiReturnFlow.exec({
             apiName: item.apiName,
             req: item.req,
-            return: transportData.ret,
+            return: transportData.type === 'res' ? { isSucc: true, res: transportData.body } : { isSucc: false, err: transportData.err },
             conn: this
         }, this.logger);
         if (!pre || item.isAborted) {
@@ -311,9 +299,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         this.logger.log(`API implemented succ: ${this.chalk(apiName, ['underline'])}`);
     };
 
-    protected async _recvApiReq(transportData: TransportData & { type: 'req' }) {
+    protected async _recvApiReq(transportData: TransportData & { type: 'req' }): Promise<ApiReturn<any>> {
         // Make ApiCall
-        const call = new ApiCall(this, transportData.apiName, transportData.sn, transportData.req, transportData.protoInfo);
+        const call = new ApiCall(this, transportData.serviceName, transportData.sn, transportData.body, transportData.protoInfo);
         return call.execute();
     }
 
@@ -362,8 +350,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Encode & Send
         let opResult = await this._sendTransportData({
             type: 'msg',
-            msgName,
-            msg
+            serviceName: msgName,
+            body: msg
         }, options)
 
         // Log
@@ -378,32 +366,18 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     }
 
     protected async _recvMsg(transportData: TransportData & { type: 'msg' }) {
-        // Validate
-        if (!this.options.skipRecvTypeCheck) {
-            const service = this.serviceMap.msgName2Service[transportData.msgName];
-            if (!service) {
-                this.logger.error(`[RecvMsg] Invalid msgName: ${transportData.msgName}`)
-                return;
-            }
-            let vRes = this.tsbuffer.validate(transportData.msg, service.msgSchemaId);
-            if (!vRes.isSucc) {
-                this.logger.error(`[RecvMsg] [MsgTypeError] ${vRes.errMsg}`, transportData.msg)
-                return;
-            }
-        }
-
         // PreRecv Flow
         let pre = await this.flows.preRecvMsgFlow.exec({
             conn: this,
-            msgName: transportData.msgName,
-            msg: transportData.msg
+            msgName: transportData.serviceName,
+            msg: transportData.body as ServiceType['msg'][keyof ServiceType['msg']]
         }, this.logger);
         if (!pre) {
             return;
         }
 
         // MsgHandlers
-        this._msgListeners.emit(transportData.msgName, transportData.msg, transportData.msgName, this);
+        this._msgListeners.emit(transportData.serviceName, transportData.body as ServiceType['msg'][string & keyof ServiceType['msg']], transportData.serviceName, this);
     }
 
     /**
@@ -449,82 +423,12 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // #region Transport
 
-    // send
-    // buffer encode -> boxBuffer
-    // text encodeJSON -> boxJSON (http text custom)
-    // recv
-    // buffer unboxBuffer -> decode
-    // text unboxText (http text custom) -> decodeJSON
-
-    // HTTP JSON override this
-    // reuse buffer
-    // text: custom encode (only req ret)
-    /**
-     * Encode data to sendable format, type of data is checked already
-     * @param data 
-     * @param dataType 
-     */
-    protected _encodeData(transportData: TransportData, dataType: 'text' | 'buffer'): OpResult<string | Uint8Array> {
-        if (dataType === 'buffer') {
-            // make TransportDataSchema
-            let wrapper: TransportDataSchema;
-            if (transportData.type === 'req') {
-                // encode data
-            }
-            else if (transportData.type === 'ret' && transportData.ret.isSucc) {
-                // encode data
-            }
-            else if (transportData.type === 'msg') {
-                // encode data
-            }
-
-            // encode TransportDataSchema
-            return TransportDataUtil.encodeBuffer(wrapper);
-        }
-        else if (dataType === 'text') {
-            // make TransportDataSchemaJSON
-            // req
-            //  encodeJSON
-            // res
-            //  encodeJSON
-            // err
-            // msg
-            // heartbeat
-            // custom
-
-            // JSON.stringify
-        }
-
-        throw new Error(`Invalid dataType: ${dataType}`)
-        // encode innerData
-
-        // encode 流程
-        // buffer encode(validate -> encode)
-        // text encodeJSON(prune -> encodeJSON) -> JSON.stringify （可能自定义）
-
-        // Req
-        // Ret
-        // Msg
-        // Heartbeat
-        // Custom
-        throw new Error('TODO');
-    }
-
-    // HTTP JSON override this
-    /**
-     * Decode binary data to TransportData.
-     * @param data 
-     * @param meta HTTP JSON may decode `apiName` `protoInfo` from HTTP header instead of `data`
-     */
-    protected _decodeData(data: string | Uint8Array, meta?: any): OpResult<TransportData> {
-        throw new Error('TODO')
-
-        // decode 外层错误
-        // return { isSucc: false, errMsg: `Decoding fails. Please check if you are using custom encoding/decoding Flow, you can enable 'debugBuf: true' to check if the data is the same before encoding and after decoding.` }
-        // req 内层错误 Parsing API request fails. TODO { proto version compare } You need resync
-        // ret 内层错误 Parsing ApiReturn fails. TODO { proto version compare } You need resync
-        // msg 内层错误 Parsing Msg fails. TODO { proto version compare } You need resync
-    }
+    // #region Encode options (may override by HTTP Text)
+    protected _encodeJsonStr?: ((obj: any, schemaId: string) => string);
+    protected _encodeSkipSN?: boolean;
+    protected _encodeBoxText?: (typeof TransportDataUtil)['encodeBoxText'];
+    protected _decodeBoxText?: (typeof TransportDataUtil)['decodeBoxText'];
+    // #endregion
 
     /**
      * Achieved by the implemented Connection.
@@ -532,19 +436,28 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      */
     protected async _sendTransportData(transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
         if (this._status !== ConnectionStatus.Opened) {
-            return { isSucc: false, errMsg: `Connection status is not opened, cannot send any data.` }
+            return { isSucc: false, errMsg: `Connection status is not "opened", cannot send any data.` }
         }
 
-        // Encode
-        const opEncode = this._encodeData(transportData, options?.dataType ?? this.options.dataType)
-        if (!opEncode.isSucc) {
-            return opEncode;
-        }
+        const dataType = options?.dataType ?? this.options.dataType;
+
+        // Encode body
+        const opEncodeBody = dataType === 'buffer'
+            ? TransportDataUtil.encodeBodyBuffer(transportData, this.serviceMap, this.tsbuffer, this.options.skipEncodeValidate)
+            : TransportDataUtil.encodeBodyText(transportData, this.serviceMap, this.tsbuffer, this.options.skipEncodeValidate, this._encodeJsonStr);
+        if (!opEncodeBody.isSucc) { return opEncodeBody }
+
+        // Encode box
+        const opEncodeBox = dataType === 'buffer'
+            ? TransportDataUtil.encodeBoxBuffer(opEncodeBody.res as BoxBuffer)
+            : (this._encodeBoxText ?? TransportDataUtil.encodeBoxText)(opEncodeBody.res as BoxTextEncoding, this._encodeSkipSN)
+        if (!opEncodeBox.isSucc) { return opEncodeBox }
 
         // Pre Flow
         const pre = await this.flows.preSendDataFlow.exec({
             conn: this,
-            data: opEncode.res
+            data: opEncodeBox.res,
+            transportData: transportData
         }, this.logger);
         if (!pre) {
             return PROMISE_ABORTED;
@@ -552,30 +465,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Do Send
         return this._sendData(pre.data, transportData, options);
-    }
-
-    private _validateBeforeSend<T = any>(dataType: BaseConnectionOptions['dataType'], data: T, schemaId: string): OpResult<T>;
-    private _validateBeforeSend<T = any>(dataType: BaseConnectionOptions['dataType'], data: T, schemaId: string): OpResult<T>;
-    private _validateBeforeSend(dataType: BaseConnectionOptions['dataType'], data: any, schemaId: string): OpResult<any> {
-        if (dataType === 'buffer') {
-            let vRes = this.tsbuffer.validate(data, schemaId, {
-                // 禁用excessPropertyChecks，因为二进制不会编码 excess property
-                excessPropertyChecks: false
-            });
-            if (!vRes.isSucc) {
-                return vRes;
-            }
-            return { isSucc: true, res: data }
-        }
-        else if (dataType === 'text') {
-            let vRes = this.tsbuffer.prune(data, schemaId);
-            if (!vRes.isSucc) {
-                return vRes;
-            }
-            return { isSucc: true, res: vRes.pruneOutput }
-        }
-
-        throw new Error(`Invalid dataType: ${dataType}`);
     }
 
     /**
@@ -599,7 +488,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 this._recvApiReq(transportData);
                 break;
             }
-            case 'ret': {
+            case 'res':
+            case 'err': {
                 this._recvApiReturn(transportData);
                 break;
             }
@@ -616,7 +506,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
     };
 
-    protected async _recvData(data: string | Uint8Array, meta?: any) {
+    protected async _recvData(data: string | Uint8Array, meta?: any): Promise<void> {
         // Ignore all data if connection is not opened
         if (this._status !== ConnectionStatus.Opened) {
             return;
@@ -628,20 +518,36 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             data: data
         }, this.logger);
         if (!pre) {
+            this.logger.debug('[preRecvDataFlow] Canceled', data);
+            return;
+        }
+        // Decode by preFlow
+        if (pre.parsedTransportData) {
+            return this._recvTransportData(pre.parsedTransportData);
+        }
+        data = pre.data;
+
+        // Decode box
+        const opDecodeBox = typeof data === 'string'
+            ? (this._decodeBoxText ?? TransportDataUtil.decodeBoxText)(data, this._pendingCallApis, this.options.skipDecodeValidate)
+            : TransportDataUtil.decodeBoxBuffer(data, this._pendingCallApis, this.serviceMap, this.options.skipDecodeValidate);
+        if (!opDecodeBox.isSucc) {
+            this.logger.error(`[DecodeBoxErr] Received data:`, data);
+            this.logger.error(`[DecodeBoxErr] ${opDecodeBox.errMsg}`);
             return;
         }
 
-        // Decode
-        if (!pre.parsedTransportData) {
-            const op = this._decodeData(data, meta);
-            if (!op.isSucc) {
-                this.logger.error(`[RecvData] [DecodeError] ${op.errMsg}`, 'data:', data, ...(meta ? ['meta:', meta] : []));
-                return op;
-            }
-            pre.parsedTransportData = op.res;
+        // Decode body
+        const opDecodeBody = typeof data === 'string'
+            ? TransportDataUtil.decodeBodyText(opDecodeBox.res as BoxTextDecoding, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)
+            : TransportDataUtil.decodeBodyBuffer(opDecodeBox.res as BoxBuffer, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)
+        if (!opDecodeBody.isSucc) {
+            this.logger.error(`[DecodeBodyErr] Received body:`, opDecodeBox.res);
+            this.logger.error(`[DecodeBodyErr] ${opDecodeBody.errMsg}`);
+            return;
         }
 
-        this._recvTransportData(pre.parsedTransportData);
+        this._recvTransportData(opDecodeBody.res);
     };
 
     // #endregion
@@ -679,8 +585,8 @@ export interface BaseConnectionOptions {
     apiCallTimeout: number,
 
     // Runtime Type Check
-    skipEncodeTypeCheck: boolean;
-    skipDecodeTypeCheck: boolean;
+    skipEncodeValidate: boolean;
+    skipDecodeValidate: boolean;
 
     // Heartbeat
     heartbeat?: {

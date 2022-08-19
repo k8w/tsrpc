@@ -4,7 +4,8 @@ import { TSBufferProto } from "tsbuffer-schema";
 import { OpResult } from "../models/OpResult";
 import { ApiService, MsgService, ServiceMap } from "../models/ServiceMapUtil";
 import { TransportDataProto } from "../proto/TransportDataProto";
-import { BoxBuffer, BoxText_Decoding, BoxText_Encoding, TransportData } from "./TransportData";
+import { TsrpcError } from "../proto/TsrpcError";
+import { BoxBuffer, BoxTextDecoding, BoxTextEncoding, TransportData } from "./TransportData";
 
 // Send buffer: TransportData -> BoxBuffer -> Uint8Array
 // Send text: TransportData -> BoxText -> string
@@ -24,7 +25,7 @@ export class TransportDataUtil {
     /**
      * @returns null 代表无需编码 body
      */
-    static getBodyInfo(transportData: { type: string, serviceName?: string }, serviceMap: ServiceMap): OpResult<{ serviceId: number, schemaId: string } | null> {
+    private static _getBodyInfo(transportData: { type: string, serviceName?: string }, serviceMap: ServiceMap): OpResult<{ serviceId: number, schemaId: string } | null> {
         // Get schemaId
         const { type, serviceName } = transportData;
         if (serviceName) {
@@ -47,7 +48,7 @@ export class TransportDataUtil {
     }
 
     static encodeBodyBuffer(transportData: TransportData, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<BoxBuffer> {
-        let opBodyInfo = this.getBodyInfo(transportData, serviceMap);
+        let opBodyInfo = this._getBodyInfo(transportData, serviceMap);
         if (!opBodyInfo.isSucc) { return opBodyInfo };
 
         // Encode body
@@ -72,8 +73,8 @@ export class TransportDataUtil {
         }
     }
 
-    static encodeBodyText(transportData: TransportData, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined, encodeJsonStr: ((obj: any, schemaId: string) => string) | undefined): OpResult<BoxText_Encoding> {
-        let opBodyInfo = this.getBodyInfo(transportData, serviceMap);
+    static encodeBodyText(transportData: TransportData, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined, encodeJsonStr: ((obj: any, schemaId: string) => string) | undefined): OpResult<BoxTextEncoding> {
+        let opBodyInfo = this._getBodyInfo(transportData, serviceMap);
         if (!opBodyInfo.isSucc) { return opBodyInfo };
 
         // Encode body
@@ -106,7 +107,7 @@ export class TransportDataUtil {
         return { isSucc: true, res: op.buf }
     }
 
-    static encodeBoxText(box: BoxText_Encoding, skipSN: boolean): OpResult<string> {
+    static encodeBoxText(box: BoxTextEncoding, skipSN: boolean | undefined): OpResult<string> {
         switch (box.type) {
             case 'req':
             case 'res':
@@ -133,7 +134,7 @@ export class TransportDataUtil {
         }
     }
 
-    protected static _pick<T, U extends keyof T>(obj: T, keys: U[]): PickUnion<T, U> {
+    private static _pick<T, U extends keyof T>(obj: T, keys: U[]): PickUnion<T, U> {
         let output: any = {};
         for (let k in keys) {
             output[k] = obj[k as U];
@@ -149,7 +150,7 @@ export class TransportDataUtil {
         if (box.type === 'res') {
             const item = pendingCallApis.get(box.sn);
             if (!item) {
-                return { isSucc: false, errMsg: `Invalid SN for callApi: ${box.sn}` };
+                return { isSucc: false, errMsg: `Invalid SN for callApi return: ${box.sn}` };
             }
             box.serviceId = serviceMap.apiName2Service[item.apiName]!.id;
         }
@@ -157,9 +158,9 @@ export class TransportDataUtil {
         return { isSucc: true, res: box }
     }
 
-    static decodeBoxText(data: string, pendingCallApis: Map<number, { apiName: string }>, skipValidate: boolean | undefined): OpResult<BoxText_Decoding> {
+    static decodeBoxText(data: string, pendingCallApis: Map<number, { apiName: string }>, skipValidate: boolean | undefined): OpResult<BoxTextDecoding> {
         try {
-            var box = JSON.parse(data) as BoxText_Decoding;
+            var box = JSON.parse(data) as BoxTextDecoding;
         }
         catch (e: any) {
             return { isSucc: false, errMsg: 'Invalid JSON string: ' + e.message }
@@ -175,7 +176,7 @@ export class TransportDataUtil {
         if (box.type === 'res') {
             const item = pendingCallApis.get(box.sn);
             if (!item) {
-                return { isSucc: false, errMsg: `Invalid SN for callApi: ${box.sn}` };
+                return { isSucc: false, errMsg: `Invalid SN for callApi return: ${box.sn}` };
             }
             box.serviceName = item.apiName;
         }
@@ -184,7 +185,7 @@ export class TransportDataUtil {
     }
 
     static decodeBodyBuffer(box: BoxBuffer, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<TransportData> {
-        let opBodyInfo = this.getBodyInfo(box, serviceMap);
+        let opBodyInfo = this._getBodyInfo(box, serviceMap);
         if (!opBodyInfo.isSucc) { return opBodyInfo };
 
         // Decode body
@@ -209,19 +210,29 @@ export class TransportDataUtil {
                 }
             }
         }
+        // err: TsrpcErrorData -> TsrpcError
+        else if (box.type === 'err') {
+            return {
+                isSucc: true,
+                res: {
+                    ...box,
+                    err: new TsrpcError(box.err)
+                }
+            }
+        }
         // No need to decode body
         else {
             return { isSucc: true, res: box as BoxBuffer & { type: Exclude<BoxBuffer['type'], 'req' | 'res' | 'msg'> } };
         }
     }
 
-    static decodeBodyText(box: BoxText_Decoding, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<TransportData> {
-        let opBodyInfo = this.getBodyInfo(box, serviceMap);
+    static decodeBodyText(box: BoxTextDecoding, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<TransportData> {
+        let opBodyInfo = this._getBodyInfo(box, serviceMap);
         if (!opBodyInfo.isSucc) { return opBodyInfo };
 
         // Decode body
         if (opBodyInfo.res) {
-            const { body, ...rest } = box as BoxText_Decoding & { type: 'req' | 'res' | 'msg' };
+            const { body, ...rest } = box as BoxTextDecoding & { type: 'req' | 'res' | 'msg' };
             let opDecode = tsbuffer.decodeJSON(body, opBodyInfo.res.schemaId, { skipValidate });
             if (!opDecode.isSucc) {
                 return opDecode;
@@ -235,9 +246,19 @@ export class TransportDataUtil {
                 }
             }
         }
+        // err: TsrpcErrorData -> TsrpcError
+        else if (box.type === 'err') {
+            return {
+                isSucc: true,
+                res: {
+                    ...box,
+                    err: new TsrpcError(box.err)
+                }
+            }
+        }
         // No need to decode body
         else {
-            return { isSucc: true, res: box as BoxText_Decoding & { type: Exclude<BoxText_Decoding['type'], 'req' | 'res' | 'msg'> } };
+            return { isSucc: true, res: box as BoxTextDecoding & { type: Exclude<BoxTextDecoding['type'], 'req' | 'res' | 'msg'> } };
         }
     }
 

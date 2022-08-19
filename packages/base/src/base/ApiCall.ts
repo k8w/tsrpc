@@ -2,9 +2,9 @@ import { Logger } from "../models/Logger";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { ApiService } from "../models/ServiceMapUtil";
 import { ApiReturn } from "../proto/ApiReturn";
+import { ProtoInfo, TsrpcErrorData, TsrpcErrorType } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
 import { BaseConnection, PROMISE_ABORTED } from "./BaseConnection";
-import { ProtoInfo, TsrpcErrorData, TsrpcErrorType } from "./TransportDataSchema";
 
 // 每一次 Api 调用都会生成一个 ApiCall（Server & Client）
 // call.succ & call.error 可用于返回
@@ -16,7 +16,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
 
     logger: Logger;
     return?: ApiReturn<Res>;
-    service?: ApiService;
+    service!: ApiService;
 
     constructor(
         public readonly conn: Conn,
@@ -34,12 +34,13 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
     protected _rsExecute?: (ret: ApiReturn<Res>) => void;;
     async execute(): Promise<ApiReturn<Res>> {
         // Get Service
-        this.service = this.conn.serviceMap.apiName2Service[this.apiName];
-        if (!this.service) {
+        const service = this.conn.serviceMap.apiName2Service[this.apiName];
+        if (!service) {
             return this.error(`Undefined API name: ${this.apiName}`, {
                 type: TsrpcErrorType.RemoteError
             });
         }
+        this.service = service;
 
         // Log
         this.conn.options.logApi && this.logger.log(this.conn.chalk('[Req]', ['info']), this.conn.options.logReqBody ? this.req : '');
@@ -50,7 +51,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
         }
 
         // Validate
-        if (!this.conn.options.skipRecvTypeCheck) {
+        if (!this.conn.options.skipDecodeValidate) {
             let vRes = this.conn.tsbuffer.validate(this.req, this.service.reqSchemaId);
             if (!vRes.isSucc) {
                 return this.error(`[ReqTypeError] vRes.errMsg`, { type: TsrpcErrorType.RemoteError, code: 'REQ_TYPE_ERR' });
@@ -119,7 +120,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
         ret = this.return = pre.return;
 
         // Send
-        // TODO
+        // TODO 不需要检查 service 存在性
         let op = await this.conn['_sendTransportData']({
             type: 'ret',
             call: this

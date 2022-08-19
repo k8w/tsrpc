@@ -88,6 +88,7 @@ export type MsgFlow<Conn extends BaseConnection<any>> = {
 export type SendDataFlow<Conn extends BaseConnection<any>> = {
     data: string | Uint8Array,
     readonly conn: Conn,
+    readonly transportData: TransportData
 };
 
 export type RecvDataFlow<Conn extends BaseConnection<any>> = {

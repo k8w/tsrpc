@@ -1,6 +1,6 @@
 import { int } from "tsbuffer-schema";
 import { __assign } from "tslib";
-import { TsrpcErrorData, TsrpcErrorType } from "../base/TransportDataSchema";
+import { TsrpcErrorData, TsrpcErrorType } from "./TransportDataSchema";
 
 /**
  * A unified Error that returned by TSRPC server or client
