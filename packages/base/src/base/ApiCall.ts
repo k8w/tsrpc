@@ -120,13 +120,21 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
         ret = this.return = pre.return;
 
         // Send
-        // TODO 不需要检查 service 存在性
         let op = await this.conn['_sendTransportData']({
-            type: 'ret',
-            call: this
-        } as any);
+            ...(ret.isSucc ? {
+                type: 'res',
+                body: ret.res,
+                serviceName: this.service.name
+            } : {
+                type: 'err',
+                err: ret.err,
+            }),
+            sn: this.sn,
+            protoInfo: this.protoInfo ? this.conn['_localProtoInfo'] : undefined,
+        })
         if (!op.isSucc) {
-            this.logger.error(`[SendReturnErr] XXXXXXX`, ret);
+            this.logger.error(`[SendReturnErr] ret:`, ret);
+            this.logger.error(`[SendReturnErr]`, op.errMsg);
             this.return = undefined;
             return await this._internalError({ message: op.errMsg });
         }
