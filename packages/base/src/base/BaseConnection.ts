@@ -9,7 +9,7 @@ import { ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturn } from "../proto/ApiReturn";
 import { BaseServiceType } from "../proto/BaseServiceType";
-import { ProtoInfo, TransportDataSchema, TsrpcErrorType } from "../proto/TransportDataSchema";
+import { ProtoInfo, TsrpcErrorType } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
 import { ApiCall } from "./ApiCall";
 import { BaseConnectionFlows } from "./BaseConnectionFlows";
@@ -41,7 +41,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Server: all shared server flows
      * Client: independent flows
      */
-    abstract flows: BaseConnectionFlows<this>;
+    abstract flows: BaseConnectionFlows<this, ServiceType>;
 
     protected _remoteProtoInfo?: ProtoInfo;
 
@@ -615,9 +615,9 @@ export interface PendingApiItem {
     onReturn?: (ret: ApiReturn<any>) => void
 }
 
-export type ApiHandler<Conn extends BaseConnection> = (call: ApiCall<any, any, Conn>) => (void | Promise<void>);
+export type ApiHandler<Conn extends BaseConnection> = <T extends Conn>(call: ApiCall<any, any, T>) => (void | Promise<void>);
 export type MsgHandler<Conn extends BaseConnection, MsgName extends keyof Conn['ServiceType']['msg']>
-    = (msg: Conn['ServiceType']['msg'][MsgName], msgName: MsgName, conn: Conn) => void | Promise<void>;
+    = <T extends Conn>(msg: T['ServiceType']['msg'][MsgName], msgName: MsgName, conn: T) => void | Promise<void>;
 
 export enum ConnectionStatus {
     Opening = 'Opening',

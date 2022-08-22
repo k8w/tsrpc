@@ -11,5 +11,5 @@
   },
   "include": [
     "src"
-  ]
+, "../../test/type-experiments/双向协变转换.ts"  ]
 }

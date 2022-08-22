@@ -8,7 +8,7 @@ import { Logger } from "./Logger";
  * If error is throwed, `Flow.onError` would be called.
  */
 export type FlowNodeReturn<T> = T | null | undefined;
-export type FlowNode<T> = (item: T) => FlowNodeReturn<T> | Promise<FlowNodeReturn<T>>;
+export type FlowNode<T> = <U extends T>(item: U) => FlowNodeReturn<T> | Promise<FlowNodeReturn<T>>;
 
 /**
  * A `Flow` is consists of many `FlowNode`, which is function with the same input and output (like pipeline).
@@ -31,7 +31,7 @@ export class Flow<T> {
      * @param input 
      * @param logger 
      */
-    onError: (e: Error | TsrpcError, last: T, input: T, logger: Logger | undefined) => void = (e, last, input, logger) => {
+    onError: <U extends T>(e: Error | TsrpcError, last: U, input: U, logger: Logger | undefined) => void = (e, last, input, logger) => {
         logger?.error('Uncaught FlowError:', e);
     };
 
@@ -50,7 +50,7 @@ export class Flow<T> {
      * @param logger Logger to print log, `undefined` means to hide all log.
      * @returns 
      */
-    async exec(input: T, logger: Logger | undefined): Promise<FlowNodeReturn<T>> {
+    async exec<U extends T>(input: U, logger: Logger | undefined): Promise<FlowNodeReturn<T>> {
         let res: ReturnType<FlowNode<T>> = input;
 
         for (let i = 0; i < this.nodes.length; ++i) {
@@ -58,7 +58,7 @@ export class Flow<T> {
                 res = await this.nodes[i](res);
             }
             catch (e) {
-                this.onError(e as Error, res!, input, logger);
+                this.onError(e as Error, res!, input!, logger);
                 return undefined;
             }
 
@@ -76,7 +76,7 @@ export class Flow<T> {
      * @param node 
      * @returns 
      */
-    push<K extends T>(node: FlowNode<K>): FlowNode<K> {
+    push<U extends T>(node: FlowNode<U>): FlowNode<U> {
         this.nodes.push(node as any);
         return node;
     }
@@ -86,7 +86,7 @@ export class Flow<T> {
      * @param node 
      * @returns 
      */
-    remove<K extends T>(node: FlowNode<K>) {
+    remove<U extends T>(node: FlowNode<U>) {
         return this.nodes.remove(v => v === node as any);
     }
 
