@@ -34,7 +34,34 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     get chalk() { return this.options.chalk };
 
     // Status
-    protected abstract _status: ConnectionStatus;
+    protected _status: ConnectionStatus = ConnectionStatus.Disconnected;
+    protected _setStatus(newStatus: Exclude<ConnectionStatus, ConnectionStatus.Disconnected>) {
+        if (this._status === newStatus) {
+            return;
+        }
+        this._status = newStatus;
+
+        // Post Connect
+        if (newStatus === ConnectionStatus.Connected) {
+            this.options.heartbeat && this._startHeartbeat();
+            this.flows.postConnectFlow.exec(this, this.logger);
+        }
+    }
+    protected _disconnect(isManual: boolean, reason?: string, code?: string | number): void {
+        this._status = ConnectionStatus.Disconnected;
+        this._stopHeartbeat();
+
+        // Post Flow
+        this.flows.postDisconnectFlow.exec({
+            conn: this,
+            isManual,
+            reason,
+            code
+        }, this.logger);
+
+        // To be override ...
+        // e.g. close ws ...
+    }
 
     /**
      * {@link Flow} to process `callApi`, `sendMsg`, buffer input/output, etc...
@@ -442,8 +469,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param transportData Type haven't been checked, need to be done inside.
      */
     protected async _sendTransportData(transportData: TransportData, options?: TransportOptions, call?: ApiCall): Promise<OpResult<void>> {
-        if (this._status !== ConnectionStatus.Opened) {
-            return { isSucc: false, errMsg: `Connection status is not "opened", cannot send any data.` }
+        if (this._status !== ConnectionStatus.Connected) {
+            return { isSucc: false, errMsg: `The connection is not established, cannot send data.` }
         }
 
         const dataType = options?.dataType ?? this.options.dataType;
@@ -464,13 +491,18 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         const pre = await this.flows.preSendDataFlow.exec({
             conn: this,
             data: opEncodeBox.res,
-            transportData: transportData
+            transportData: transportData,
+            call: call
         }, this.logger);
         if (!pre) {
             return PROMISE_ABORTED;
         }
 
-        // Do Send
+        // Send Data
+        if (this.options.debugBuf) {
+            this.logger.debug('[debugBuf] [SendTransportData]', pre.transportData);
+            this.logger.debug('[debugBuf] [SendData]', pre.data);
+        }
         const opSend = await this._sendData(pre.data, transportData, options);
 
         // Post Flow
@@ -497,6 +529,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param transportData Type haven't been checked, need to be done inside.
      */
     protected async _recvTransportData(transportData: TransportData): Promise<void> {
+        this.options.debugBuf && this.logger.debug('[debugBuf] [RecvTransportData]', transportData);
+
         // Sync remote protoInfo
         if ('protoInfo' in transportData && transportData.protoInfo) {
             this._remoteProtoInfo = transportData.protoInfo;
@@ -517,19 +551,19 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 break;
             }
             case 'heartbeat': {
-                // TODO
-                // this.heartbeatManager.recv(heartbeatSn)
+                this._recvHeartbeat(transportData);
                 break;
             }
-
         }
     };
 
     protected async _recvData(data: string | Uint8Array, meta?: any): Promise<void> {
         // Ignore all data if connection is not opened
-        if (this._status !== ConnectionStatus.Opened) {
+        if (this._status !== ConnectionStatus.Connected) {
             return;
         }
+
+        this.options.debugBuf && this.logger.debug('[debugBuf] [RecvData]', data);
 
         // Pre Flow
         const pre = await this.flows.preRecvDataFlow.exec({
@@ -568,8 +602,85 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         this._recvTransportData(opDecodeBody.res);
     };
-
     // #endregion
+
+    //#region Heartbeat
+
+    // ! Heartbeat 统一走可靠传输通道
+
+    protected _heartbeat?: {
+        sn: Counter,
+        sendInterval?: ReturnType<typeof setInterval>,
+        recvTimeout?: ReturnType<typeof setTimeout>
+    }
+
+    protected _startHeartbeat() {
+        if (this._heartbeat) {
+            return;
+        }
+
+        // Set interval and timers
+        if (this.options.heartbeatSendInterval) {
+            this._heartbeat = {
+                sn: new Counter
+            };
+            this._heartbeat.sendInterval = setInterval(() => {
+                this._sendHeartbeat();
+            }, this.options.heartbeatSendInterval)
+        }
+
+        // Init recv timeout
+        this._resetHeartbeatTimeout();
+    }
+
+    protected _stopHeartbeat() {
+        // Clear interval and timers
+        if (this._heartbeat?.sendInterval) {
+            clearInterval(this._heartbeat.sendInterval)
+        }
+        if (this._heartbeat?.recvTimeout) {
+            clearTimeout(this._heartbeat.recvTimeout)
+        }
+
+        this._heartbeat = undefined;
+    }
+
+    protected _sendHeartbeat() {
+        this._sendTransportData({
+            type: 'heartbeat',
+            sn: this._heartbeat!.sn.getNext()
+        })
+    }
+
+    private _recvHeartbeat(data: TransportData & { type: 'heartbeat' }) {
+        this._resetHeartbeatTimeout();
+
+        // Recv Ping
+        if (!data.isReply) {
+            // Send Reply
+            this._sendTransportData({
+                ...data,
+                isReply: true
+            })
+        }
+    }
+
+    private _resetHeartbeatTimeout() {
+        if (!this._heartbeat) {
+            return;
+        }
+
+        // Clear old
+        if (this._heartbeat.recvTimeout) {
+            clearTimeout(this._heartbeat.recvTimeout);
+        }
+
+        // Set new
+        this._heartbeat.recvTimeout = setTimeout(() => {
+            this._disconnect(false, 'Heartbeat timeout')
+        }, this.options.heartbeatRecvTimeout)
+    }
+    //#endregion
 }
 
 export const defaultBaseConnectionOptions: BaseConnectionOptions = {
@@ -587,18 +698,17 @@ export const defaultBaseConnectionOptions: BaseConnectionOptions = {
     debugBuf: false,
 
     // Timeout
-    callApiTimeout: number,
-    apiCallTimeout: number,
+    callApiTimeout: 15000,
+    apiCallTimeout: 15000,
 
     // Runtime Type Check
-    skipEncodeValidate: boolean;
-    skipDecodeValidate: boolean;
+    skipEncodeValidate: false,
+    skipDecodeValidate: false,
 
     // Heartbeat
-    heartbeat?: {
-        sendInterval: number,
-        recvTimeout: number
-    },
+    heartbeat: true,
+    heartbeatSendInterval: 1000,
+    heartbeatRecvTimeout: 5000,
 
     // Serialization (Only for HTTP)
     // encodeReturnText?: (ret: ApiReturn<any>) => string,
@@ -632,10 +742,25 @@ export interface BaseConnectionOptions {
     skipDecodeValidate: boolean;
 
     // Heartbeat
-    heartbeat?: {
-        sendInterval: number,
-        recvTimeout: number
-    },
+    /** 
+     * Whether enable heartbeat
+     * @defaultValue true
+     */
+    heartbeat: boolean;
+    /** 
+     * Interval time (ms) to send heartbeat packet.
+     * Unit: ms
+     * `0` represent not send heartbeat request.
+     * At least 1 end needs to send a heartbeat between the local and the remote.
+     * @defaultValue 1000
+     */
+    heartbeatSendInterval: number,
+    /**
+     * Timeout time (ms) to disconnect if not receive any heartbeat packet (ping or pong).
+     * Unit: ms 
+     * @defaultValue 5000
+     */
+    heartbeatRecvTimeout: number
 
     // Serialization (Only for HTTP)
     // encodeReturnText?: (ret: ApiReturn<any>) => string,
@@ -658,13 +783,8 @@ export type MsgHandler<Conn extends BaseConnection, MsgName extends keyof Conn['
     = <T extends Conn>(msg: T['ServiceType']['msg'][MsgName], msgName: MsgName, conn: T) => void | Promise<void>;
 
 export enum ConnectionStatus {
-    Opening = 'Opening',
-    Opened = 'Opened',
-    Closing = 'Closing',
-    Closed = 'Closed',
-}
-
-export interface IHeartbeatManager {
-    // TODO
-    // TCP / UDP 机制不同
+    Connecting = 'Connecting',
+    Connected = 'Connected',
+    Disconnecting = 'Disconnecting',
+    Disconnected = 'Disconnected',
 }

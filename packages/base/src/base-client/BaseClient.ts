@@ -1,29 +1,14 @@
 import { TSBuffer } from "tsbuffer";
 import { BaseConnection, BaseConnectionOptions, defaultBaseConnectionOptions } from "../base/BaseConnection";
-import { BaseConnectionFlows } from "../base/BaseConnectionFlows";
-import { Flow } from "../models/Flow";
 import { getCustomObjectIdTypes } from "../models/getCustomObjectIdTypes";
 import { ServiceMapUtil } from "../models/ServiceMapUtil";
 import { BaseServiceType } from "../proto/BaseServiceType";
 import { ServiceProto } from "../proto/ServiceProto";
+import { BaseClientFlows } from "./BaseClientFlows";
 
 export abstract class BaseClient<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
-    flows: BaseConnectionFlows<this, ServiceType> & {
-        preConnectFlow: Flow<any>,
-        postConnectFlow: Flow<any>,
-        postDisconnectFlow: Flow<any>,
-
-        // 旧版 Flow 兼容
-        /** @deprecated Use `preCallApiReturnFlow` instead. */
-        preApiReturnFlow?: never,
-        /** @deprecated Use `postSendDataFlow` instead. */
-        postApiReturnFlow?: never,
-        /** @deprecated Use `postSendDataFlow` instead. */
-        postSendMsgFlow?: never,
-        /** @deprecated Use `postSendDataFlow` instead. */
-        postRecvMsgFlow?: never
-    } = {} as any;
+    flows: BaseClientFlows<this, ServiceType> = {} as any;
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseClientOptions, privateOptions: PrivateBaseClientOptions) {
         const serviceMap = ServiceMapUtil.getServiceMap(serviceProto);

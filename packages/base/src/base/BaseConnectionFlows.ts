@@ -6,6 +6,22 @@ import { BaseConnection } from "./BaseConnection";
 import { TransportData } from "./TransportData";
 
 export interface BaseConnectionFlows<Conn extends BaseConnection, ServiceType extends BaseServiceType> {
+
+    // Connect Flows
+    postConnectFlow: Flow<Conn>,
+    postDisconnectFlow: Flow<{
+        readonly conn: Conn,
+        /**
+         * Whether is is disconnected manually by `client.disconnect()`,
+         * otherwise by accident. (e.g. network error, server closed...)
+         */
+        isManual: boolean,
+        /** reason parameter from server-side `conn.close(reason)` */
+        reason?: string,
+        code?: string | number
+
+    }>,
+
     /**
      * API Client Flows (callApi)
      * callApi() 
@@ -46,7 +62,7 @@ export interface BaseConnectionFlows<Conn extends BaseConnection, ServiceType ex
      * recv TransportData -> 【preRecvTransportDataFlow】 -> ApiCall or MsgCall or commands ...
      */
     preSendDataFlow: Flow<SendDataFlow<Conn>>,
-    postSendDataFlow: Flow<SendDataFlow<Conn>>, // TODO 接入
+    postSendDataFlow: Flow<SendDataFlow<Conn>>,
     preRecvDataFlow: Flow<RecvDataFlow<Conn>>,
 }
 
@@ -92,7 +108,7 @@ export type SendDataFlow<Conn extends BaseConnection<any>> = {
     /** Where the data is encoded from */
     readonly transportData: TransportData,
     /** If the data is an ApiReturn, this would be its original ApiCall. */
-    readonly call?: ApiCall // TODO 接入
+    readonly call?: ApiCall
 };
 
 export type RecvDataFlow<Conn extends BaseConnection<any>> = {
