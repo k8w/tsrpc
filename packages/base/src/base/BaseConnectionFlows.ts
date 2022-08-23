@@ -64,6 +64,7 @@ export interface BaseConnectionFlows<Conn extends BaseConnection, ServiceType ex
     preSendDataFlow: Flow<SendDataFlow<Conn>>,
     postSendDataFlow: Flow<SendDataFlow<Conn>>,
     preRecvDataFlow: Flow<RecvDataFlow<Conn>>,
+    postRecvCustomDataFlow: Flow<RecvCustomDataFlow<Conn>>,
 }
 
 export type CallApiFlow<Conn extends BaseConnection<any>, ServiceType extends BaseServiceType> = {
@@ -114,5 +115,10 @@ export type SendDataFlow<Conn extends BaseConnection<any>> = {
 export type RecvDataFlow<Conn extends BaseConnection<any>> = {
     data: string | Uint8Array,
     parsedTransportData?: TransportData
+    readonly conn: Conn,
+};
+
+export type RecvCustomDataFlow<Conn extends BaseConnection<any>> = {
+    data: TransportData & { type: 'custom' },
     readonly conn: Conn,
 };

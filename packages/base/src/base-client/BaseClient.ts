@@ -8,6 +8,8 @@ import { BaseClientFlows } from "./BaseClientFlows";
 
 export abstract class BaseClient<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
+    declare readonly options: BaseClientOptions;
+
     flows: BaseClientFlows<this, ServiceType> = {} as any;
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseClientOptions, privateOptions: PrivateBaseClientOptions) {
@@ -15,6 +17,10 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
         const tsbuffer = new TSBuffer({
             ...serviceProto.types,
             ...getCustomObjectIdTypes(privateOptions.classObjectId)
+        }, {
+            strictNullChecks: options.strictNullChecks,
+            skipEncodeValidate: options.skipEncodeValidate,
+            skipDecodeValidate: options.skipDecodeValidate,
         });
         super(options, serviceMap, tsbuffer, {
             lastModified: serviceProto.lastModified,
@@ -42,10 +48,14 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
 }
 
 export const defaultBaseClientOptions: BaseClientOptions = {
-    ...defaultBaseConnectionOptions
+    ...defaultBaseConnectionOptions,
+    strictNullChecks: false
 }
 
 export interface BaseClientOptions extends BaseConnectionOptions {
+    // TSBufferOptions
+    strictNullChecks: boolean,
+
     /** @deprecated Use `dataType` instead. */
     json?: never;
     /** @deprecated Use `callApiTimeout` instead. */

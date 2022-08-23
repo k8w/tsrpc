@@ -1,4 +1,4 @@
-import { TSBuffer } from "tsbuffer";
+import { TSBuffer, TSBufferOptions } from "tsbuffer";
 import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { EventEmitter } from "../models/EventEmitter";
@@ -74,7 +74,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     constructor(
         // Server: all connections shared single options
-        public options: BaseConnectionOptions,
+        public readonly options: BaseConnectionOptions,
         public readonly serviceMap: ServiceMap,
         public readonly tsbuffer: TSBuffer,
         protected readonly _localProtoInfo: ProtoInfo
@@ -554,6 +554,13 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 this._recvHeartbeat(transportData);
                 break;
             }
+            case 'custom': {
+                this.flows.postRecvCustomDataFlow.exec({
+                    data: transportData,
+                    conn: this
+                }, this.logger);
+                break;
+            }
         }
     };
 
@@ -734,10 +741,12 @@ export interface BaseConnectionOptions {
     debugBuf: boolean,
 
     // Timeout
+    /** `0` represent no timeout */
     callApiTimeout: number,
+    /** `0` represent no timeout */
     apiCallTimeout: number,
 
-    // Runtime Type Check
+    // TSBufferOptions
     skipEncodeValidate: boolean;
     skipDecodeValidate: boolean;
 
@@ -762,9 +771,6 @@ export interface BaseConnectionOptions {
      */
     heartbeatRecvTimeout: number
 
-    // Serialization (Only for HTTP)
-    // encodeReturnText?: (ret: ApiReturn<any>) => string,
-    // decodeReturnText?: (data: string) => ApiReturn<any>,
 }
 
 export interface PendingApiItem {

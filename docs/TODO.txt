@@ -1,0 +1,12 @@
+Server
+
+Access-Control-Request-Headers
+X-TSRPC-PROTO-INFO
+X-TSRPC-DATA-TYPE
+msg
+
+/**
+* Event when progress of data sent is changed
+* @param ratio - 0~1
+*/
+onProgress?: (ratio: number) => void;
