@@ -46,6 +46,7 @@ export interface BaseConnectionFlows<Conn extends BaseConnection, ServiceType ex
      * recv TransportData -> 【preRecvTransportDataFlow】 -> ApiCall or MsgCall or commands ...
      */
     preSendDataFlow: Flow<SendDataFlow<Conn>>,
+    postSendDataFlow: Flow<SendDataFlow<Conn>>, // TODO 接入
     preRecvDataFlow: Flow<RecvDataFlow<Conn>>,
 }
 
@@ -88,7 +89,10 @@ export type MsgFlow<Conn extends BaseConnection<any>, ServiceType extends BaseSe
 export type SendDataFlow<Conn extends BaseConnection<any>> = {
     data: string | Uint8Array,
     readonly conn: Conn,
-    readonly transportData: TransportData
+    /** Where the data is encoded from */
+    readonly transportData: TransportData,
+    /** If the data is an ApiReturn, this would be its original ApiCall. */
+    readonly call?: ApiCall // TODO 接入
 };
 
 export type RecvDataFlow<Conn extends BaseConnection<any>> = {

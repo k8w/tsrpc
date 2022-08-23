@@ -131,7 +131,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
             }),
             sn: this.sn,
             protoInfo: this.protoInfo ? this.conn['_localProtoInfo'] : undefined,
-        })
+        }, undefined, this);
         if (!op.isSucc) {
             this.logger.error(`[SendReturnErr] ret:`, ret);
             this.logger.error(`[SendReturnErr]`, op.errMsg);
@@ -143,7 +143,9 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
             this.logger.log(this.conn.chalk('[Res]', ['info']), this.conn.options.logResBody ? ret.res : '');
         }
         else {
-            this.logger.log(this.conn.chalk('[Err]', [ret.err.type === TsrpcErrorType.ApiError ? 'info' : 'error']), ret.err);
+            this.logger[ret.err.type === TsrpcErrorType.LocalError || ret.err.type === TsrpcErrorType.NetworkError ? 'error' : 'log'](
+                this.conn.chalk('[Err]', [ret.err.type === TsrpcErrorType.ApiError ? 'info' : 'error']), ret.err
+            );
         }
 
         // PostReturn Flow

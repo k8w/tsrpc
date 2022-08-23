@@ -3,7 +3,7 @@ import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { EventEmitter } from "../models/EventEmitter";
 import { Flow } from "../models/Flow";
-import { Logger, LogLevel } from "../models/Logger";
+import { Logger, LogLevel, setLogLevel } from "../models/Logger";
 import { OpResult } from "../models/OpResult";
 import { ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
@@ -53,6 +53,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         protected readonly _localProtoInfo: ProtoInfo
     ) {
         this._setDefaultFlowOnError();
+
+        // LogLevel
+        if (options.logLevel !== 'debug') {
+            this.options.logger = setLogLevel(this.options.logger, options.logLevel);
+        }
     }
 
     // #region API Client
@@ -359,13 +364,15 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             this.options.logMsg && this.logger.log(`[SendMsg]`, msgName, msg);
         }
         else {
-            this.logger.error(`[SendMsgErr] [${msgName}] XXXXXXXX`, msg);
+            this.logger.error(`[SendMsgErr] ${msgName} ${opResult.errMsg}`, msg);
         }
 
         return opResult;
     }
 
     protected async _recvMsg(transportData: TransportData & { type: 'msg' }) {
+        this.options.logMsg && this.logger.log(`[RecvMsg]`, transportData.serviceName, transportData.body);
+
         // PreRecv Flow
         let pre = await this.flows.preRecvMsgFlow.exec({
             conn: this,
@@ -434,7 +441,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Achieved by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
-    protected async _sendTransportData(transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
+    protected async _sendTransportData(transportData: TransportData, options?: TransportOptions, call?: ApiCall): Promise<OpResult<void>> {
         if (this._status !== ConnectionStatus.Opened) {
             return { isSucc: false, errMsg: `Connection status is not "opened", cannot send any data.` }
         }
@@ -464,7 +471,19 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
 
         // Do Send
-        return this._sendData(pre.data, transportData, options);
+        const opSend = await this._sendData(pre.data, transportData, options);
+
+        // Post Flow
+        if (opSend.isSucc) {
+            this.flows.postSendDataFlow.exec({
+                conn: this,
+                data: pre.data,
+                transportData: transportData,
+                call: call
+            }, this.logger);
+        }
+
+        return opSend;
     }
 
     /**
@@ -554,13 +573,37 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 }
 
 export const defaultBaseConnectionOptions: BaseConnectionOptions = {
-    logger: {
-        debug: console.debug.bind(console),
-        log: console.log.bind(console),
-        warn: console.warn.bind(console),
-        error: console.error.bind(console),
-    }
-} as any
+    dataType: 'buffer',
+    apiReturnInnerError: true,
+
+    // Log
+    logger: console,
+    logLevel: 'warn',
+    chalk: v => v,
+    logApi: true,
+    logMsg: true,
+    logReqBody: true,
+    logResBody: true,
+    debugBuf: false,
+
+    // Timeout
+    callApiTimeout: number,
+    apiCallTimeout: number,
+
+    // Runtime Type Check
+    skipEncodeValidate: boolean;
+    skipDecodeValidate: boolean;
+
+    // Heartbeat
+    heartbeat?: {
+        sendInterval: number,
+        recvTimeout: number
+    },
+
+    // Serialization (Only for HTTP)
+    // encodeReturnText?: (ret: ApiReturn<any>) => string,
+    // decodeReturnText?: (data: string) => ApiReturn<any>,
+};
 
 /**
  * Server: all connections shared 1 options
@@ -597,11 +640,6 @@ export interface BaseConnectionOptions {
     // Serialization (Only for HTTP)
     // encodeReturnText?: (ret: ApiReturn<any>) => string,
     // decodeReturnText?: (data: string) => ApiReturn<any>,
-
-    // jsonEncoder: any;
-    // jsonDecoder: any;
-    // bufferEncoder: any;
-    // bufferDecoder: any;
 }
 
 export interface PendingApiItem {
