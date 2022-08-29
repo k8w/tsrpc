@@ -149,7 +149,7 @@ export const defaultBaseHttpClientOptions: BaseHttpClientOptions = {
     ...defaultBaseClientOptions,
     server: 'http://127.0.0.1:3000',
     heartbeat: false,
-    apiCallTimeout: -1
+    apiCallTimeout: undefined as never
 }
 
 export interface BaseHttpClientOptions extends BaseClientOptions {
@@ -163,7 +163,7 @@ export interface BaseHttpClientOptions extends BaseClientOptions {
     heartbeat: false,
 
     /** HTTP client do not support duplex callApi */
-    apiCallTimeout: -1
+    apiCallTimeout: never
 }
 
 export interface PrivateBaseHttpClientOptions extends PrivateBaseClientOptions {
