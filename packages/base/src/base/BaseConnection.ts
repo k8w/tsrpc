@@ -1,4 +1,4 @@
-import { TSBuffer, TSBufferOptions } from "tsbuffer";
+import { TSBuffer } from "tsbuffer";
 import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { EventEmitter } from "../models/EventEmitter";
@@ -90,7 +90,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // #region API Client
 
     protected _callApiSn = new Counter(1);
-    protected _pendingCallApis = new Map<number, PendingApiItem>;
+    protected _pendingCallApis = new Map<number, PendingCallApiItem>;
 
     get lastSn() {
         return this._callApiSn.last;
@@ -113,8 +113,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         let sn = this._callApiSn.getNext();
         this.options.logApi && this.logger.log(`[CallApi] [#${sn}] ${this.chalk('[Req]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logReqBody ? req : '');
 
-        // Create PendingApiItem
-        let pendingItem: PendingApiItem = {
+        // Create PendingCallApiItem
+        let pendingItem: PendingCallApiItem = {
             sn,
             apiName,
             req,
@@ -170,7 +170,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         return ret;
     }
 
-    protected async _doCallApi<T extends string & keyof ServiceType['api']>(serviceName: T, req: ServiceType['api'][T]['req'], pendingItem: PendingApiItem, options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
+    protected async _doCallApi<T extends string & keyof ServiceType['api']>(serviceName: T, req: ServiceType['api'][T]['req'], pendingItem: PendingCallApiItem, options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
         // Make TransportData
         let transportData: TransportData = {
             type: 'req',
@@ -206,7 +206,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param timeout 
      * @returns `undefined` 代表 canceled
      */
-    protected async _waitApiReturn(pendingItem: PendingApiItem, timeout?: number): Promise<ApiReturn<any>> {
+    protected async _waitApiReturn(pendingItem: PendingCallApiItem, timeout?: number): Promise<ApiReturn<any>> {
         return new Promise<ApiReturn<any>>(rs => {
             // Timeout
             let timer: ReturnType<typeof setTimeout> | undefined;
@@ -238,7 +238,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     }
 
     protected async _recvApiReturn(transportData: TransportData & { type: 'res' | 'err' }) {
-        // Parse PendingApiItem
+        // Parse PendingCallApiItem
         const item = this._pendingCallApis.get(transportData.sn);
         if (!item) {
             this.logger.error('Invalid SN for callApi return: ' + transportData.sn, transportData);
@@ -564,7 +564,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
     };
 
-    protected async _recvData(data: string | Uint8Array, meta?: any): Promise<void> {
+    protected async _recvData(data: string | Uint8Array, ...rest: any[]): Promise<void> {
         // Ignore all data if connection is not opened
         if (this._status !== ConnectionStatus.Connected) {
             return;
@@ -589,7 +589,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Decode box
         const opDecodeBox = typeof data === 'string'
-            ? (this._decodeBoxText ?? TransportDataUtil.decodeBoxText)(data, this._pendingCallApis, this.options.skipDecodeValidate)
+            ? (this._decodeBoxText ?? TransportDataUtil.decodeBoxText)(data, this._pendingCallApis, this.options.skipDecodeValidate, ...rest)
             : TransportDataUtil.decodeBoxBuffer(data, this._pendingCallApis, this.serviceMap, this.options.skipDecodeValidate);
         if (!opDecodeBox.isSucc) {
             this.logger.error(`[DecodeBoxErr] Received data:`, data);
@@ -773,7 +773,7 @@ export interface BaseConnectionOptions {
 
 }
 
-export interface PendingApiItem {
+export interface PendingCallApiItem {
     sn: number,
     apiName: string,
     req: any,

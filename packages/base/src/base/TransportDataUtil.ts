@@ -158,7 +158,7 @@ export class TransportDataUtil {
         return { isSucc: true, res: box }
     }
 
-    static decodeBoxText(data: string, pendingCallApis: Map<number, { apiName: string }>, skipValidate: boolean | undefined): OpResult<BoxTextDecoding> {
+    static decodeBoxText(data: string, pendingCallApis: Map<number, { apiName: string }>, skipValidate: boolean | undefined, ...rest: any[]): OpResult<BoxTextDecoding> {
         try {
             var box = JSON.parse(data) as BoxTextDecoding;
         }

@@ -30,11 +30,10 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
         })
     }
 
-    // #region 3.x API 向后兼容
+    // #region Deprecated 3.x API
     /** @deprecated Use `this.options.dataType` instead. */
     declare dataType: never;
 
-    private _DEPRECATED_msgHandlers = new WeakMap<Function, Function>();
     /** @deprecated Use `onMsg` instead. */
     listenMsg = this.onMsg;
     /** @deprecated Use `offMsg` instead. */

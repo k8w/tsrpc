@@ -1,9 +1,12 @@
+import { PROMISE_ABORTED } from "../../base/BaseConnection";
 import { TransportData } from "../../base/TransportData";
+import { TransportDataUtil } from "../../base/TransportDataUtil";
 import { OpResult } from "../../models/OpResult";
 import { TransportOptions } from "../../models/TransportOptions";
 import { ApiReturn } from "../../proto/ApiReturn";
 import { BaseServiceType } from "../../proto/BaseServiceType";
 import { ServiceProto } from "../../proto/ServiceProto";
+import { ProtoInfo, TsrpcErrorType } from "../../proto/TransportDataSchema";
 import { TsrpcError } from "../../proto/TsrpcError";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../BaseClient";
 import { HttpRequest } from "./IHttpRequest";
@@ -13,76 +16,113 @@ export class BaseHttpClient<ServiceType extends BaseServiceType> extends BaseCli
     declare readonly options: BaseHttpClientOptions;
     protected _request: HttpRequest;
 
-    constructor(serviceProto: ServiceProto<ServiceType>, options: Partial<BaseHttpClientOptions> | undefined, privateOptions: PrivateBaseHttpClientOptions) {
-        super(serviceProto, {
-            ...defaultBaseHttpClientOptions,
-            ...options
-        }, privateOptions);
-
+    constructor(serviceProto: ServiceProto<ServiceType>, options: BaseHttpClientOptions, privateOptions: PrivateBaseHttpClientOptions) {
+        super(serviceProto, options, privateOptions);
         this._request = privateOptions.request;
-        this.logger.log('TSRPC HTTP Client :', this.options.server);
+        this.logger.log(`TSRPC HTTP Client: ${this.options.server}`);
     }
 
-    protected _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
-        let promise = (async (): Promise<{ err: TsrpcError | undefined; res?: undefined } | { res: string | Uint8Array, err?: undefined }> => {
-            // Send to this URL
-            const serviceName = 'serviceName' in transportData ? transportData.serviceName : '';
-            const url = (typeof data === 'string' && serviceName)
-                ? `${this.options.server}${this.options.server.endsWith('/') ? '' : '/'}${serviceName}`
-                : this.options.server;
+    protected async _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
+        // Send to this URL
+        const serviceName = 'serviceName' in transportData ? transportData.serviceName : '';
+        const url = (typeof data === 'string' && serviceName)
+            ? `${this.options.server}${this.options.server.endsWith('/') ? '' : '/'}${serviceName}`
+            : this.options.server;
 
-            // Do Send
-            let { promise: fetchPromise, abort } = this._request({
-                url: url,
-                data: data,
-                method: 'POST',
-                timeout: options?.timeout || this.options.callApiTimeout,
-                headers: {
-                    'Content-Type': typeof data === 'string' ? 'application/json' : 'application/octet-stream',
-                    ...(transportData.type === 'msg' || transportData.type === 'custom' ? {
-                        'X-TSRPC-DATA-TYPE': transportData.type,
-                    } : undefined),
-                    ...('protoInfo' in transportData && transportData.protoInfo ? {
-                        'X-TSRPC-PROTO-INFO': JSON.stringify(transportData.protoInfo)
-                    } : undefined)
-                },
-                responseType: typeof data === 'string' ? 'text' : 'arraybuffer',
-            });
+        // Do Send
+        let { promise, abort } = this._request({
+            url: url,
+            data: data,
+            method: 'POST',
+            timeout: options?.timeout || this.options.callApiTimeout,
+            headers: {
+                'Content-Type': typeof data === 'string' ? 'application/json' : 'application/octet-stream',
+                ...(transportData.type === 'msg' || transportData.type === 'custom' ? {
+                    'X-TSRPC-DATA-TYPE': transportData.type,
+                } : undefined),
+                ...('protoInfo' in transportData && transportData.protoInfo ? {
+                    'X-TSRPC-PROTO-INFO': JSON.stringify(transportData.protoInfo)
+                } : undefined)
+            },
+            responseType: typeof data === 'string' ? 'text' : 'arraybuffer',
+        });
 
-            if (pendingApiItem) {
-                pendingApiItem.onAbort = () => {
-                    abort();
-                }
+        const pendingCallApiItem = transportData.type === 'req' ? this._pendingCallApis.get(transportData.sn) : undefined;
+        if (pendingCallApiItem) {
+            pendingCallApiItem.onAbort = () => {
+                abort();
             }
-
             // Aborted
-            if (pendingApiItem?.isAborted) {
-                return new Promise(rs => { });
+            if (pendingCallApiItem.isAborted) {
+                return PROMISE_ABORTED;
             }
+        }
 
-            let fetchRes = await fetchPromise;
-            if (!fetchRes.isSucc) {
-                return { err: fetchRes.err };
-            }
-            return { res: fetchRes.res };
-        })();
+        // callApi: recv data
+        if (pendingCallApiItem) {
+            promise.catch((e: Error) => ({ isSucc: false as const, err: new TsrpcError(e.message, { type: TsrpcErrorType.LocalError }) })).then(ret => {
+                if (!ret.isSucc) {
+                    this._recvApiReturn({
+                        type: 'err',
+                        sn: (transportData as TransportData & { type: 'req' }).sn,
+                        err: ret.err
+                    });
+                    return;
+                }
 
-        promise.then(v => {
-            // Msg 不需要 onRecvData
-            if (pendingApiItem && v.res) {
-                this._onRecvData(v.res, pendingApiItem);
-            }
-        })
+                this._recvData(ret.body, (transportData as TransportData & { type: 'req' }).sn, ret.headers);
+            })
+        }
 
-        // Finally
-        promise.catch(e => { }).then(() => {
-            if (pendingApiItem) {
-                pendingApiItem.onAbort = undefined;
-            }
-        })
-
-        return promise;
+        // Send Succ
+        return { isSucc: true, res: undefined };
     }
+
+    // #region Encode options (may override by HTTP Text)
+    declare protected _recvData: (data: string | Uint8Array, reqSn: number, resHeaders: Record<string, string> | undefined) => Promise<void>;
+    // TODO
+    protected _encodeJsonStr?: ((obj: any, schemaId: string) => string);
+    protected _encodeSkipSN = true;
+    // TODO
+    protected _encodeBoxText?: (typeof TransportDataUtil)['encodeBoxText'];
+    protected _decodeBoxText: (typeof TransportDataUtil)['decodeBoxText'] = (data, pendingCallApis, skipValidate, reqSn: number, resHeaders: Record<string, string> | undefined) => {
+        const pendingApi = pendingCallApis.get(reqSn);
+        if (!pendingApi) {
+            return { isSucc: false, errMsg: `Invalid SN: ${reqSn}` };
+        }
+
+        // Parse body
+        let body: object;
+        try {
+            body = JSON.parse(data);
+        }
+        catch (e) {
+            return { isSucc: false, errMsg: `Response body is not a valid JSON.${this.flows.preRecvDataFlow.nodes.length ? ' You are using "preRecvDataFlow", please check whether it transformed the data properly.' : ''}\n  |- ${e}` }
+        }
+
+        // Parse remote proto info from header
+        let protoInfo: ProtoInfo | undefined;
+        if (resHeaders?.['X-TSRPC-PROTO-INFO']) {
+            try {
+                protoInfo = JSON.parse(resHeaders['X-TSRPC-PROTO-INFO'])
+            }
+            catch (e) {
+                this.logger.warn('Invalid reponse header "X-TSRPC-PROTO-INFO":', resHeaders['X-TSRPC-PROTO-INFO'], e)
+            }
+        }
+
+        return {
+            isSucc: true,
+            res: {
+                type: 'res',
+                body: body,
+                serviceName: pendingApi.apiName,
+                sn: reqSn,
+                protoInfo: protoInfo
+            }
+        }
+    }
+    // #endregion
 
     // #region HTTP not supported APIs
     /** HTTP client do not support duplex callApi */

@@ -12,5 +12,5 @@ export type HttpRequest = (options: {
     responseType: 'text' | 'arraybuffer'
 }) => {
     abort: () => void,
-    promise: Promise<{ isSucc: true, res: string | Uint8Array } | { isSucc: false, err: TsrpcError }>
+    promise: Promise<{ isSucc: true, body: string | Uint8Array, headers?: Record<string, string> } | { isSucc: false, err: TsrpcError }>
 };
