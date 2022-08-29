@@ -1,6 +1,6 @@
 import { TsrpcError } from "../../proto/TsrpcError";
 
-export type HttpRequest = (options: {
+export type HttpRequestProxy = (options: {
     url: string,
     data: string | Uint8Array,
     method: string,

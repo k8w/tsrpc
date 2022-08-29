@@ -9,12 +9,12 @@ import { ServiceProto } from "../../proto/ServiceProto";
 import { ProtoInfo, TsrpcErrorType } from "../../proto/TransportDataSchema";
 import { TsrpcError } from "../../proto/TsrpcError";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../BaseClient";
-import { HttpRequest } from "./IHttpRequest";
+import { HttpRequestProxy } from "./HttpRequestProxy";
 
 export class BaseHttpClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
 
     declare readonly options: BaseHttpClientOptions;
-    protected _request: HttpRequest;
+    protected _request: HttpRequestProxy;
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseHttpClientOptions, privateOptions: PrivateBaseHttpClientOptions) {
         super(serviceProto, options, privateOptions);
@@ -167,5 +167,5 @@ export interface BaseHttpClientOptions extends BaseClientOptions {
 }
 
 export interface PrivateBaseHttpClientOptions extends PrivateBaseClientOptions {
-    request: HttpRequest
+    request: HttpRequestProxy
 }
