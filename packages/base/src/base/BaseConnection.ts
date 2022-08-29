@@ -458,7 +458,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // #region Transport
 
     // #region Encode options (may override by HTTP Text)
-    protected _encodeJsonStr?: ((obj: any, schemaId: string) => string);
+    protected _encodeJsonStr?: ((jsonObj: any, schemaId: string) => string);
     protected _encodeSkipSN?: boolean;
     protected _encodeBoxText?: (typeof TransportDataUtil)['encodeBoxText'];
     protected _decodeBoxText?: (typeof TransportDataUtil)['decodeBoxText'];

@@ -1,5 +1,5 @@
 import { PROMISE_ABORTED } from "../../base/BaseConnection";
-import { TransportData } from "../../base/TransportData";
+import { BoxTextEncoding, TransportData } from "../../base/TransportData";
 import { TransportDataUtil } from "../../base/TransportDataUtil";
 import { OpResult } from "../../models/OpResult";
 import { TransportOptions } from "../../models/TransportOptions";
@@ -80,11 +80,17 @@ export class BaseHttpClient<ServiceType extends BaseServiceType> extends BaseCli
 
     // #region Encode options (may override by HTTP Text)
     declare protected _recvData: (data: string | Uint8Array, reqSn: number, resHeaders: Record<string, string> | undefined) => Promise<void>;
-    // TODO
-    protected _encodeJsonStr?: ((obj: any, schemaId: string) => string);
+
+    protected _encodeJsonStr: ((jsonObj: any, schemaId: string) => string) = (obj, schemaId) => {
+        return (this.options.encodeReturnText ?? JSON.stringify)(obj);
+    }
+
     protected _encodeSkipSN = true;
-    // TODO
-    protected _encodeBoxText?: (typeof TransportDataUtil)['encodeBoxText'];
+
+    protected _encodeBoxText: (typeof TransportDataUtil)['encodeBoxText'] = (box: BoxTextEncoding & { type: 'req' }, skipSN) => {
+        return { isSucc: true, res: box.body };
+    }
+
     protected _decodeBoxText: (typeof TransportDataUtil)['decodeBoxText'] = (data, pendingCallApis, skipValidate, reqSn: number, resHeaders: Record<string, string> | undefined) => {
         const pendingApi = pendingCallApis.get(reqSn);
         if (!pendingApi) {
@@ -94,7 +100,7 @@ export class BaseHttpClient<ServiceType extends BaseServiceType> extends BaseCli
         // Parse body
         let body: object;
         try {
-            body = JSON.parse(data);
+            body = (this.options.decodeReturnText ?? JSON.parse)(data);
         }
         catch (e) {
             return { isSucc: false, errMsg: `Response body is not a valid JSON.${this.flows.preRecvDataFlow.nodes.length ? ' You are using "preRecvDataFlow", please check whether it transformed the data properly.' : ''}\n  |- ${e}` }

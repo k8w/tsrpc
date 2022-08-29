@@ -73,7 +73,7 @@ export class TransportDataUtil {
         }
     }
 
-    static encodeBodyText(transportData: TransportData, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined, encodeJsonStr: ((obj: any, schemaId: string) => string) | undefined): OpResult<BoxTextEncoding> {
+    static encodeBodyText(transportData: TransportData, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined, encodeJsonStr: ((jsonObj: any, schemaId: string) => string) | undefined): OpResult<BoxTextEncoding> {
         let opBodyInfo = this._getBodyInfo(transportData, serviceMap);
         if (!opBodyInfo.isSucc) { return opBodyInfo };
 
