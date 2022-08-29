@@ -78,7 +78,7 @@ export class BaseHttpClient<ServiceType extends BaseServiceType> extends BaseCli
         return { isSucc: true, res: undefined };
     }
 
-    // #region Encode options (may override by HTTP Text)
+    // #region Override text encode options
     declare protected _recvData: (data: string | Uint8Array, reqSn: number, resHeaders: Record<string, string> | undefined) => Promise<void>;
 
     protected _encodeJsonStr: ((jsonObj: any, schemaId: string) => string) = (obj, schemaId) => {

@@ -236,14 +236,14 @@ export const TransportDataProto: TSBufferProto = {
       },
       {
         "id": 2,
-        "name": "tsrpcVersion",
+        "name": "tsrpc",
         "type": {
           "type": "String"
         }
       },
       {
         "id": 3,
-        "name": "nodeVersion",
+        "name": "node",
         "type": {
           "type": "String"
         },

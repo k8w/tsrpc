@@ -4,6 +4,7 @@ import { getCustomObjectIdTypes } from "../models/getCustomObjectIdTypes";
 import { ServiceMapUtil } from "../models/ServiceMapUtil";
 import { BaseServiceType } from "../proto/BaseServiceType";
 import { ServiceProto } from "../proto/ServiceProto";
+import { ProtoInfo } from "../proto/TransportDataSchema";
 import { BaseClientFlows } from "./BaseClientFlows";
 
 export abstract class BaseClient<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
@@ -25,8 +26,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
         super(options, serviceMap, tsbuffer, {
             lastModified: serviceProto.lastModified,
             md5: serviceProto.md5,
-            tsrpcVersion: privateOptions.tsrpcOptions,
-            ...(privateOptions.nodeVersion ? { nodeVersion: privateOptions.nodeVersion } : undefined)
+            ...privateOptions.env
         })
     }
 
@@ -74,8 +74,5 @@ export interface PrivateBaseClientOptions {
      */
     classObjectId: { new(id?: any): any };
 
-    /** NodeJS version (if it is) */
-    nodeVersion?: string;
-
-    tsrpcOptions: string;
+    env: Pick<ProtoInfo, 'tsrpc' | 'node'>;
 }

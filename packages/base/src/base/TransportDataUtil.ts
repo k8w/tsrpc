@@ -119,7 +119,7 @@ export class TransportDataUtil {
                         + (box.type === 'req' ? `",serviceName":"${box.serviceName}"` : '') // serviceName
                         + (skipSN ? '' : `,"sn":${box.sn}`) // sn
                         + (box.type === 'err' ? `,"err":${JSON.stringify(box.err)}` : `,"body":${box.body}`) // body/err
-                        + (protoInfo ? `,"protoInfo":{"lastModified":"${protoInfo.lastModified}","md5":"${protoInfo.md5}","tsrpcVersion":"${protoInfo.tsrpcVersion}",${protoInfo.nodeVersion ? `,"nodeVersion":"${protoInfo.nodeVersion}"` : ''}}` : '') // protoInfo
+                        + (protoInfo ? `,"protoInfo":{"lastModified":"${protoInfo.lastModified}","md5":"${protoInfo.md5}","tsrpc":"${protoInfo.tsrpc}",${protoInfo.node ? `,"node":"${protoInfo.node}"` : ''}}` : '') // protoInfo
                         + '}'
                 };
             }

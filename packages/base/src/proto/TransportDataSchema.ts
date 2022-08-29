@@ -47,8 +47,8 @@ export type TransportDataSchema = {
 export interface ProtoInfo {
     lastModified: string,
     md5: string,
-    tsrpcVersion: string,
-    nodeVersion?: string
+    tsrpc: string,
+    node?: string
 }
 
 export interface TsrpcErrorData {
