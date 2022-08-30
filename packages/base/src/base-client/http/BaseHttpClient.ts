@@ -9,16 +9,16 @@ import { ServiceProto } from "../../proto/ServiceProto";
 import { ProtoInfo, TsrpcErrorType } from "../../proto/TransportDataSchema";
 import { TsrpcError } from "../../proto/TsrpcError";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../BaseClient";
-import { HttpRequestProxy } from "./HttpRequestProxy";
+import { BaseHttpClientTransport } from "./BaseHttpClientTransport";
 
 export class BaseHttpClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
 
     declare readonly options: BaseHttpClientOptions;
-    protected _request: HttpRequestProxy;
+    protected _request: BaseHttpClientTransport['request'];
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseHttpClientOptions, privateOptions: PrivateBaseHttpClientOptions) {
         super(serviceProto, options, privateOptions);
-        this._request = privateOptions.request;
+        this._request = privateOptions.transport['request'];
         this.logger.log(`TSRPC HTTP Client: ${this.options.server}`);
     }
 
@@ -136,7 +136,7 @@ export class BaseHttpClient<ServiceType extends BaseServiceType> extends BaseCli
     /** HTTP client not support listen Msg, please use `WsClient` instead. */
     declare onMsg: never;
     /** HTTP client not support listen Msg, please use `WsClient` instead. */
-    declare off: never;
+    declare offMsg: never;
     /** HTTP client not support listen Msg, please use `WsClient` instead. */
     declare listenMsg: never;
     /** HTTP client not support listen Msg, please use `WsClient` instead. */
@@ -167,5 +167,6 @@ export interface BaseHttpClientOptions extends BaseClientOptions {
 }
 
 export interface PrivateBaseHttpClientOptions extends PrivateBaseClientOptions {
-    request: HttpRequestProxy
+    transport: BaseHttpClientTransport
 }
+
