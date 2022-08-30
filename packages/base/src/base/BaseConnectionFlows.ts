@@ -1,11 +1,10 @@
 import { Flow } from "../models/Flow";
 import { ApiReturn } from "../proto/ApiReturn";
-import { BaseServiceType } from "../proto/BaseServiceType";
 import { ApiCall } from "./ApiCall";
 import { BaseConnection } from "./BaseConnection";
 import { TransportData } from "./TransportData";
 
-export interface BaseConnectionFlows<Conn extends BaseConnection, ServiceType extends BaseServiceType> {
+export interface BaseConnectionFlows<Conn extends BaseConnection> {
 
     // Connect Flows
     postConnectFlow: Flow<Conn>,
@@ -31,8 +30,8 @@ export interface BaseConnectionFlows<Conn extends BaseConnection, ServiceType ex
      *   -> 【preCallApiReturnFlow】
      *   -> return
      */
-    preCallApiFlow: Flow<CallApiFlow<Conn, ServiceType>>,
-    preCallApiReturnFlow: Flow<CallApiReturnFlow<Conn, ServiceType>>,
+    preCallApiFlow: Flow<CallApiFlow<Conn>>,
+    preCallApiReturnFlow: Flow<CallApiReturnFlow<Conn>>,
 
     /**
      * API Server Flows (ApiCall)
@@ -44,17 +43,17 @@ export interface BaseConnectionFlows<Conn extends BaseConnection, ServiceType ex
      *          -> send response
      *          -> 【postApiCallReturnFlow】
      */
-    preApiCallFlow: Flow<ApiCallFlow<Conn, ServiceType>>,
-    preApiCallReturnFlow: Flow<ApiCallReturnFlow<Conn, ServiceType>>,
-    postApiCallReturnFlow: Flow<ApiCallReturnFlow<Conn, ServiceType>>,
+    preApiCallFlow: Flow<ApiCallFlow<Conn>>,
+    preApiCallReturnFlow: Flow<ApiCallReturnFlow<Conn>>,
+    postApiCallReturnFlow: Flow<ApiCallReturnFlow<Conn>>,
 
     /**
      * Duplex Message Flows
      * sendMsg() -> 【preSendMsgFlow】 -> send data -> 【postSendMsgFlow】
      * recv MsgCall -> 【preRecvMsgFlow】 -> msg listeners
      */
-    preSendMsgFlow: Flow<MsgFlow<Conn, ServiceType>>,
-    preRecvMsgFlow: Flow<MsgFlow<Conn, ServiceType>>,
+    preSendMsgFlow: Flow<MsgFlow<Conn>>,
+    preRecvMsgFlow: Flow<MsgFlow<Conn>>,
 
     /**
      * Duplex TransportData Flows
@@ -67,41 +66,41 @@ export interface BaseConnectionFlows<Conn extends BaseConnection, ServiceType ex
     postRecvCustomDataFlow: Flow<RecvCustomDataFlow<Conn>>,
 }
 
-export type CallApiFlow<Conn extends BaseConnection<any>, ServiceType extends BaseServiceType> = {
-    [K in keyof ServiceType['api']]: {
+export type CallApiFlow<Conn extends BaseConnection<any>> = {
+    [K in keyof Conn['ServiceType']['api']]: {
         apiName: K & string,
-        req: ServiceType['api'][K]['req'],
-        ret?: ApiReturn<ServiceType['api'][K]['res']>,
+        req: Conn['ServiceType']['api'][K]['req'],
+        ret?: ApiReturn<Conn['ServiceType']['api'][K]['res']>,
         readonly conn: Conn
     }
-}[keyof ServiceType['api']];
+}[keyof Conn['ServiceType']['api']];
 
-export type CallApiReturnFlow<Conn extends BaseConnection<any>, ServiceType extends BaseServiceType> = {
-    [K in keyof ServiceType['api']]: {
+export type CallApiReturnFlow<Conn extends BaseConnection<any>> = {
+    [K in keyof Conn['ServiceType']['api']]: {
         apiName: K & string,
-        req: ServiceType['api'][K]['req'],
-        return: ApiReturn<ServiceType['api'][K]['res']>,
+        req: Conn['ServiceType']['api'][K]['req'],
+        return: ApiReturn<Conn['ServiceType']['api'][K]['res']>,
         readonly conn: Conn
     }
-}[keyof ServiceType['api']];
+}[keyof Conn['ServiceType']['api']];
 
-export type ApiCallFlow<Conn extends BaseConnection<any>, ServiceType extends BaseServiceType> = {
-    [K in keyof ServiceType['api']]: ApiCall<ServiceType['api'][K]['req'], ServiceType['api'][K]['res'], Conn>
-}[keyof ServiceType['api']];
+export type ApiCallFlow<Conn extends BaseConnection<any>> = {
+    [K in keyof Conn['ServiceType']['api']]: ApiCall<Conn['ServiceType']['api'][K]['req'], Conn['ServiceType']['api'][K]['res'], Conn>
+}[keyof Conn['ServiceType']['api']];
 
-export type ApiCallReturnFlow<Conn extends BaseConnection<any>, ServiceType extends BaseServiceType> = {
-    [K in keyof ServiceType['api']]: ApiCall<ServiceType['api'][K]['req'], ServiceType['api'][K]['res'], Conn> & {
-        return: ApiReturn<ServiceType['api'][K]['res']>
+export type ApiCallReturnFlow<Conn extends BaseConnection<any>> = {
+    [K in keyof Conn['ServiceType']['api']]: ApiCall<Conn['ServiceType']['api'][K]['req'], Conn['ServiceType']['api'][K]['res'], Conn> & {
+        return: ApiReturn<Conn['ServiceType']['api'][K]['res']>
     }
-}[keyof ServiceType['api']];
+}[keyof Conn['ServiceType']['api']];
 
-export type MsgFlow<Conn extends BaseConnection<any>, ServiceType extends BaseServiceType> = {
-    [K in keyof ServiceType['msg']]: {
+export type MsgFlow<Conn extends BaseConnection<any>> = {
+    [K in keyof Conn['ServiceType']['msg']]: {
         msgName: K & string,
-        msg: ServiceType['msg'][K],
+        msg: Conn['ServiceType']['msg'][K],
         readonly conn: Conn,
     }
-}[keyof ServiceType['msg']];
+}[keyof Conn['ServiceType']['msg']];
 
 export type SendDataFlow<Conn extends BaseConnection<any>> = {
     data: string | Uint8Array,

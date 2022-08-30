@@ -10,7 +10,7 @@ import { BaseWsClientTransport } from "./BaseWsClientTransport";
 export class BaseWsClient<ServiceType extends BaseServiceType = any> extends BaseClient<ServiceType> {
 
     declare readonly options: BaseWsClientOptions;
-    declare flows: BaseWsClientFlows<this, ServiceType>;
+    declare flows: BaseWsClientFlows<this>;
     protected _ws: BaseWsClientTransport;
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseWsClientOptions, privateOptions: PrivateBaseWsClientOptions) {

@@ -12,7 +12,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
     declare readonly options: BaseClientOptions;
 
     // TODO
-    flows: BaseClientFlows<this, ServiceType> = {} as any;
+    flows: BaseClientFlows<this> = {} as any;
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseClientOptions, privateOptions: PrivateBaseClientOptions) {
         const serviceMap = ServiceMapUtil.getServiceMap(serviceProto);

@@ -68,7 +68,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Server: all shared server flows
      * Client: independent flows
      */
-    abstract flows: BaseConnectionFlows<this, ServiceType>;
+    abstract flows: BaseConnectionFlows<this>;
 
     protected _remoteProtoInfo?: ProtoInfo;
 
