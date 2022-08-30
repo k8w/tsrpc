@@ -30,16 +30,16 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     declare ServiceType: ServiceType;
 
     // Options
-    get logger() { return this.options.logger };
-    get chalk() { return this.options.chalk };
+    readonly logger: Logger;
+    readonly chalk: Chalk;
 
     // Status
-    protected _status: ConnectionStatus = ConnectionStatus.Disconnected;
+    readonly status: ConnectionStatus = ConnectionStatus.Disconnected;
     protected _setStatus(newStatus: Exclude<ConnectionStatus, ConnectionStatus.Disconnected>) {
-        if (this._status === newStatus) {
+        if (this.status === newStatus) {
             return;
         }
-        this._status = newStatus;
+        (this.status as ConnectionStatus) = newStatus;
 
         // Post Connect
         if (newStatus === ConnectionStatus.Connected) {
@@ -47,9 +47,20 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             this.flows.postConnectFlow.exec(this, this.logger);
         }
     }
-    protected _disconnect(isManual: boolean, reason?: string, code?: string | number): void {
-        this._status = ConnectionStatus.Disconnected;
+    protected _disconnect(isManual: boolean, reason?: string, code?: number): void {
+        if (this.status === ConnectionStatus.Disconnected) {
+            return;
+        }
+        (this.status as ConnectionStatus) = ConnectionStatus.Disconnected;
         this._stopHeartbeat();
+
+        // 对所有请求中的 API 报错
+        this._pendingCallApis.forEach(v => {
+            v.onReturn?.({
+                isSucc: false,
+                err: new TsrpcError(reason || 'Lost connection to server', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
+            })
+        })
 
         // Post Flow
         this.flows.postDisconnectFlow.exec({
@@ -80,11 +91,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         protected readonly _localProtoInfo: ProtoInfo
     ) {
         this._setDefaultFlowOnError();
-
-        // LogLevel
-        if (options.logLevel !== 'debug') {
-            this.options.logger = setLogLevel(this.options.logger, options.logLevel);
-        }
+        this.logger = setLogLevel(options.logger, options.logLevel);
+        this.chalk = options.chalk;
     }
 
     // #region API Client
@@ -469,7 +477,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param transportData Type haven't been checked, need to be done inside.
      */
     protected async _sendTransportData(transportData: TransportData, options?: TransportOptions, call?: ApiCall): Promise<OpResult<void>> {
-        if (this._status !== ConnectionStatus.Connected) {
+        if (this.status !== ConnectionStatus.Connected) {
             return { isSucc: false, errMsg: `The connection is not established, cannot send data.` }
         }
 
@@ -499,6 +507,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
 
         // Send Data
+        if (this.status !== ConnectionStatus.Connected) {
+            return { isSucc: false, errMsg: `The connection is not established, cannot send data.` }
+        }
         if (this.options.debugBuf) {
             this.logger.debug('[debugBuf] [SendTransportData]', pre.transportData);
             this.logger.debug('[debugBuf] [SendData]', pre.data);
@@ -566,7 +577,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     protected async _recvData(data: string | Uint8Array, ...rest: any[]): Promise<void> {
         // Ignore all data if connection is not opened
-        if (this._status !== ConnectionStatus.Connected) {
+        if (this.status !== ConnectionStatus.Connected) {
             return;
         }
 
@@ -684,7 +695,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Set new
         this._heartbeat.recvTimeout = setTimeout(() => {
-            this._disconnect(false, 'Heartbeat timeout')
+            this._disconnect(false, 'Receive heartbeat timeout', 1006)
         }, this.options.heartbeatRecvTimeout)
     }
     //#endregion
@@ -791,6 +802,5 @@ export type MsgHandler<Conn extends BaseConnection, MsgName extends keyof Conn['
 export enum ConnectionStatus {
     Connecting = 'Connecting',
     Connected = 'Connected',
-    Disconnecting = 'Disconnecting',
     Disconnected = 'Disconnected',
 }

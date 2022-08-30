@@ -1,16 +1,15 @@
+import { ConnectionStatus, PROMISE_ABORTED } from "../../base/BaseConnection";
 import { TransportData } from "../../base/TransportData";
 import { OpResult } from "../../models/OpResult";
 import { TransportOptions } from "../../models/TransportOptions";
 import { BaseServiceType } from "../../proto/BaseServiceType";
 import { ServiceProto } from "../../proto/ServiceProto";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../BaseClient";
-import { BaseWsClientFlows } from "./BaseWsClientFlows";
 import { BaseWsClientTransport } from "./BaseWsClientTransport";
 
 export class BaseWsClient<ServiceType extends BaseServiceType = any> extends BaseClient<ServiceType> {
 
     declare readonly options: BaseWsClientOptions;
-    declare flows: BaseWsClientFlows<this>;
     protected _ws: BaseWsClientTransport;
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseWsClientOptions, privateOptions: PrivateBaseWsClientOptions) {
@@ -18,192 +17,135 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
 
         // Init transport
         this._ws = privateOptions.transport;
-        // this._ws.logger = this.logger;
-        // this._ws.onOpen = this._onWsOpen;
-        // this._ws.onClose = this._onWsClose;
-        // this._ws.onError = this._onWsError;
-        // this._ws.onMessage = this._onWsMessage;
+        this._ws.logger = this.logger;
+        this._ws.onOpen = this._onWsOpen;
+        this._ws.onClose = this._onWsClose;
+        this._ws.onError = this._onWsError;
+        this._ws.onMessage = this._onWsMessage;
 
         this.logger.log(`TSRPC WebSocket Client: ${this.options.server}`);
     }
 
-    // private _connecting?: {
-    //     promise: Promise<OpResult<void>>,
-    //     rs: (v: OpResult<void>) => void
-    // };
-    // /**
-    //  * Start connecting, you must connect first before `callApi()` and `sendMsg()`.
-    //  * @throws never
-    //  */
-    // async connect(): Promise<{ isSucc: true, errMsg?: undefined } | { isSucc: false, errMsg: string }> {
-    //     // 已连接成功
-    //     if (this._status === ConnectionStatus.Connected) {
-    //         return { isSucc: true };
-    //     }
+    private _connecting?: {
+        promise: Promise<OpResult<void>>,
+        rs: (v: OpResult<void>) => void
+    };
+    /**
+     * Start connecting, you must connect first before `callApi()` and `sendMsg()`.
+     * @throws never
+     */
+    async connect(): Promise<OpResult<void>> {
+        // 已连接成功
+        if (this.status === ConnectionStatus.Connected) {
+            return { isSucc: true, res: undefined };
+        }
 
-    //     // 已连接中
-    //     if (this._connecting) {
-    //         return this._connecting.promise;
-    //     }
+        // 已连接中
+        if (this._connecting) {
+            return this._connecting.promise;
+        }
 
-    //     // Pre Flow
-    //     let pre = await this.flows.preConnectFlow.exec({}, this.logger);
-    //     // Pre return
-    //     if (pre?.return) {
-    //         return pre.return;
-    //     }
-    //     // Canceled
-    //     if (!pre) {
-    //         return new Promise(rs => { });
-    //     }
+        // Pre Flow
+        let pre = await this.flows.preConnectFlow.exec({ conn: this }, this.logger);
+        // Pre return
+        if (pre?.return) {
+            return pre.return;
+        }
+        // Canceled
+        if (!pre) {
+            return PROMISE_ABORTED;
+        }
 
-    //     try {
-    //         this._wsp.connect(this.options.server, [this.options.json ? 'text' : 'buffer']);
-    //     }
-    //     catch (e) {
-    //         this.logger?.error(e);
-    //         return { isSucc: false, errMsg: (e as Error).message }
-    //     }
-    //     this._status = WsClientStatus.Opening;
-    //     this.logger?.log(`Start connecting ${this.options.server}...`);
+        // Connect WS
+        this._rsDisconnect = undefined;
+        try {
+            this._ws.connect(this.options.server, [this.options.dataType]);
+        }
+        catch (e) {
+            this.logger?.error(e);
+            return { isSucc: false, errMsg: (e as Error).message }
+        }
 
-    //     this._connecting = {} as any;
-    //     let promiseConnect = new Promise<{ isSucc: true } | { isSucc: false, errMsg: string }>(rs => {
-    //         this._connecting!.rs = rs;
-    //     });
-    //     this._connecting!.promise = promiseConnect;
+        // Connecting
+        this._setStatus(ConnectionStatus.Connecting);
+        this.logger?.log(`Start connecting ${this.options.server}...`);
+        this._connecting = {} as any;
+        let promiseConnect = new Promise<OpResult<void>>(rs => {
+            this._connecting!.rs = rs;
+        });
+        this._connecting!.promise = promiseConnect;
 
-    //     return promiseConnect;
-    // }
-
-    // private _rsDisconnecting?: () => void;
-    // /**
-    //  * Disconnect immediately
-    //  * @throws never
-    //  */
-    // async disconnect(code?: number, reason?: string) {
-    //     if (this._status === WsClientStatus.Closed) {
-    //         return;
-    //     }
-
-    //     this._status = WsClientStatus.Closing;
-    //     this.logger?.log('Start disconnecting...');
-    //     return new Promise<void>(rs => {
-    //         this._rsDisconnecting = rs;
-    //         // 兼容 Cocos Creator 的原生实现
-    //         if (code === undefined && reason === undefined) {
-    //             this._wsp.close();
-    //         }
-    //         else if (reason === undefined) {
-    //             this._wsp.close(code);
-    //         }
-    //         else {
-    //             this._wsp.close(code, reason);
-    //         }
-    //     })
-    // }
-
-    // protected _onWsOpen = () => {
-    //     if (!this._connecting) {
-    //         return;
-    //     }
-
-    //     this._status = WsClientStatus.Opened;
-    //     this._connecting.rs({ isSucc: true });
-    //     this._connecting = undefined;
-    //     this.logger?.log('WebSocket connection to server successful');
-
-    //     this.flows.postConnectFlow.exec({}, this.logger);
-
-    //     // First heartbeat
-    //     if (this.options.heartbeat) {
-    //         this._heartbeat();
-    //     }
-    // };
-
-    // protected _onWsClose = (code: number, reason: string) => {
-    //     let isManual = !!this._rsDisconnecting;
-    //     let isConnectedBefore = this.isConnected || isManual;
-    //     this._status = WsClientStatus.Closed;
-
-    //     // 连接中，返回连接失败
-    //     if (this._connecting) {
-    //         this._connecting.rs({
-    //             isSucc: false,
-    //             errMsg: `Failed to connect to WebSocket server: ${this.options.server}`
-    //         });
-    //         this._connecting = undefined;
-    //         this.logger?.error(`Failed to connect to WebSocket server: ${this.options.server}`);
-    //     }
-
-    //     // Clear heartbeat
-    //     if (this._pendingHeartbeat) {
-    //         clearTimeout(this._pendingHeartbeat.timeoutTimer);
-    //         this._pendingHeartbeat = undefined;
-    //     }
-    //     if (this._nextHeartbeatTimer) {
-    //         clearTimeout(this._nextHeartbeatTimer);
-    //     }
-
-    //     // disconnect中，返回成功
-    //     if (this._rsDisconnecting) {
-    //         this._rsDisconnecting();
-    //         this._rsDisconnecting = undefined;
-    //         this.logger?.log('Disconnected succ', `code=${code} reason=${reason}`);
-    //     }
-    //     // 非 disconnect 中，从连接中意外断开
-    //     else if (isConnectedBefore) {
-    //         this.logger?.log(`Lost connection to ${this.options.server}`, `code=${code} reason=${reason}`);
-    //     }
-
-    //     // postDisconnectFlow，仅从连接状态断开时触发
-    //     if (isConnectedBefore) {
-    //         this.flows.postDisconnectFlow.exec({
-    //             reason: reason,
-    //             isManual: isManual
-    //         }, this.logger);
-    //     }
-
-    //     // 对所有请求中的 API 报错
-    //     this._pendingApis.slice().forEach(v => {
-    //         v.onReturn?.({
-    //             isSucc: false,
-    //             err: new TsrpcError(reason || 'Lost connection to server', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
-    //         })
-    //     })
-    // };
-
-    // protected _onWsError = (e: unknown) => {
-    //     this.logger?.error('[WebSocket Error]', e);
-
-    //     // 连接中，返回连接失败
-    //     if (this._connecting) {
-    //         this._connecting.rs({
-    //             isSucc: false,
-    //             errMsg: `Failed to connect to WebSocket server: ${this.options.server}`
-    //         });
-    //         this._connecting = undefined;
-    //         this.logger?.error(`Failed to connect to WebSocket server: ${this.options.server}`);
-    //     }
-    // };
-
-    // protected _onWsMessage = (data: Uint8Array | string) => {
-    //     // 心跳包回包
-    //     if (data instanceof Uint8Array && data.length === TransportDataUtil.HeartbeatPacket.length && data.every((v, i) => v === TransportDataUtil.HeartbeatPacket[i])) {
-    //         this._onHeartbeatAnswer(data);
-    //         return;
-    //     }
-
-    //     this._onRecvData(data);
-    // };
-
-    protected _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
-        throw new Error("Method not implemented.");
+        return promiseConnect;
     }
 
-    // #region Deprecated 3.x APIs
+    private _rsDisconnect?: () => void;
+    /**
+     * Disconnect immediately
+     * @throws never
+     */
+    async disconnect(reason?: string, code?: number): Promise<void> {
+        return new Promise(rs => {
+            this._rsDisconnect = rs;
+            this._disconnect(true, reason, code);
+        })
+    }
+    protected _disconnect(isManual: boolean, reason?: string, code?: number): void {
+        super._disconnect(isManual, reason, code);
 
-    // #endregion
+        this._ws.close(reason ?? '', code ?? 1000);
+
+        // 连接中，返回连接失败
+        if (this._connecting) {
+            this.logger.error(`Failed to connect to WebSocket server: ${this.options.server}`);
+            this._connecting.rs({
+                isSucc: false,
+                errMsg: `Failed to connect to WebSocket server: ${this.options.server}`
+            });
+            this._connecting = undefined;
+        }
+    }
+
+    protected _onWsOpen = () => {
+        if (!this._connecting) {
+            return;
+        }
+
+        // Resolve this.connect()
+        this._setStatus(ConnectionStatus.Connected);
+        this._connecting.rs({ isSucc: true, res: undefined });
+        this._connecting = undefined;
+        this.logger?.log(`Connect to ${this.options.server} successfully`);
+
+        this.flows.postConnectFlow.exec(this, this.logger);
+    };
+
+    protected _onWsClose = (code?: number, reason?: string) => {
+        // Resolve this.disconnect()
+        if (this.status === ConnectionStatus.Disconnected && this._rsDisconnect) {
+            this._rsDisconnect();
+        }
+        this._rsDisconnect = undefined;
+        this.logger.debug('Websocket disconnect succ', `code=${code} reason=${reason}`);
+
+        // 连接意外断开
+        if (this.status !== ConnectionStatus.Disconnected) {
+            this.logger.warn(`Lost connection to ${this.options.server}`, `code=${code} reason=${reason}`);
+            this._disconnect(false, reason ?? 'Lost connection to server', code ?? 1001);
+        }
+    };
+
+    protected _onWsError = (e: unknown) => {
+        this.logger.error('[WebSocketError]', e);
+        this._disconnect(false, '' + e, 1006);
+    };
+
+    protected _onWsMessage = (data: Uint8Array | string) => {
+        this._recvData(data);
+    };
+
+    protected _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
+        return this._ws.send(data);
+    }
 
 }
 

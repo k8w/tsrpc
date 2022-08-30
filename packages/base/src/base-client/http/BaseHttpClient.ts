@@ -11,7 +11,7 @@ import { TsrpcError } from "../../proto/TsrpcError";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../BaseClient";
 import { BaseHttpClientTransport } from "./BaseHttpClientTransport";
 
-export class BaseHttpClient<ServiceType extends BaseServiceType> extends BaseClient<ServiceType> {
+export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends BaseClient<ServiceType> {
 
     declare readonly options: BaseHttpClientOptions;
     protected _request: BaseHttpClientTransport['request'];
@@ -131,15 +131,17 @@ export class BaseHttpClient<ServiceType extends BaseServiceType> extends BaseCli
     // #endregion
 
     // #region HTTP not supported APIs
-    /** HTTP client do not support duplex callApi */
+    /** @deprecated HTTP client does not have status */
+    declare readonly status: never;
+    /** @deprecated HTTP client do not support duplex callApi */
     declare implementApi: never;
-    /** HTTP client not support listen Msg, please use `WsClient` instead. */
+    /** @deprecated HTTP client not support listen Msg, please use `WsClient` instead. */
     declare onMsg: never;
-    /** HTTP client not support listen Msg, please use `WsClient` instead. */
+    /** @deprecated HTTP client not support listen Msg, please use `WsClient` instead. */
     declare offMsg: never;
-    /** HTTP client not support listen Msg, please use `WsClient` instead. */
+    /** @deprecated HTTP client not support listen Msg, please use `WsClient` instead. */
     declare listenMsg: never;
-    /** HTTP client not support listen Msg, please use `WsClient` instead. */
+    /** @deprecated HTTP client not support listen Msg, please use `WsClient` instead. */
     declare unlistenMsg: never;
     // #endregion
 
