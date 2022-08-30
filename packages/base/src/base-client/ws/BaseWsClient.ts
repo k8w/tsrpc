@@ -1,6 +1,6 @@
 import { ConnectionStatus, PROMISE_ABORTED } from "../../base/BaseConnection";
 import { TransportData } from "../../base/TransportData";
-import { OpResult } from "../../models/OpResult";
+import { OpResultVoid } from "../../models/OpResult";
 import { TransportOptions } from "../../models/TransportOptions";
 import { BaseServiceType } from "../../proto/BaseServiceType";
 import { ServiceProto } from "../../proto/ServiceProto";
@@ -27,17 +27,17 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
     }
 
     private _connecting?: {
-        promise: Promise<OpResult<void>>,
-        rs: (v: OpResult<void>) => void
+        promise: Promise<OpResultVoid>,
+        rs: (v: OpResultVoid) => void
     };
     /**
      * Start connecting, you must connect first before `callApi()` and `sendMsg()`.
      * @throws never
      */
-    async connect(): Promise<OpResult<void>> {
+    async connect(): Promise<OpResultVoid> {
         // 已连接成功
         if (this.status === ConnectionStatus.Connected) {
-            return { isSucc: true, res: undefined };
+            return { isSucc: true };
         }
 
         // 已连接中
@@ -70,7 +70,7 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
         this._setStatus(ConnectionStatus.Connecting);
         this.logger?.log(`Start connecting ${this.options.server}...`);
         this._connecting = {} as any;
-        let promiseConnect = new Promise<OpResult<void>>(rs => {
+        let promiseConnect = new Promise<OpResultVoid>(rs => {
             this._connecting!.rs = rs;
         });
         this._connecting!.promise = promiseConnect;
@@ -112,7 +112,7 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
 
         // Resolve this.connect()
         this._setStatus(ConnectionStatus.Connected);
-        this._connecting.rs({ isSucc: true, res: undefined });
+        this._connecting.rs({ isSucc: true });
         this._connecting = undefined;
         this.logger?.log(`Connect to ${this.options.server} successfully`);
 
@@ -143,7 +143,7 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
         this._recvData(data);
     };
 
-    protected _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
+    protected _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid> {
         return this._ws.send(data);
     }
 

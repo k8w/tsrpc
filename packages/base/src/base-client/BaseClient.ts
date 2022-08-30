@@ -1,12 +1,27 @@
 import { TSBuffer } from "tsbuffer";
-import { BaseConnection, BaseConnectionOptions, defaultBaseConnectionOptions } from "../base/BaseConnection";
+import { BaseConnection, BaseConnectionDataType, BaseConnectionOptions, defaultBaseConnectionOptions } from "../base/BaseConnection";
 import { getCustomObjectIdTypes } from "../models/getCustomObjectIdTypes";
+import { LogLevel, setLogLevel } from "../models/Logger";
 import { ServiceMapUtil } from "../models/ServiceMapUtil";
 import { BaseServiceType } from "../proto/BaseServiceType";
 import { ServiceProto } from "../proto/ServiceProto";
 import { ProtoInfo } from "../proto/TransportDataSchema";
 import { BaseClientFlows } from "./BaseClientFlows";
 
+/**
+ * An abstract base class for TSRPC Client,
+ * which includes some common buffer process flows.
+ * 
+ * @remarks
+ * You can implement a client on a specific transportation protocol (like HTTP, WebSocket, QUIP) by extend this.
+ * 
+ * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
+ * 
+ * @see
+ * {@link https://github.com/k8w/tsrpc}
+ * {@link https://github.com/k8w/tsrpc-browser}
+ * {@link https://github.com/k8w/tsrpc-miniapp}
+ */
 export abstract class BaseClient<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
     declare readonly options: BaseClientOptions;
@@ -24,7 +39,8 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
             skipEncodeValidate: options.skipEncodeValidate,
             skipDecodeValidate: options.skipDecodeValidate,
         });
-        super(options, serviceMap, tsbuffer, {
+        options.logger = setLogLevel(options.logger, options.logLevel)
+        super(options.dataType, options, serviceMap, tsbuffer, {
             lastModified: serviceProto.lastModified,
             md5: serviceProto.md5,
             ...privateOptions.env
@@ -49,10 +65,15 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
 
 export const defaultBaseClientOptions: BaseClientOptions = {
     ...defaultBaseConnectionOptions,
+    dataType: 'text',
+    logLevel: 'warn',
     strictNullChecks: false
 }
 
 export interface BaseClientOptions extends BaseConnectionOptions {
+    dataType: BaseConnectionDataType,
+    logLevel: LogLevel,
+
     // TSBufferOptions
     strictNullChecks: boolean,
 

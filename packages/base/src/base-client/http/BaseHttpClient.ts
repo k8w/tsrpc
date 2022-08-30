@@ -1,7 +1,7 @@
 import { PROMISE_ABORTED } from "../../base/BaseConnection";
 import { BoxTextEncoding, TransportData } from "../../base/TransportData";
 import { TransportDataUtil } from "../../base/TransportDataUtil";
-import { OpResult } from "../../models/OpResult";
+import { OpResultVoid } from "../../models/OpResult";
 import { TransportOptions } from "../../models/TransportOptions";
 import { ApiReturn } from "../../proto/ApiReturn";
 import { BaseServiceType } from "../../proto/BaseServiceType";
@@ -22,7 +22,7 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
         this.logger.log(`TSRPC HTTP Client: ${this.options.server}`);
     }
 
-    protected async _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>> {
+    protected async _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid> {
         // Send to this URL
         const serviceName = 'serviceName' in transportData ? transportData.serviceName : '';
         const url = (typeof data === 'string' && serviceName)
@@ -75,11 +75,11 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
         }
 
         // Send Succ
-        return { isSucc: true, res: undefined };
+        return { isSucc: true };
     }
 
     // #region Override text encode options
-    declare protected _recvData: (data: string | Uint8Array, reqSn: number, resHeaders: Record<string, string> | undefined) => Promise<void>;
+    declare protected _recvData: (data: string | Uint8Array, reqSn: number, resHeaders: Record<string, string> | undefined) => Promise<OpResultVoid>;
 
     protected _encodeJsonStr: ((jsonObj: any, schemaId: string) => string) = (obj, schemaId) => {
         return (this.options.encodeReturnText ?? JSON.stringify)(obj);

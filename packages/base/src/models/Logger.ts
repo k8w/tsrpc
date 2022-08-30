@@ -14,15 +14,21 @@ export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 
 const loggerFunNames = ['debug', 'log', 'warn', 'error'] as const;
 
-const emptyFunc = () => { };
+const empty = () => { };
 
 export function setLogLevel(logger: Logger, logLevel: LogLevel): Logger {
-    const levelIndex = logLevel === 'none' ? 99 : loggerFunNames.indexOf(logLevel === 'info' ? 'log' : logLevel);
-
-    // New logger
-    let output: Logger = {} as any;
-    loggerFunNames.forEach((v, i) => {
-        output[v] = i >= levelIndex ? logger[v].bind(logger) : emptyFunc
-    })
-    return output
+    switch (logLevel) {
+        case 'none':
+            return { debug: empty, log: empty, warn: empty, error: empty };
+        case 'error':
+            return { debug: empty, log: empty, warn: empty, error: logger.error.bind(logger) };
+        case 'warn':
+            return { debug: empty, log: empty, warn: logger.warn.bind(logger), error: logger.error.bind(logger) };
+        case 'info':
+            return { debug: empty, log: logger.log.bind(logger), warn: logger.warn.bind(logger), error: logger.error.bind(logger) };
+        case 'debug':
+            return logger;
+        default:
+            throw new Error(`Invalid logLevel: '${logLevel}'`)
+    }
 }

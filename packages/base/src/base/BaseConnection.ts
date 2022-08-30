@@ -3,8 +3,8 @@ import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { EventEmitter } from "../models/EventEmitter";
 import { Flow } from "../models/Flow";
-import { Logger, LogLevel, setLogLevel } from "../models/Logger";
-import { OpResult } from "../models/OpResult";
+import { Logger } from "../models/Logger";
+import { OpResultVoid } from "../models/OpResult";
 import { ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturn } from "../proto/ApiReturn";
@@ -84,6 +84,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     protected _remoteProtoInfo?: ProtoInfo;
 
     constructor(
+        public readonly dataType: BaseConnectionDataType,
         // Server: all connections shared single options
         public readonly options: BaseConnectionOptions,
         public readonly serviceMap: ServiceMap,
@@ -91,7 +92,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         protected readonly _localProtoInfo: ProtoInfo
     ) {
         this._setDefaultFlowOnError();
-        this.logger = setLogLevel(options.logger, options.logLevel);
+        this.logger = options.logger;
         this.chalk = options.chalk;
     }
 
@@ -245,15 +246,15 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         });
     }
 
-    protected async _recvApiReturn(transportData: TransportData & { type: 'res' | 'err' }) {
+    protected async _recvApiReturn(transportData: TransportData & { type: 'res' | 'err' }): Promise<OpResultVoid> {
         // Parse PendingCallApiItem
         const item = this._pendingCallApis.get(transportData.sn);
         if (!item) {
             this.logger.error('Invalid SN for callApi return: ' + transportData.sn, transportData);
-            return;
+            return { isSucc: false, errMsg: 'Invalid SN for callApi return: ' + transportData.sn };
         }
         if (item.isAborted) {
-            return;
+            return PROMISE_ABORTED;
         }
 
         // Pre Flow
@@ -264,10 +265,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             conn: this
         }, this.logger);
         if (!pre || item.isAborted) {
-            return;
+            return PROMISE_ABORTED;
         }
 
-        item.onReturn?.(pre.return)
+        item.onReturn?.(pre.return);
+        return { isSucc: true }
     }
 
     /**
@@ -374,7 +376,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @returns If the promise is resolved, it means the request is sent to system kernel successfully.
      * Notice that not means the server received and processed the message correctly.
      */
-    async sendMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options?: TransportOptions): Promise<OpResult<void>> {
+    async sendMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], options?: TransportOptions): Promise<OpResultVoid> {
         // Pre Flow
         let pre = await this.flows.preSendMsgFlow.exec({
             msgName: msgName,
@@ -405,7 +407,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         return opResult;
     }
 
-    protected async _recvMsg(transportData: TransportData & { type: 'msg' }) {
+    protected async _recvMsg(transportData: TransportData & { type: 'msg' }): Promise<OpResultVoid> {
         this.options.logMsg && this.logger.log(`[RecvMsg]`, transportData.serviceName, transportData.body);
 
         // PreRecv Flow
@@ -415,11 +417,12 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             msg: transportData.body as ServiceType['msg'][keyof ServiceType['msg']]
         }, this.logger);
         if (!pre) {
-            return;
+            return PROMISE_ABORTED;
         }
 
         // MsgHandlers
         this._msgListeners.emit(transportData.serviceName, transportData.body as ServiceType['msg'][string & keyof ServiceType['msg']], transportData.serviceName, this);
+        return { isSucc: true }
     }
 
     /**
@@ -476,12 +479,12 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Achieved by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
-    protected async _sendTransportData(transportData: TransportData, options?: TransportOptions, call?: ApiCall): Promise<OpResult<void>> {
+    protected async _sendTransportData(transportData: TransportData, options?: TransportOptions, call?: ApiCall): Promise<OpResultVoid> {
         if (this.status !== ConnectionStatus.Connected) {
             return { isSucc: false, errMsg: `The connection is not established, cannot send data.` }
         }
 
-        const dataType = options?.dataType ?? this.options.dataType;
+        const dataType = options?.dataType ?? this.dataType;
 
         // Encode body
         const opEncodeBody = dataType === 'buffer'
@@ -533,13 +536,13 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Encode and send
      * @param transportData Type has been checked already
      */
-    protected abstract _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResult<void>>;
+    protected abstract _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid>;
 
     /**
      * Called by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
-    protected async _recvTransportData(transportData: TransportData): Promise<void> {
+    protected async _recvTransportData(transportData: TransportData): Promise<OpResultVoid> {
         this.options.debugBuf && this.logger.debug('[debugBuf] [RecvTransportData]', transportData);
 
         // Sync remote protoInfo
@@ -549,36 +552,33 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         switch (transportData.type) {
             case 'req': {
-                this._recvApiReq(transportData);
-                break;
+                return this._recvApiReq(transportData).then(v => v.isSucc ? v : { isSucc: v.isSucc, errMsg: v.err.message });
             }
             case 'res':
             case 'err': {
-                this._recvApiReturn(transportData);
-                break;
+                return this._recvApiReturn(transportData);
             }
             case 'msg': {
-                this._recvMsg(transportData)
-                break;
+                return this._recvMsg(transportData)
             }
             case 'heartbeat': {
                 this._recvHeartbeat(transportData);
-                break;
+                return { isSucc: true }
             }
             case 'custom': {
                 this.flows.postRecvCustomDataFlow.exec({
                     data: transportData,
                     conn: this
                 }, this.logger);
-                break;
+                return { isSucc: true }
             }
         }
     };
 
-    protected async _recvData(data: string | Uint8Array, ...rest: any[]): Promise<void> {
+    protected async _recvData(data: string | Uint8Array, ...rest: any[]): Promise<OpResultVoid> {
         // Ignore all data if connection is not opened
         if (this.status !== ConnectionStatus.Connected) {
-            return;
+            return PROMISE_ABORTED;
         }
 
         this.options.debugBuf && this.logger.debug('[debugBuf] [RecvData]', data);
@@ -590,7 +590,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }, this.logger);
         if (!pre) {
             this.logger.debug('[preRecvDataFlow] Canceled', data);
-            return;
+            return PROMISE_ABORTED;
         }
         // Decode by preFlow
         if (pre.parsedTransportData) {
@@ -605,7 +605,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         if (!opDecodeBox.isSucc) {
             this.logger.error(`[DecodeBoxErr] Received data:`, data);
             this.logger.error(`[DecodeBoxErr] ${opDecodeBox.errMsg}`);
-            return;
+            // TODO 友好错误提示 检测 flow 使用
+            return { isSucc: false, errMsg: `Received an invalid ${typeof data === 'string' ? 'text' : 'buffer'} data` };
         }
 
         // Decode body
@@ -615,10 +616,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         if (!opDecodeBody.isSucc) {
             this.logger.error(`[DecodeBodyErr] Received body:`, opDecodeBox.res);
             this.logger.error(`[DecodeBodyErr] ${opDecodeBody.errMsg}`);
-            return;
+            // TODO 友好错误提示 检测 flow 使用、检测 proto version
+            return { isSucc: false, errMsg: `Invalid data body` };
         }
 
-        this._recvTransportData(opDecodeBody.res);
+        return this._recvTransportData(opDecodeBody.res);
     };
     // #endregion
 
@@ -702,12 +704,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 }
 
 export const defaultBaseConnectionOptions: BaseConnectionOptions = {
-    dataType: 'buffer',
     apiReturnInnerError: true,
 
     // Log
     logger: console,
-    logLevel: 'warn',
     chalk: v => v,
     logApi: true,
     logMsg: true,
@@ -738,12 +738,10 @@ export const defaultBaseConnectionOptions: BaseConnectionOptions = {
  * Client: each is independent options
  */
 export interface BaseConnectionOptions {
-    dataType: 'text' | 'buffer',
     apiReturnInnerError: boolean,
 
     // Log
     logger: Logger,
-    logLevel: LogLevel,
     chalk: Chalk,
     logApi: boolean,
     logMsg: boolean,
@@ -804,3 +802,5 @@ export enum ConnectionStatus {
     Connected = 'Connected',
     Disconnected = 'Disconnected',
 }
+
+export type BaseConnectionDataType = 'text' | 'buffer';
