@@ -44,7 +44,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
             lastModified: serviceProto.lastModified,
             md5: serviceProto.md5,
             ...privateOptions.env
-        })
+        }, privateOptions.remoteAddress)
     }
 
     // #region Deprecated 3.x API
@@ -97,4 +97,6 @@ export interface PrivateBaseClientOptions {
     classObjectId: { new(id?: any): any };
 
     env: Pick<ProtoInfo, 'tsrpc' | 'node'>;
+
+    remoteAddress: string;
 }

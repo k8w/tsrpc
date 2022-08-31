@@ -89,7 +89,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         public readonly options: BaseConnectionOptions,
         public readonly serviceMap: ServiceMap,
         public readonly tsbuffer: TSBuffer,
-        protected readonly _localProtoInfo: ProtoInfo
+        protected readonly _localProtoInfo: ProtoInfo,
+        public readonly remoteAddress: string
     ) {
         this._setDefaultFlowOnError();
         this.logger = options.logger;
@@ -120,7 +121,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     async callApi<T extends string & keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
         // SN & Log
         let sn = this._callApiSn.getNext();
-        this.options.logApi && this.logger.log(`[CallApi] [#${sn}] ${this.chalk('[Req]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logReqBody ? req : '');
+        this.options.logApi && this.logger.log(`[callApi] [#${sn}] ${this.chalk('[Req]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logReqBody ? req : '');
 
         // Create PendingCallApiItem
         let pendingItem: PendingCallApiItem = {
@@ -168,10 +169,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Log Return
         if (this.options.logApi) {
             if (ret.isSucc) {
-                this.logger.log(`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Res]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logResBody ? ret.res : '');
+                this.logger.log(`[callApi] [#${pendingItem.sn}] ${this.chalk('[Res]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logResBody ? ret.res : '');
             }
             else {
-                this.logger[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, ret.err);
+                this.logger[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`[callApi] [#${pendingItem.sn}] ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, ret.err);
             }
         }
 
@@ -285,7 +286,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         this._pendingCallApis.delete(sn);
 
         // Log
-        this.options.logApi && this.logger.log(`[CallApi] [#${pendingItem.sn}] ${this.chalk('[Abort]', ['info'])} ${this.chalk(`[${pendingItem.apiName}]`, ['gray'])}`);
+        this.options.logApi && this.logger.log(`[callApi] [#${pendingItem.sn}] ${this.chalk('[Abort]', ['info'])} ${this.chalk(`[${pendingItem.apiName}]`, ['gray'])}`);
 
         // onAbort
         pendingItem.onReturn = undefined;
@@ -701,6 +702,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }, this.options.heartbeatRecvTimeout)
     }
     //#endregion
+
+    // #region Deprecated APIs
+    /** @deprecated Use `remoteAddress` instead */
+    declare ip: never;
+    // #endregion
 }
 
 export const defaultBaseConnectionOptions: BaseConnectionOptions = {
