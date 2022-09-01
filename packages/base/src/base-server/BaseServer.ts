@@ -15,7 +15,7 @@ import { BaseServerFlows } from "./BaseServerFlows";
  * Implement on a transportation protocol (like HTTP WebSocket) by extend it.
  * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
  */
-export abstract class BaseServer<Conn extends BaseServerConnection = BaseServerConnection>{
+export abstract class BaseServer<Conn extends BaseServerConnection = any>{
 
     declare Conn: Conn;
 
