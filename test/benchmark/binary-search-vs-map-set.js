@@ -1,6 +1,6 @@
 require('k8w-extend-native');
 
-const N = 10000;
+const N = 1000;
 const rands = Array.from({ length: N }, (v, i) => i).orderBy(() => Math.random())
 
 function binarySearch() {
@@ -43,20 +43,22 @@ function set() {
 
 for (let i = 0; i < 10; ++i) {
     console.time('binarySearch');
-    for (let i = 0; i < 100; ++i) {
+    for (let i = 0; i < 10000; ++i) {
         binarySearch();
     }
     console.timeEnd('binarySearch');
 
     console.time('map');
-    for (let i = 0; i < 100; ++i) {
+    for (let i = 0; i < 10000; ++i) {
         map();
     }
     console.timeEnd('map');
 
     console.time('set');
-    for (let i = 0; i < 100; ++i) {
+    for (let i = 0; i < 10000; ++i) {
         set();
     }
     console.timeEnd('set');
+
+    console.log('---------------------')
 }

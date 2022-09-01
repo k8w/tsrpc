@@ -1,16 +1,20 @@
 import { BaseConnection, BaseConnectionDataType, ConnectionStatus } from "../base/BaseConnection";
 import { Logger } from "../models/Logger";
-import { PrefixLogger } from "../models/PrefixLogger";
+import { PrefixLogger, PrefixLoggerOptions } from "../models/PrefixLogger";
 import { BaseServiceType } from "../proto/BaseServiceType";
 import { BaseServer } from "./BaseServer";
 
 export abstract class BaseServerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
     public readonly id: number;
+    
     constructor(public readonly server: BaseServer, options: BaseServerConnectionOptions) {
         super(options.dataType, server.options, server.serviceMap, server.tsbuffer, server.localProtoInfo, options.remoteAddress);
-        this.id = options.id;
-        (this.logger as Logger) = options.logger;
+        (this.logger as Logger) = new PrefixLogger({
+            logger: server.logger,
+            prefixs: options.logPrefixs
+        });
+        this.id = server['_connId'].getNext()
 
         // To be override ...
         // Init connection (http req/res, ws conn, ...)
@@ -25,7 +29,6 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
 
 export interface BaseServerConnectionOptions {
     dataType: BaseConnectionDataType,
-    id: number,
     remoteAddress: string,
-    logger: PrefixLogger
+    logPrefixs: PrefixLoggerOptions['prefixs']
 }

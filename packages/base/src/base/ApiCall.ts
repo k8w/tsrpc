@@ -148,9 +148,6 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
             );
         }
 
-        // PostReturn Flow
-        this.conn.flows.postApiCallReturnFlow.exec(this as this & { return: ApiReturn<Res> }, this.logger);
-
         return ret;
     }
 

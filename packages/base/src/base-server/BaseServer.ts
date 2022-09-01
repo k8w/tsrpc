@@ -1,6 +1,7 @@
 import { TSBuffer } from "tsbuffer";
 import { BaseConnectionDataType, BaseConnectionOptions, ConnectionStatus, defaultBaseConnectionOptions } from "../base/BaseConnection";
 import { Chalk } from "../models/Chalk";
+import { Counter } from "../models/Counter";
 import { getCustomObjectIdTypes } from "../models/getCustomObjectIdTypes";
 import { Logger, LogLevel, setLogLevel } from "../models/Logger";
 import { ServiceMap, ServiceMapUtil } from "../models/ServiceMapUtil";
@@ -16,8 +17,10 @@ import { BaseServerFlows } from "./BaseServerFlows";
  */
 export abstract class BaseServer<Conn extends BaseServerConnection = BaseServerConnection>{
 
+    declare Conn: Conn;
+
     // TODO
-    flows: BaseServerFlows = null!;
+    flows: BaseServerFlows<this> = null!;
 
     /** { [id: number]: Conn } */
     readonly connections = new Set<Conn>;
@@ -62,6 +65,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = BaseServerC
      */
     abstract start(): Promise<void>;
 
+    protected _connId = new Counter();
     onConnection(conn: Conn) {
         this.connections.add(conn);
         conn['_setStatus'](ConnectionStatus.Connected);
@@ -156,10 +160,6 @@ export abstract class BaseServer<Conn extends BaseServerConnection = BaseServerC
 
     // TODO
     broadcastMsg() { }
-
-    filterConnections(filter: (v: Conn) => boolean) {
-        
-    }
 
 }
 

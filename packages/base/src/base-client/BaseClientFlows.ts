@@ -3,7 +3,7 @@ import { Flow } from "../models/Flow";
 import { OpResultVoid } from "../models/OpResult";
 import { BaseClient } from "./BaseClient";
 
-export type BaseClientFlows<Conn extends BaseClient> = BaseConnectionFlows<Conn> & {
+export type BaseClientFlows<Conn extends BaseClient> = BaseConnectionFlows<Conn, Conn['ServiceType']> & {
     preConnectFlow: Flow<{
         readonly conn: Conn,
         /** Return `res` to `client.connect()`, without latter connect procedure */

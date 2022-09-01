@@ -13,7 +13,7 @@ import { ProtoInfo, TsrpcErrorType } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
 import { ApiCall } from "./ApiCall";
 import { BaseConnectionFlows } from "./BaseConnectionFlows";
-import { BoxBuffer, BoxTextDecoding, BoxTextEncoding, TransportData } from "./TransportData";
+import { BoxBuffer, BoxDecoding, BoxEncoding, BoxTextDecoding, BoxTextEncoding, TransportData } from "./TransportData";
 import { TransportDataUtil } from "./TransportDataUtil";
 
 export const PROMISE_ABORTED = new Promise<any>(rs => { });
@@ -79,7 +79,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Server: all shared server flows
      * Client: independent flows
      */
-    abstract flows: BaseConnectionFlows<this>;
+    abstract flows: BaseConnectionFlows<this, ServiceType>;
 
     protected _remoteProtoInfo?: ProtoInfo;
 
@@ -493,10 +493,14 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             : TransportDataUtil.encodeBodyText(transportData, this.serviceMap, this.tsbuffer, this.options.skipEncodeValidate, this._encodeJsonStr);
         if (!opEncodeBody.isSucc) { return opEncodeBody }
 
+        return this._sendBox(opEncodeBody.res, dataType, transportData, options, call);
+    }
+
+    protected async _sendBox(box: BoxEncoding, dataType: BaseConnectionDataType, transportData: TransportData, options?: TransportOptions, call?: ApiCall): Promise<OpResultVoid> {
         // Encode box
         const opEncodeBox = dataType === 'buffer'
-            ? TransportDataUtil.encodeBoxBuffer(opEncodeBody.res as BoxBuffer)
-            : (this._encodeBoxText ?? TransportDataUtil.encodeBoxText)(opEncodeBody.res as BoxTextEncoding, this._encodeSkipSN)
+            ? TransportDataUtil.encodeBoxBuffer(box as BoxBuffer)
+            : (this._encodeBoxText ?? TransportDataUtil.encodeBoxText)(box as BoxTextEncoding, this._encodeSkipSN)
         if (!opEncodeBox.isSucc) { return opEncodeBox }
 
         // Pre Flow
@@ -504,7 +508,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             conn: this,
             data: opEncodeBox.res,
             transportData: transportData,
-            call: call
+            call: call as (ApiCall<any, any, this> & { return: any }) | undefined
         }, this.logger);
         if (!pre) {
             return PROMISE_ABORTED;
@@ -526,7 +530,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 conn: this,
                 data: pre.data,
                 transportData: transportData,
-                call: call
+                call: call as (ApiCall<any, any, this> & { return: any }) | undefined
             }, this.logger);
         }
 
@@ -567,10 +571,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 return { isSucc: true }
             }
             case 'custom': {
-                this.flows.postRecvCustomDataFlow.exec({
-                    data: transportData,
-                    conn: this
-                }, this.logger);
+                // this.flows.postRecvCustomDataFlow.exec({
+                //     data: transportData,
+                //     conn: this
+                // }, this.logger);
                 return { isSucc: true }
             }
         }
@@ -594,8 +598,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             return PROMISE_ABORTED;
         }
         // Decode by preFlow
-        if (pre.parsedTransportData) {
-            return this._recvTransportData(pre.parsedTransportData);
+        if (pre.transportData) {
+            return this._recvTransportData(pre.transportData);
         }
         data = pre.data;
 
@@ -610,19 +614,23 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             return { isSucc: false, errMsg: `Received an invalid ${typeof data === 'string' ? 'text' : 'buffer'} data` };
         }
 
+        return this._recvBox(opDecodeBox.res, typeof data === 'string' ? 'text' : 'buffer');
+    };
+
+    protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResultVoid> {
         // Decode body
-        const opDecodeBody = typeof data === 'string'
-            ? TransportDataUtil.decodeBodyText(opDecodeBox.res as BoxTextDecoding, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)
-            : TransportDataUtil.decodeBodyBuffer(opDecodeBox.res as BoxBuffer, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)
+        const opDecodeBody = dataType === 'text'
+            ? TransportDataUtil.decodeBodyText(box as BoxTextDecoding, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)
+            : TransportDataUtil.decodeBodyBuffer(box as BoxBuffer, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)
         if (!opDecodeBody.isSucc) {
-            this.logger.error(`[DecodeBodyErr] Received body:`, opDecodeBox.res);
+            this.logger.error(`[DecodeBodyErr] Received body:`, box);
             this.logger.error(`[DecodeBodyErr] ${opDecodeBody.errMsg}`);
             // TODO 友好错误提示 检测 flow 使用、检测 proto version
             return { isSucc: false, errMsg: `Invalid data body` };
         }
 
         return this._recvTransportData(opDecodeBody.res);
-    };
+    }
     // #endregion
 
     //#region Heartbeat
