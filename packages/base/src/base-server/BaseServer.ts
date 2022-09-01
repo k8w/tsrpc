@@ -19,7 +19,8 @@ export abstract class BaseServer<Conn extends BaseServerConnection = BaseServerC
     // TODO
     flows: BaseServerFlows = null!;
 
-    readonly connections: Conn[] = [];
+    /** { [id: number]: Conn } */
+    readonly connections = new Set<Conn>;
 
     // Options
     readonly logger: Logger;
@@ -28,10 +29,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = BaseServerC
     readonly tsbuffer: TSBuffer;
     readonly localProtoInfo: ProtoInfo
 
-    protected _status: ServerStatus = ServerStatus.Stopped;
-    get status(): ServerStatus {
-        return this._status;
-    }
+    readonly status: ServerStatus = ServerStatus.Stopped;
 
     constructor(
         public serviceProto: ServiceProto<Conn['ServiceType']>,
@@ -60,9 +58,18 @@ export abstract class BaseServer<Conn extends BaseServerConnection = BaseServerC
     }
 
     /**
-     * Listen port, wait connection, and call onConnection
+     * Listen port, wait connection, and call this.onConnection()
      */
     abstract start(): Promise<void>;
+
+    onConnection(conn: Conn) {
+        this.connections.add(conn);
+        conn['_setStatus'](ConnectionStatus.Connected);
+
+        if (this.status !== ServerStatus.Started) {
+            conn['_disconnect'](false, 'Server stopped', 1001)
+        }
+    }
 
     /**
      * Stop the server
@@ -70,15 +77,20 @@ export abstract class BaseServer<Conn extends BaseServerConnection = BaseServerC
      * @returns 
      */
     async stop(gracefulWaitTime = 0): Promise<void> {
-        if (this._status !== ServerStatus.Started) {
+        if (this.status === ServerStatus.Stopped) {
             return;
         }
 
+        // Stop immediately
         if (!gracefulWaitTime) {
             return this._stop();
         }
 
-        this._status = ServerStatus.Stopping;
+        // Graceful stop
+        if (this.status === ServerStatus.Stopping) {
+            return;
+        }
+        (this.status as ServerStatus) = ServerStatus.Stopping;
         await Promise.race([
             new Promise<void>(rs => { setTimeout(rs, gracefulWaitTime) }),
             new Promise<void>(rs => {
@@ -144,6 +156,10 @@ export abstract class BaseServer<Conn extends BaseServerConnection = BaseServerC
 
     // TODO
     broadcastMsg() { }
+
+    filterConnections(filter: (v: Conn) => boolean) {
+        
+    }
 
 }
 
