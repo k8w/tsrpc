@@ -4,6 +4,7 @@ import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { getCustomObjectIdTypes } from "../models/getCustomObjectIdTypes";
 import { Logger, LogLevel, setLogLevel } from "../models/Logger";
+import { OpResultVoid } from "../models/OpResult";
 import { ServiceMap, ServiceMapUtil } from "../models/ServiceMapUtil";
 import { ServiceProto } from "../proto/ServiceProto";
 import { ProtoInfo } from "../proto/TransportDataSchema";
@@ -159,7 +160,100 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
     // }
 
     // TODO
-    broadcastMsg() { }
+    /**
+     * Send the same message to many connections.
+     * No matter how many target connections are, the message would be only encoded once.
+     * @param msgName 
+     * @param msg - Message body
+     * @param connIds - `id` of target connections, `undefined` means broadcast to every connections.
+     * @returns Send result, `isSucc: true` means the message buffer is sent to kernel, not represents the clients received.
+     */
+    // async broadcastMsg<T extends string & keyof Conn['ServiceType']['msg']>(msgName: T, msg: Conn['ServiceType']['msg'][T], conns?: Conn[]): Promise<OpResultVoid> {
+    //     let connAll = false;
+    //     if (!conns) {
+    //         conns = this.connections;
+    //         connAll = true;
+    //     }
+
+    //     const connStr = () => connAll ? '*' : conns!.map(v => v.id).join(',');
+
+    //     if (!conns.length) {
+    //         return { isSucc: true };
+    //     }
+
+    //     if (this.status !== ServerStatus.Opened) {
+    //         this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr()}]`, 'Server not open');
+    //         return { isSucc: false, errMsg: 'Server not open' };
+    //     }
+
+    //     // GetService
+    //     let service = this.serviceMap.msgName2Service[msgName as string];
+    //     if (!service) {
+    //         this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr()}]`, 'Invalid msg name: ' + msgName);
+    //         return { isSucc: false, errMsg: 'Invalid msg name: ' + msgName };
+    //     }
+
+    //     // Encode group by dataType
+    //     let _opEncodeBuf: EncodeOutput<Uint8Array> | undefined;
+    //     let _opEncodeText: EncodeOutput<string> | undefined;
+    //     const getOpEncodeBuf = () => {
+    //         if (!_opEncodeBuf) {
+    //             _opEncodeBuf = TransportDataUtil.encodeServerMsg(this.tsbuffer, service!, msg, 'buffer', 'LONG');
+    //         }
+    //         return _opEncodeBuf;
+    //     }
+    //     const getOpEncodeText = () => {
+    //         if (!_opEncodeText) {
+    //             _opEncodeText = TransportDataUtil.encodeServerMsg(this.tsbuffer, service!, msg, 'text', 'LONG');
+    //         }
+    //         return _opEncodeText;
+    //     }
+
+    //     // 测试一下编码可以通过
+    //     let op = conns.some(v => v.dataType === 'buffer') ? getOpEncodeBuf() : getOpEncodeText();
+    //     if (!op.isSucc) {
+    //         this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr()}]`, op.errMsg);
+    //         return op;
+    //     }
+
+    //     this.options.logMsg && this.logger.log(`[BroadcastMsg]`, `[${msgName}]`, `[To:${connStr()}]`, msg);
+
+    //     // Batch send
+    //     let errMsgs: string[] = [];
+    //     return Promise.all(conns.map(async conn => {
+    //         // Pre Flow
+    //         let pre = await this.flows.preSendMsgFlow.exec({ conn: conn, service: service!, msg: msg }, this.logger);
+    //         if (!pre) {
+    //             conn.logger.debug('[preSendMsgFlow]', 'Canceled');
+    //             return { isSucc: false, errMsg: 'Prevented by preSendMsgFlow' };
+    //         }
+    //         msg = pre.msg;
+
+    //         // Do send!
+    //         let opSend = await conn.sendData((conn.dataType === 'buffer' ? getOpEncodeBuf() : getOpEncodeText())!.output!);
+    //         if (!opSend.isSucc) {
+    //             return opSend;
+    //         }
+
+    //         // Post Flow
+    //         this.flows.postSendMsgFlow.exec(pre, this.logger);
+
+    //         return { isSucc: true };
+    //     })).then(results => {
+    //         for (let i = 0; i < results.length; ++i) {
+    //             let op = results[i];
+    //             if (!op.isSucc) {
+    //                 errMsgs.push(`Conn#conns[i].id: ${op.errMsg}`)
+    //             };
+    //         }
+    //         if (errMsgs.length) {
+    //             return { isSucc: false, errMsg: errMsgs.join('\n') }
+    //         }
+    //         else {
+    //             return { isSucc: true }
+    //         }
+    //     })
+    // };
 
 }
 
