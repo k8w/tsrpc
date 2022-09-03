@@ -4,7 +4,6 @@ import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { getCustomObjectIdTypes } from "../models/getCustomObjectIdTypes";
 import { Logger, LogLevel, setLogLevel } from "../models/Logger";
-import { OpResultVoid } from "../models/OpResult";
 import { ServiceMap, ServiceMapUtil } from "../models/ServiceMapUtil";
 import { ServiceProto } from "../proto/ServiceProto";
 import { ProtoInfo } from "../proto/TransportDataSchema";
@@ -33,7 +32,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
     readonly tsbuffer: TSBuffer;
     readonly localProtoInfo: ProtoInfo
 
-    readonly status: ServerStatus = ServerStatus.Stopped;
+    protected _status: ServerStatus = ServerStatus.Stopped;
 
     constructor(
         public serviceProto: ServiceProto<Conn['ServiceType']>,
@@ -71,37 +70,39 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
         this.connections.add(conn);
         conn['_setStatus'](ConnectionStatus.Connected);
 
-        if (this.status !== ServerStatus.Started) {
-            conn['_disconnect'](false, 'Server stopped', 1001)
+        if (this._status !== ServerStatus.Started) {
+            conn['_disconnect'](false, 'Server stopped')
         }
     }
 
+    protected _pendingApiCallNum = 0;
+    protected _rsGracefulStop?: () => void;
     /**
      * Stop the server
-     * @param gracefulWaitTime `0` represent stop immediately, otherwise wait all API requests finished and then stop the server.
+     * @param gracefulWaitTime `undefined` represent stop immediately, otherwise wait all API requests finished and then stop the server.
      * @returns 
      */
-    async stop(gracefulWaitTime = 0): Promise<void> {
-        if (this.status === ServerStatus.Stopped) {
-            return;
+    async stop(gracefulWaitTime?: number): Promise<void> {
+        // Graceful stop (wait all ApiCall finished)
+        if (gracefulWaitTime) {
+            this._status = ServerStatus.Stopping;
+            let timeout!: ReturnType<typeof setTimeout>;
+            await Promise.race([
+                new Promise<void>(rs => { timeout = setTimeout(rs, gracefulWaitTime) }),    // Max wait time
+                new Promise<void>(rs => {
+                    // Mark all conns as disconnecting
+                    this.connections.forEach(v => { v['_setStatus'](ConnectionStatus.Disconnecting) });
+                    this._rsGracefulStop = rs;
+                })
+            ]);
+            // Clear
+            clearTimeout(timeout);
+            this._rsGracefulStop = undefined;
         }
 
-        // Stop immediately
-        if (!gracefulWaitTime) {
-            return this._stop();
-        }
-
-        // Graceful stop
-        if (this.status === ServerStatus.Stopping) {
-            return;
-        }
-        (this.status as ServerStatus) = ServerStatus.Stopping;
-        await Promise.race([
-            new Promise<void>(rs => { setTimeout(rs, gracefulWaitTime) }),
-            new Promise<void>(rs => {
-                // TODO
-            })
-        ]);
+        // Do Stop (immediately)
+        this._status = ServerStatus.Stopped;
+        this.connections.forEach(conn => { conn['_disconnect'](true, 'Server stopped') });
         return this._stop();
     }
 

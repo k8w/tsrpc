@@ -17,9 +17,7 @@ export interface BaseConnectionFlows<Conn extends BaseConnection, ServiceType ex
          */
         isManual: boolean,
         /** reason parameter from server-side `conn.close(reason)` */
-        reason?: string,
-        code?: string | number
-
+        reason?: string
     }>,
 
     /**

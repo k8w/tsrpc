@@ -47,7 +47,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             this.flows.postConnectFlow.exec(this, this.logger);
         }
     }
-    protected _disconnect(isManual: boolean, reason?: string, code?: number): void {
+    protected _disconnect(isManual: boolean, reason?: string): void {
         if (this.status === ConnectionStatus.Disconnected) {
             return;
         }
@@ -58,16 +58,16 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         this._pendingCallApis.forEach(v => {
             v.onReturn?.({
                 isSucc: false,
-                err: new TsrpcError(reason || 'Lost connection to server', { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
+                err: new TsrpcError(`Disconnected to server${reason ? `, reason: ${reason}` : ''}`, { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
             })
-        })
+        });
+        // TODO pendingApiCalls
 
         // Post Flow
         this.flows.postDisconnectFlow.exec({
             conn: this,
             isManual,
-            reason,
-            code
+            reason
         }, this.logger);
 
         // To be override ...
@@ -342,7 +342,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         this.logger.log(`API implemented succ: ${this.chalk(apiName, ['underline'])}`);
     };
 
-    protected async _recvApiReq(transportData: TransportData & { type: 'req' }): Promise<ApiReturn<any>> {
+    protected _recvApiReq(transportData: TransportData & { type: 'req' }): Promise<ApiReturn<any>> {
         // Make ApiCall
         const call = new ApiCall(this, transportData.serviceName, transportData.sn, transportData.body, transportData.protoInfo);
         return call.execute();
@@ -706,7 +706,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Set new
         this._heartbeat.recvTimeout = setTimeout(() => {
-            this._disconnect(false, 'Receive heartbeat timeout', 1006)
+            this._disconnect(false, 'Receive heartbeat timeout')
         }, this.options.heartbeatRecvTimeout)
     }
     //#endregion
@@ -814,6 +814,7 @@ export type MsgHandler<Conn extends BaseConnection, MsgName extends keyof Conn['
 export enum ConnectionStatus {
     Connecting = 'Connecting',
     Connected = 'Connected',
+    Disconnecting = 'Disconnecting',
     Disconnected = 'Disconnected',
 }
 

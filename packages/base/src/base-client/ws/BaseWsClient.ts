@@ -57,7 +57,6 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
         }
 
         // Connect WS
-        this._rsDisconnect = undefined;
         try {
             this._ws.connect(this.options.server, [this.options.dataType]);
         }
@@ -78,21 +77,17 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
         return promiseConnect;
     }
 
-    private _rsDisconnect?: () => void;
     /**
      * Disconnect immediately
      * @throws never
      */
-    async disconnect(reason?: string, code?: number): Promise<void> {
-        return new Promise(rs => {
-            this._rsDisconnect = rs;
-            this._disconnect(true, reason, code);
-        })
+    disconnect(reason?: string): void {
+        return this._disconnect(true, reason);
     }
-    protected _disconnect(isManual: boolean, reason?: string, code?: number): void {
-        super._disconnect(isManual, reason, code);
+    protected override _disconnect(isManual: boolean, reason?: string): void {
+        super._disconnect(isManual, reason);
 
-        this._ws.close(reason ?? '', code ?? 1000);
+        this._ws.close(reason ?? '', isManual ? 1000 : 1001);
 
         // 连接中，返回连接失败
         if (this._connecting) {
@@ -120,23 +115,18 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
     };
 
     protected _onWsClose = (code?: number, reason?: string) => {
-        // Resolve this.disconnect()
-        if (this.status === ConnectionStatus.Disconnected && this._rsDisconnect) {
-            this._rsDisconnect();
-        }
-        this._rsDisconnect = undefined;
         this.logger.debug('Websocket disconnect succ', `code=${code} reason=${reason}`);
 
         // 连接意外断开
         if (this.status !== ConnectionStatus.Disconnected) {
             this.logger.warn(`Lost connection to ${this.options.server}`, `code=${code} reason=${reason}`);
-            this._disconnect(false, reason ?? 'Lost connection to server', code ?? 1001);
+            this._disconnect(false, reason ?? 'Lost connection to server');
         }
     };
 
     protected _onWsError = (e: unknown) => {
         this.logger.error('[WebSocketError]', e);
-        this._disconnect(false, '' + e, 1006);
+        this._disconnect(false, '' + e);
     };
 
     protected _onWsMessage = (data: Uint8Array | string) => {
