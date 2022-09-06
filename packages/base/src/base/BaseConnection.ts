@@ -724,7 +724,7 @@ export const defaultBaseConnectionOptions: BaseConnectionOptions = {
     logger: console,
     chalk: v => v,
     logApi: true,
-    logMsg: true,
+    logMsg: false,
     logReqBody: true,
     logResBody: true,
     debugBuf: false,
