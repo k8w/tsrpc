@@ -263,7 +263,7 @@ export const defaultBaseServerOptions: BaseServerOptions = {
     defaultDataType: 'text',
     allowedDataTypes: ['text', 'buffer'],
     strictNullChecks: false,
-    logLevel: 'debug',
+    logLevel: 'debug'
 }
 
 export interface BaseServerOptions extends BaseConnectionOptions {
@@ -272,6 +272,7 @@ export interface BaseServerOptions extends BaseConnectionOptions {
     /** @defaultValue ['text', 'buffer'] */
     allowedDataTypes: BaseConnectionDataType[],
 
+    /** @defaultValue 'debug' */
     logLevel: LogLevel,
 
     // TSBufferOptions

@@ -72,6 +72,8 @@ export const defaultBaseClientOptions: BaseClientOptions = {
 
 export interface BaseClientOptions extends BaseConnectionOptions {
     dataType: BaseConnectionDataType,
+
+    /** @defaultValue 'warn' */
     logLevel: LogLevel,
 
     // TSBufferOptions
