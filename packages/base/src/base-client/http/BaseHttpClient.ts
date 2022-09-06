@@ -81,10 +81,6 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
     // #region Override text encode options
     declare protected _recvData: (data: string | Uint8Array, reqSn: number, resHeaders: Record<string, string> | undefined) => Promise<OpResultVoid>;
 
-    protected _encodeJsonStr: ((jsonObj: any, schemaId: string) => string) = (obj, schemaId) => {
-        return (this.options.encodeReturnText ?? JSON.stringify)(obj);
-    }
-
     protected _encodeSkipSN = true;
 
     protected _encodeBoxText: (typeof TransportDataUtil)['encodeBoxText'] = (box: BoxTextEncoding & { type: 'req' }, skipSN) => {
@@ -158,7 +154,6 @@ export interface BaseHttpClientOptions extends BaseClientOptions {
     /** Server URL, starts with `http://` or `https://`. */
     server: string;
 
-    encodeReturnText?: (ret: ApiReturn<any>) => string,
     decodeReturnText?: (data: string) => ApiReturn<any>,
 
     /** HTTP do not need heartbeat */

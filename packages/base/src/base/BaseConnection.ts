@@ -61,7 +61,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 err: new TsrpcError(`Disconnected to server${reason ? `, reason: ${reason}` : ''}`, { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
             })
         });
-        // TODO pendingApiCalls
 
         // Post Flow
         this.flows.postDisconnectFlow.exec({

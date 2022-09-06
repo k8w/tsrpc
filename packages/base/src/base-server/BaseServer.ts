@@ -1,9 +1,12 @@
 import { TSBuffer } from "tsbuffer";
-import { BaseConnectionDataType, BaseConnectionOptions, ConnectionStatus, defaultBaseConnectionOptions } from "../base/BaseConnection";
+import { BaseConnectionDataType, BaseConnectionOptions, ConnectionStatus, defaultBaseConnectionOptions, PROMISE_ABORTED } from "../base/BaseConnection";
+import { BoxBuffer, BoxTextEncoding, TransportData } from "../base/TransportData";
+import { TransportDataUtil } from "../base/TransportDataUtil";
 import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { getCustomObjectIdTypes } from "../models/getCustomObjectIdTypes";
 import { Logger, LogLevel, setLogLevel } from "../models/Logger";
+import { OpResultVoid } from "../models/OpResult";
 import { ServiceMap, ServiceMapUtil } from "../models/ServiceMapUtil";
 import { ServiceProto } from "../proto/ServiceProto";
 import { ProtoInfo } from "../proto/TransportDataSchema";
@@ -90,9 +93,9 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
             await Promise.race([
                 new Promise<void>(rs => { timeout = setTimeout(rs, gracefulWaitTime) }),    // Max wait time
                 new Promise<void>(rs => {
+                    this._rsGracefulStop = rs;
                     // Mark all conns as disconnecting
                     this.connections.forEach(v => { v['_setStatus'](ConnectionStatus.Disconnecting) });
-                    this._rsGracefulStop = rs;
                 })
             ]);
             // Clear
@@ -111,56 +114,6 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
      */
     protected abstract _stop(): void;
 
-    // protected _gracefulStop?: {
-    //     rs: () => void
-    // };
-    // /**
-    //  * Stop the server gracefully.
-    //  * Wait all API requests finished and then stop the server.
-    //  * @param maxWaitTime - The max time(ms) to wait before force stop the server.
-    //  * `undefined` and `0` means stop the server immediately.
-    //  */
-    // async stop(maxWaitTime?: number) {
-    //     if (this._status !== ServerStatus.Started) {
-    //         throw new Error(`Cannot gracefulStop when server status is '${this._status}'.`);
-    //     }
-
-    //     this.logger.log('[GracefulStop] Start graceful stop, waiting all ApiCall finished...')
-    //     this._status = ServerStatus.Stopping;
-    //     let promiseWaitApi = new Promise<void>(rs => {
-    //         this._gracefulStop = {
-    //             rs: rs
-    //         };
-    //     });
-
-    //     return new Promise<void>(rs => {
-    //         let maxWaitTimer: ReturnType<typeof setTimeout> | undefined;
-    //         if (maxWaitTime) {
-    //             maxWaitTimer = setTimeout(() => {
-    //                 maxWaitTimer = undefined;
-    //                 if (this._gracefulStop) {
-    //                     this._gracefulStop = undefined;
-    //                     this.logger.log('Graceful stop timeout, stop the server directly.');
-    //                     this.stop().then(() => { rs() });
-    //                 }
-    //             }, maxWaitTime);
-    //         }
-
-    //         promiseWaitApi.then(() => {
-    //             this.logger.log('All ApiCall finished, continue stop server.');
-    //             if (maxWaitTimer) {
-    //                 clearTimeout(maxWaitTimer);
-    //                 maxWaitTimer = undefined;
-    //             }
-    //             if (this._gracefulStop) {
-    //                 this._gracefulStop = undefined;
-    //                 this.stop().then(() => { rs() });
-    //             }
-    //         })
-    //     })
-    // }
-
-    // TODO
     /**
      * Send the same message to many connections.
      * No matter how many target connections are, the message would be only encoded once.
@@ -169,93 +122,104 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
      * @param connIds - `id` of target connections, `undefined` means broadcast to every connections.
      * @returns Send result, `isSucc: true` means the message buffer is sent to kernel, not represents the clients received.
      */
-    // async broadcastMsg<T extends string & keyof Conn['ServiceType']['msg']>(msgName: T, msg: Conn['ServiceType']['msg'][T], conns?: Conn[]): Promise<OpResultVoid> {
-    //     let connAll = false;
-    //     if (!conns) {
-    //         conns = this.connections;
-    //         connAll = true;
-    //     }
+    async broadcastMsg<T extends string & keyof Conn['ServiceType']['msg']>(msgName: T, msg: Conn['ServiceType']['msg'][T], conns?: Conn[]): Promise<OpResultVoid> {
+        let isAllConn = false;
+        if (!conns) {
+            conns = Array.from(this.connections);
+            isAllConn = true;
+        }
 
-    //     const connStr = () => connAll ? '*' : conns!.map(v => v.id).join(',');
+        let _connStr: string | undefined;
+        const getConnStr = () => _connStr ?? (_connStr = (isAllConn ? '*' : conns!.map(v => '$' + v.id).join(',')));
 
-    //     if (!conns.length) {
-    //         return { isSucc: true };
-    //     }
+        if (!conns.length) {
+            return { isSucc: true };
+        }
 
-    //     if (this.status !== ServerStatus.Opened) {
-    //         this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr()}]`, 'Server not open');
-    //         return { isSucc: false, errMsg: 'Server not open' };
-    //     }
+        if (this._status !== ServerStatus.Started) {
+            this.logger.error('[BroadcastMsgErr]', `[${msgName}]`, `[To:${getConnStr()}]`, 'Server is not started');
+            return { isSucc: false, errMsg: 'Server is not started' };
+        }
 
-    //     // GetService
-    //     let service = this.serviceMap.msgName2Service[msgName as string];
-    //     if (!service) {
-    //         this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr()}]`, 'Invalid msg name: ' + msgName);
-    //         return { isSucc: false, errMsg: 'Invalid msg name: ' + msgName };
-    //     }
+        // Pre Flow
+        let pre = await this.flows.preBroadcastMsgFlow.exec({
+            msgName: msgName,
+            msg: msg,
+            conns: conns
+        }, this.logger);
+        if (!pre) {
+            return PROMISE_ABORTED;
+        }
+        msgName = pre.msgName as T;
+        msg = pre.msg;
+        conns = pre.conns;
 
-    //     // Encode group by dataType
-    //     let _opEncodeBuf: EncodeOutput<Uint8Array> | undefined;
-    //     let _opEncodeText: EncodeOutput<string> | undefined;
-    //     const getOpEncodeBuf = () => {
-    //         if (!_opEncodeBuf) {
-    //             _opEncodeBuf = TransportDataUtil.encodeServerMsg(this.tsbuffer, service!, msg, 'buffer', 'LONG');
-    //         }
-    //         return _opEncodeBuf;
-    //     }
-    //     const getOpEncodeText = () => {
-    //         if (!_opEncodeText) {
-    //             _opEncodeText = TransportDataUtil.encodeServerMsg(this.tsbuffer, service!, msg, 'text', 'LONG');
-    //         }
-    //         return _opEncodeText;
-    //     }
+        // GetService
+        let service = this.serviceMap.msgName2Service[msgName as string];
+        if (!service) {
+            this.logger.error('[BroadcastMsgErr]', `[${msgName}]`, `[To:${getConnStr()}]`, 'Invalid msg name: ' + msgName);
+            return { isSucc: false, errMsg: 'Invalid msg name: ' + msgName };
+        }
 
-    //     // 测试一下编码可以通过
-    //     let op = conns.some(v => v.dataType === 'buffer') ? getOpEncodeBuf() : getOpEncodeText();
-    //     if (!op.isSucc) {
-    //         this.logger.warn('[BroadcastMsgErr]', `[${msgName}]`, `[To:${connStr()}]`, op.errMsg);
-    //         return op;
-    //     }
+        const transportData: TransportData & { type: 'msg' } = {
+            type: 'msg',
+            serviceName: msgName,
+            body: msg
+        }
 
-    //     this.options.logMsg && this.logger.log(`[BroadcastMsg]`, `[${msgName}]`, `[To:${connStr()}]`, msg);
+        // 区分 dataType 不同的 conns
+        let connGroups: { conns: Conn[], dataType: BaseConnectionDataType, data: any }[] = conns.groupBy(v => v.dataType).map(v => ({
+            conns: v,
+            dataType: v.key,
+            data: null
+        }));
 
-    //     // Batch send
-    //     let errMsgs: string[] = [];
-    //     return Promise.all(conns.map(async conn => {
-    //         // Pre Flow
-    //         let pre = await this.flows.preSendMsgFlow.exec({ conn: conn, service: service!, msg: msg }, this.logger);
-    //         if (!pre) {
-    //             conn.logger.debug('[preSendMsgFlow]', 'Canceled');
-    //             return { isSucc: false, errMsg: 'Prevented by preSendMsgFlow' };
-    //         }
-    //         msg = pre.msg;
+        // Encode
+        for (let groupItem of connGroups) {
+            // Encode body
+            const opEncodeBody = groupItem.dataType === 'buffer'
+                ? TransportDataUtil.encodeBodyBuffer(transportData, this.serviceMap, this.tsbuffer, this.options.skipEncodeValidate)
+                : TransportDataUtil.encodeBodyText(transportData, this.serviceMap, this.tsbuffer, this.options.skipEncodeValidate, groupItem.conns[0]['_encodeJsonStr']);
+            if (!opEncodeBody.isSucc) {
+                this.logger.error('[BroadcastMsgErr] Encode msg to text error.\n  |- ' + opEncodeBody.errMsg);
+                return { isSucc: false, errMsg: 'Encode msg to text error.\n  |- ' + opEncodeBody.errMsg };
+            }
 
-    //         // Do send!
-    //         let opSend = await conn.sendData((conn.dataType === 'buffer' ? getOpEncodeBuf() : getOpEncodeText())!.output!);
-    //         if (!opSend.isSucc) {
-    //             return opSend;
-    //         }
+            // Encode box
+            const opEncodeBox = groupItem.dataType === 'buffer'
+                ? TransportDataUtil.encodeBoxBuffer(opEncodeBody.res as BoxBuffer)
+                : (groupItem.conns[0]['_encodeBoxText'] ?? TransportDataUtil.encodeBoxText)(opEncodeBody.res as BoxTextEncoding, groupItem.conns[0]['_encodeSkipSN'])
+            if (!opEncodeBox.isSucc) {
+                this.logger.error(`[BroadcastMsgErr] Encode ${groupItem.dataType === 'buffer' ? 'BoxBuffer' : 'BoxText'} error.\n  |- ${opEncodeBox.errMsg}`);
+                return { isSucc: false, errMsg: `Encode ${groupItem.dataType === 'buffer' ? 'BoxBuffer' : 'BoxText'} error.\n  |- ${opEncodeBox.errMsg}` };
+            }
+        }
 
-    //         // Post Flow
-    //         this.flows.postSendMsgFlow.exec(pre, this.logger);
+        // SEND
+        this.options.logMsg && this.logger.log(`[BroadcastMsg]`, `[${msgName}]`, `[To:${getConnStr()}]`, msg);
+        let promiseSends: Promise<OpResultVoid>[] = [];
+        connGroups.forEach(v => {
+            const data = v.data;
+            promiseSends = promiseSends.concat(v.conns.map(v => v['_sendData'](data, transportData)));
+        });
 
-    //         return { isSucc: true };
-    //     })).then(results => {
-    //         for (let i = 0; i < results.length; ++i) {
-    //             let op = results[i];
-    //             if (!op.isSucc) {
-    //                 errMsgs.push(`Conn#conns[i].id: ${op.errMsg}`)
-    //             };
-    //         }
-    //         if (errMsgs.length) {
-    //             return { isSucc: false, errMsg: errMsgs.join('\n') }
-    //         }
-    //         else {
-    //             return { isSucc: true }
-    //         }
-    //     })
-    // };
-
+        // Batch send
+        let errMsgs: string[] = [];
+        return Promise.all(promiseSends).then(results => {
+            for (let i = 0; i < results.length; ++i) {
+                let op = results[i];
+                if (!op.isSucc) {
+                    errMsgs.push(`Conn$${conns![i].id}: ${op.errMsg}`)
+                };
+            }
+            if (errMsgs.length) {
+                return { isSucc: false, errMsg: errMsgs.join('\n') }
+            }
+            else {
+                return { isSucc: true }
+            }
+        })
+    };
 }
 
 export const defaultBaseServerOptions: BaseServerOptions = {
