@@ -3,15 +3,17 @@ import { TransportData } from "../base/TransportData";
 import { Logger } from "../models/Logger";
 import { PrefixLogger, PrefixLoggerOptions } from "../models/PrefixLogger";
 import { ApiReturn } from "../proto/ApiReturn";
-import { BaseServiceType } from "../proto/BaseServiceType";
 import { BaseServer } from "./BaseServer";
 
-export abstract class BaseServerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
+export abstract class BaseServerConnection<Server extends BaseServer = any> extends BaseConnection<Server['Conn']['ServiceType']> {
+
+    declare options: Server['options']
 
     readonly id: number;
     readonly ip: string;
+    flows: Server['flows'];
 
-    constructor(public readonly server: BaseServer, privateOptions: PrivateBaseServerConnectionOptions) {
+    constructor(public readonly server: Server, privateOptions: PrivateBaseServerConnectionOptions) {
         super(privateOptions.dataType, server.options, server.serviceMap, server.tsbuffer, server.localProtoInfo);
         (this.logger as Logger) = new PrefixLogger({
             logger: server.logger,
@@ -19,6 +21,7 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
         });
         this.id = server['_connId'].getNext();
         this.ip = privateOptions.ip;
+        this.flows = server.flows;
 
         // To be override ...
         // Init connection (http req/res, ws conn, ...)

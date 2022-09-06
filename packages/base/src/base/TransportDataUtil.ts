@@ -73,7 +73,7 @@ export class TransportDataUtil {
         }
     }
 
-    static encodeBodyText(transportData: TransportData, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined, encodeJsonStr: ((jsonObj: any, schemaId: string) => string) | undefined): OpResult<BoxTextEncoding> {
+    static encodeBodyText(transportData: TransportData, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined, stringifyBodyJson: ((bodyJson: Object, transportData: TransportData, schemaId: string) => string) | undefined): OpResult<BoxTextEncoding> {
         let opBodyInfo = this._getBodyInfo(transportData, serviceMap);
         if (!opBodyInfo.isSucc) { return opBodyInfo };
 
@@ -88,7 +88,7 @@ export class TransportDataUtil {
                 isSucc: true,
                 res: {
                     ...rest,
-                    body: encodeJsonStr ? encodeJsonStr(opEncode.json, opBodyInfo.res.schemaId) : JSON.stringify(opEncode.json)
+                    body: stringifyBodyJson ? stringifyBodyJson(opEncode.json, transportData, opBodyInfo.res.schemaId) : JSON.stringify(opEncode.json)
                 }
             }
         }

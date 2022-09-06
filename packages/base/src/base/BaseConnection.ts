@@ -468,8 +468,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // #region Transport
 
     // #region Encode options (may override by HTTP Text)
-    protected _encodeJsonStr?: ((jsonObj: any, schemaId: string) => string);
     protected _encodeSkipSN?: boolean;
+    protected _stringifyBodyJson?: (bodyJson: Object, transportData: TransportData, schemaId: string) => string;
     protected _encodeBoxText?: (typeof TransportDataUtil)['encodeBoxText'];
     protected _decodeBoxText?: (typeof TransportDataUtil)['decodeBoxText'];
     // #endregion
@@ -488,7 +488,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Encode body
         const opEncodeBody = dataType === 'buffer'
             ? TransportDataUtil.encodeBodyBuffer(transportData, this.serviceMap, this.tsbuffer, this.options.skipEncodeValidate)
-            : TransportDataUtil.encodeBodyText(transportData, this.serviceMap, this.tsbuffer, this.options.skipEncodeValidate, this._encodeJsonStr);
+            : TransportDataUtil.encodeBodyText(transportData, this.serviceMap, this.tsbuffer, this.options.skipEncodeValidate, this._stringifyBodyJson);
         if (!opEncodeBody.isSucc) { return opEncodeBody }
 
         return this._sendBox(opEncodeBody.res, dataType, transportData, options, call);

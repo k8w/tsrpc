@@ -65,6 +65,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
 
     /**
      * Listen port, wait connection, and call this.onConnection()
+     * @throws Throw `Error` if start failed
      */
     abstract start(): Promise<void>;
 
@@ -83,7 +84,8 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
     /**
      * Stop the server
      * @param gracefulWaitTime `undefined` represent stop immediately, otherwise wait all API requests finished and then stop the server.
-     * @returns 
+     * @returns Promise<void>
+     * @throws Throw `Error` if stop failed
      */
     async stop(gracefulWaitTime?: number): Promise<void> {
         // Graceful stop (wait all ApiCall finished)
@@ -179,7 +181,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
             // Encode body
             const opEncodeBody = groupItem.dataType === 'buffer'
                 ? TransportDataUtil.encodeBodyBuffer(transportData, this.serviceMap, this.tsbuffer, this.options.skipEncodeValidate)
-                : TransportDataUtil.encodeBodyText(transportData, this.serviceMap, this.tsbuffer, this.options.skipEncodeValidate, groupItem.conns[0]['_encodeJsonStr']);
+                : TransportDataUtil.encodeBodyText(transportData, this.serviceMap, this.tsbuffer, this.options.skipEncodeValidate, groupItem.conns[0]['_stringifyBodyJson']);
             if (!opEncodeBody.isSucc) {
                 this.logger.error('[BroadcastMsgErr] Encode msg to text error.\n  |- ' + opEncodeBody.errMsg);
                 return { isSucc: false, errMsg: 'Encode msg to text error.\n  |- ' + opEncodeBody.errMsg };
@@ -227,7 +229,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
                     }, this.logger)
                 }
             })
-            
+
             promiseSends = promiseSends.concat(promises);
         });
 

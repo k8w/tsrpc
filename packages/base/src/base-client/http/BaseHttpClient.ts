@@ -94,7 +94,7 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
         }
 
         // Parse body
-        let body: object;
+        let body: ApiReturn<any>;
         try {
             body = (this.options.decodeReturnText ?? JSON.parse)(data);
         }
