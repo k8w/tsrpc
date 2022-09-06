@@ -1,12 +1,21 @@
-import { BaseConnectionFlows } from "../base/BaseConnectionFlows";
+import { Overwrite } from "tsbuffer-schema";
+import { BaseConnectionFlows, SendDataFlow } from "../base/BaseConnectionFlows";
 import { Flow } from "../models/Flow";
 import { BaseServiceType } from "../proto/BaseServiceType";
 import { BaseServer } from "./BaseServer";
 import { BaseServerConnection } from "./BaseServerConnection";
 
-export type BaseServerFlows<Server extends BaseServer> = BaseConnectionFlows<Server['Conn'], Server['Conn']['ServiceType']> & {
+export type BaseServerFlows<Server extends BaseServer> = Overwrite<BaseConnectionFlows<Server['Conn'], Server['Conn']['ServiceType']>, {
     preBroadcastMsgFlow: Flow<BroadcastMsgFlow<Server['Conn'], Server['Conn']['ServiceType']>>,
-    
+    preSendDataFlow: Flow<SendDataFlow<Server['Conn'], Server['Conn']['ServiceType']> & {
+        /** When `server.broadcastMsg()`, preSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
+        readonly conns?: Server['Conn'][]
+    }>,
+    postSendDataFlow: Flow<SendDataFlow<Server['Conn'], Server['Conn']['ServiceType']> & {
+        /** When `server.broadcastMsg()`, postSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
+        readonly conns?: Server['Conn'][]
+    }>,
+
     /** @deprecated Use `preRecvDataFlow` instead */
     preRecvBufferFlow?: never,
     /** @deprecated Use `preSendDataFlow` instead */
@@ -23,7 +32,7 @@ export type BaseServerFlows<Server extends BaseServer> = BaseConnectionFlows<Ser
     postMsgCallFlow?: never,
     /** @deprecated Use `postSendDataFlow` instead */
     postSendMsgFlow?: never,
-};
+}>;
 
 export type BroadcastMsgFlow<Conn extends BaseServerConnection<any>, ServiceType extends BaseServiceType> = {
     [K in keyof ServiceType['msg']]: {

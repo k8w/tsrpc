@@ -141,7 +141,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
             return { isSucc: false, errMsg: 'Server is not started' };
         }
 
-        // Pre Flow
+        // Pre Broadcast Flow
         let pre = await this.flows.preBroadcastMsgFlow.exec({
             msgName: msgName,
             msg: msg,
@@ -193,6 +193,19 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
                 this.logger.error(`[BroadcastMsgErr] Encode ${groupItem.dataType === 'buffer' ? 'BoxBuffer' : 'BoxText'} error.\n  |- ${opEncodeBox.errMsg}`);
                 return { isSucc: false, errMsg: `Encode ${groupItem.dataType === 'buffer' ? 'BoxBuffer' : 'BoxText'} error.\n  |- ${opEncodeBox.errMsg}` };
             }
+
+            // Pre SendData Flow (run once only)
+            const pre = await this.flows.preSendDataFlow.exec({
+                conn: groupItem.conns[0],
+                data: opEncodeBox.res,
+                transportData: transportData,
+                conns: groupItem.conns
+            }, this.logger);
+            if (!pre) {
+                return PROMISE_ABORTED;
+            }
+
+            groupItem.data = opEncodeBox.res;
         }
 
         // SEND
@@ -200,10 +213,25 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
         let promiseSends: Promise<OpResultVoid>[] = [];
         connGroups.forEach(v => {
             const data = v.data;
-            promiseSends = promiseSends.concat(v.conns.map(v => v['_sendData'](data, transportData)));
+            let promises = v.conns.map(v => v['_sendData'](data, transportData));
+
+            // Post SendData Flow (run once only)
+            Promise.all(promises).then(ops => {
+                let succConns = ops.filterIndex(v => v.isSucc).map(i => v.conns[i]);
+                if (succConns.length) {
+                    this.flows.postSendDataFlow.exec({
+                        conn: succConns[0],
+                        conns: succConns,
+                        data: data,
+                        transportData: transportData
+                    }, this.logger)
+                }
+            })
+            
+            promiseSends = promiseSends.concat(promises);
         });
 
-        // Batch send
+        // Merge errMsgs and return
         let errMsgs: string[] = [];
         return Promise.all(promiseSends).then(results => {
             for (let i = 0; i < results.length; ++i) {

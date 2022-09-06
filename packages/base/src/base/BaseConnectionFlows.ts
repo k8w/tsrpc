@@ -106,7 +106,7 @@ export type SendDataFlow<Conn extends BaseConnection<any>, ServiceType extends B
     /** Where the data is encoded from */
     readonly transportData: TransportData,
     /** If the data is an ApiReturn, this would be its original ApiCall. */
-    readonly call?: ApiCallReturnFlow<Conn, ServiceType>
+    readonly call?: ApiCallReturnFlow<Conn, ServiceType>,
 };
 
 export type RecvDataFlow<Conn extends BaseConnection<any>> = {
