@@ -89,7 +89,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         public readonly serviceMap: ServiceMap,
         public readonly tsbuffer: TSBuffer,
         protected readonly _localProtoInfo: ProtoInfo,
-        public readonly remoteAddress: string
     ) {
         this._setDefaultFlowOnError();
         this.logger = options.logger;
@@ -711,8 +710,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     //#endregion
 
     // #region Deprecated APIs
-    /** @deprecated Use `remoteAddress` instead */
-    declare ip: never;
     // #endregion
 }
 

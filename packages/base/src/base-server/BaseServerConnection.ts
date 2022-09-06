@@ -8,15 +8,17 @@ import { BaseServer } from "./BaseServer";
 
 export abstract class BaseServerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
-    public readonly id: number;
+    readonly id: number;
+    readonly ip: string;
 
-    constructor(public readonly server: BaseServer, options: BaseServerConnectionOptions) {
-        super(options.dataType, server.options, server.serviceMap, server.tsbuffer, server.localProtoInfo, options.remoteAddress);
+    constructor(public readonly server: BaseServer, privateOptions: PrivateBaseServerConnectionOptions) {
+        super(privateOptions.dataType, server.options, server.serviceMap, server.tsbuffer, server.localProtoInfo);
         (this.logger as Logger) = new PrefixLogger({
             logger: server.logger,
-            prefixs: options.logPrefixs
+            prefixs: privateOptions.logPrefixs
         });
-        this.id = server['_connId'].getNext()
+        this.id = server['_connId'].getNext();
+        this.ip = privateOptions.ip;
 
         // To be override ...
         // Init connection (http req/res, ws conn, ...)
@@ -45,8 +47,8 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
 
 }
 
-export interface BaseServerConnectionOptions {
+export interface PrivateBaseServerConnectionOptions {
     dataType: BaseConnectionDataType,
-    remoteAddress: string,
-    logPrefixs: PrefixLoggerOptions['prefixs']
+    ip: string,
+    logPrefixs: PrefixLoggerOptions['prefixs'],
 }
