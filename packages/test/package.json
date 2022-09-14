@@ -26,5 +26,11 @@
   },
   "dependencies": {
     "tsrpc-base-client": "^4.0.0-dev.0"
+  },
+  "devDependencies": {
+    "tsrpc-proto": "workspace:^4.0.0-dev.0"
+  },
+  "peerDependencies": {
+    "tsrpc-proto": "workspace:^4.0.0-dev.0"
   }
 }
