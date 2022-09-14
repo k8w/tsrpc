@@ -1,4 +1,4 @@
-import { Overwrite, uint } from "tsbuffer-schema";
+import type { Overwrite, uint } from "tsbuffer-schema";
 import { TransportDataSchema } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
 

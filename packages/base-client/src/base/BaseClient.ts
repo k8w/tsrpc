@@ -1,11 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { BaseConnection, BaseConnectionDataType, BaseConnectionOptions, defaultBaseConnectionOptions } from "../base/BaseConnection";
-import { getCustomObjectIdTypes } from "../models/getCustomObjectIdTypes";
-import { LogLevel, setLogLevel } from "../models/Logger";
-import { ServiceMapUtil } from "../models/ServiceMapUtil";
-import { BaseServiceType } from "../proto/BaseServiceType";
-import { ServiceProto } from "../proto/ServiceProto";
-import { ProtoInfo } from "../proto/TransportDataSchema";
+import { BaseServiceType, BaseConnection, ServiceProto, ServiceMapUtil, getCustomObjectIdTypes, setLogLevel, defaultBaseConnectionOptions, BaseConnectionOptions, BaseConnectionDataType, LogLevel, ProtoInfo } from "tsrpc-base";
 import { BaseClientFlows } from "./BaseClientFlows";
 
 /**

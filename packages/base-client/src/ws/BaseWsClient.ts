@@ -1,10 +1,5 @@
-import { ConnectionStatus, PROMISE_ABORTED } from "../../base/BaseConnection";
-import { TransportData } from "../../base/TransportData";
-import { OpResultVoid } from "../../models/OpResult";
-import { TransportOptions } from "../../models/TransportOptions";
-import { BaseServiceType } from "../../proto/BaseServiceType";
-import { ServiceProto } from "../../proto/ServiceProto";
-import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../BaseClient";
+import { BaseServiceType, ServiceProto, OpResultVoid, ConnectionStatus, PROMISE_ABORTED, TransportData, TransportOptions } from "tsrpc-base";
+import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../base/BaseClient";
 import { BaseWsClientTransport } from "./BaseWsClientTransport";
 
 export class BaseWsClient<ServiceType extends BaseServiceType = any> extends BaseClient<ServiceType> {

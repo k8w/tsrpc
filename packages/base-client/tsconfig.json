@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
     "target": "es5",
+    "lib": [
+      "es6",
+      "DOM"
+    ],
     "module": "es6",
     "outDir": "./dist",
     "importHelpers": true,

@@ -1,5 +1,5 @@
 {
-  "name": "tsrpc-base-server",
+  "name": "tsrpc-base-client",
   "version": "4.0.0-dev.0",
   "description": "TSRPC Base Client",
   "main": "./dist/index.js",
@@ -19,7 +19,7 @@
     "url": "git+https://github.com/k8w/tsrpc.git",
     "directory": "packages/base-client"
   },
-  "author": "",
+  "author": "k8w",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/k8w/tsrpc/issues"
@@ -37,7 +37,7 @@
     "typescript": "^4.7.3"
   },
   "peerDependencies": {
-    "tslib": "*",
-    "tsbuffer": "*"
+    "tslib": "^2.4.0",
+    "tsbuffer": "^2.2.3"
   }
 }

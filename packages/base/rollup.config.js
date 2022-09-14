@@ -7,7 +7,7 @@ const banner = `/*!
  * -----------------------------------------
  * Copyright (c) King Wang.
  * MIT License
- * https://github.com/k8w/tsrpc
+ * ${packageJSON.homepage}
  */`
 
 export default [

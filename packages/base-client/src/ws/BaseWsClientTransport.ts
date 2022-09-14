@@ -1,5 +1,4 @@
-import { Logger } from "../../models/Logger";
-import { OpResult } from "../../models/OpResult";
+import { Logger, OpResult } from "tsrpc-base";
 
 export interface BaseWsClientTransport {
     onOpen: () => void;

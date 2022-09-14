@@ -1,4 +1,4 @@
-import { TsrpcError } from "../../proto/TsrpcError";
+import { TsrpcError } from "tsrpc-base"
 
 export interface BaseHttpClientTransport {
     request: (options: {

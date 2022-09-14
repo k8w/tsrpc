@@ -4,7 +4,7 @@
     "lerna": "^5.5.1"
   },
   "scripts": {
-    "install": "lerna bootstrap",
+    "postinstall": "lerna bootstrap",
     "test": "lerna run test",
     "build": "lerna run build",
     "publish:dev": "",

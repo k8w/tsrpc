@@ -1,0 +1,30 @@
+{
+  "name": "test",
+  "private": true,
+  "version": "4.0.0-dev.0",
+  "description": "> TODO: description",
+  "author": "k8w <me@k8w.cn>",
+  "homepage": "https://github.com/k8w/tsrpc#readme",
+  "license": "ISC",
+  "main": "lib/test.js",
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k8w/tsrpc.git"
+  },
+  "scripts": {
+    "test": "node ./__tests__/test.test.js"
+  },
+  "bugs": {
+    "url": "https://github.com/k8w/tsrpc/issues"
+  },
+  "dependencies": {
+    "tsrpc-base-client": "^4.0.0-dev.0"
+  }
+}

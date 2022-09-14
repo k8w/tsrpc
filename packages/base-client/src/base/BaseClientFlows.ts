@@ -1,6 +1,4 @@
-import { BaseConnectionFlows } from "../base/BaseConnectionFlows";
-import { Flow } from "../models/Flow";
-import { OpResultVoid } from "../models/OpResult";
+import { BaseConnectionFlows, Flow, OpResultVoid } from "tsrpc-base";
 import { BaseClient } from "./BaseClient";
 
 export type BaseClientFlows<Conn extends BaseClient> = BaseConnectionFlows<Conn, Conn['ServiceType']> & {

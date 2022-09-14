@@ -15,7 +15,9 @@
         "@rollup/*",
         "rollup-*",
         "@babel/*",
-        "tslib"
+        "tslib",
+        "tsbuffer",
+        "tsbuffer-*"
       ]
     }
   }

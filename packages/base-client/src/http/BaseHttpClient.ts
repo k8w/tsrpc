@@ -1,14 +1,5 @@
-import { PROMISE_ABORTED } from "../../base/BaseConnection";
-import { BoxTextEncoding, TransportData } from "../../base/TransportData";
-import { TransportDataUtil } from "../../base/TransportDataUtil";
-import { OpResultVoid } from "../../models/OpResult";
-import { TransportOptions } from "../../models/TransportOptions";
-import { ApiReturn } from "../../proto/ApiReturn";
-import { BaseServiceType } from "../../proto/BaseServiceType";
-import { ServiceProto } from "../../proto/ServiceProto";
-import { ProtoInfo, TsrpcErrorType } from "../../proto/TransportDataSchema";
-import { TsrpcError } from "../../proto/TsrpcError";
-import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../BaseClient";
+import { BaseServiceType, ServiceProto, TransportData, TransportOptions, OpResultVoid, PROMISE_ABORTED, TsrpcError, TsrpcErrorType, TransportDataUtil, BoxTextEncoding, ApiReturn, ProtoInfo } from "tsrpc-base";
+import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../base/BaseClient";
 import { BaseHttpClientTransport } from "./BaseHttpClientTransport";
 
 export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends BaseClient<ServiceType> {
