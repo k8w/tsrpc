@@ -1,0 +1,23 @@
+{
+  "name": "tsrpc-proto",
+  "version": "4.0.0-dev.0",
+  "description": "TSRPC Proto",
+  "types": "./index.d.ts",
+  "files": [
+    "index.d.ts"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k8w/tsrpc.git",
+    "directory": "packages/proto"
+  },
+  "author": "k8w",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/k8w/tsrpc/issues"
+  },
+  "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/proto#readme",
+  "peerDependencies": {
+    "tsbuffer-schema": "^2.2.0"
+  }
+}
