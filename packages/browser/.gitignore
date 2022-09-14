@@ -1,9 +1,0 @@
-dist
-node_modules
-logs
-yarn.lock
-package-lock.json
-.rpt2_cache
-temp
-lib
-.DS_STORE

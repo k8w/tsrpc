@@ -1,4 +1,5 @@
 import 'k8w-extend-native';
+import 'tsrpc-proto';
 
 export { BaseConnection } from "./base/BaseConnection";
 

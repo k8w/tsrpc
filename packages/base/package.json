@@ -1,6 +1,6 @@
 {
   "name": "tsrpc-base",
-  "version": "2.1.2",
+  "version": "4.0.0-dev.0",
   "description": "TSRPC Base",
   "main": "./dist/index.js",
   "exports": {
@@ -43,6 +43,6 @@
     "k8w-extend-native": "^1.4.6",
     "tsbuffer-schema": "^2.2.0",
     "tsbuffer-validator": "^2.1.0",
-    "tslib": "^2.4.0"
+    "tslib": "*"
   }
 }

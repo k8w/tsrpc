@@ -1,7 +1,7 @@
 {
   "name": "tsrpc-base-server",
   "version": "2.1.2",
-  "description": "TSRPC Base Client",
+  "description": "TSRPC Base Server",
   "main": "./dist/index.js",
   "exports": {
     "require": "./dist/index.js",
@@ -25,11 +25,8 @@
     "url": "https://github.com/k8w/tsrpc/issues"
   },
   "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base-server#readme",
-  "dependencies": {
-    "k8w-extend-native": "^1.4.6",
-    "tsbuffer": "^2.2.3",
-    "tslib": "*",
-    "tsrpc-base": "^2.1.2"
+  "dependencies": {    
+    "tsrpc-base": "^4.0.0-dev.0"
   },
   "devDependencies": {
     "mocha": "^9.2.2",
@@ -38,5 +35,9 @@
     "rollup-plugin-typescript2": "^0.32.1",
     "ts-node": "^10.8.1",
     "typescript": "^4.7.3"
+  },
+  "peerDependencies": {
+    "tsbuffer": "*",
+    "tslib": "*"
   }
 }

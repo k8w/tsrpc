@@ -14,7 +14,8 @@
         "@microsoft/*",
         "@rollup/*",
         "rollup-*",
-        "@babel/*"
+        "@babel/*",
+        "tslib"
       ]
     }
   }

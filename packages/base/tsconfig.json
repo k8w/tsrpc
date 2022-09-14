@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es2019",
+    "target": "es5",
     "module": "es6",
     "outDir": "./dist",
     "importHelpers": true,
@@ -10,7 +10,6 @@
     "esModuleInterop": true
   },
   "include": [
-    "src",
-    "../../test/type-experiments/双向协变转换.ts"
+    "src"
   ]
 }

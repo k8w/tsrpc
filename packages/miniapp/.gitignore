@@ -1,7 +1,0 @@
-node_modules
-dist
-test/miniapp/**/*.js
-lib
-temp
-.rpt2_cache
-.DS_Store

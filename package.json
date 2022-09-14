@@ -1,10 +1,10 @@
 {
   "private": true,
   "devDependencies": {
-    "lerna": "^5.1.8"
+    "lerna": "^5.5.1"
   },
   "scripts": {
-    "init": "npm i && lerna bootstrap",
+    "install": "lerna bootstrap",
     "test": "lerna run test",
     "build": "lerna run build",
     "publish:dev": "",
