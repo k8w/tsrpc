@@ -1,5 +1,4 @@
 import 'k8w-extend-native';
-import type tsbuffer_schema from 'tsbuffer-schema';
 
 export * from './base/ApiCall';
 export * from './base/BaseConnection';
@@ -10,12 +9,12 @@ export * from './models/Chalk';
 export * from './models/Counter';
 export * from './models/EventEmitter';
 export * from './models/Flow';
+export * from './models/getCustomObjectIdTypes';
 export * from './models/Logger';
 export * from './models/OpResult';
 export * from './models/PrefixLogger';
 export * from './models/ServiceMapUtil';
 export * from './models/TransportOptions';
-export * from './models/getCustomObjectIdTypes';
 export * from './proto/ApiReturn';
 export * from './proto/BaseServiceType';
 export * from './proto/ServiceProto';
