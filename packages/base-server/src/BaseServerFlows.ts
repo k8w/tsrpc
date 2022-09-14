@@ -1,7 +1,5 @@
 import { Overwrite } from "tsbuffer-schema";
-import { BaseConnectionFlows, SendDataFlow } from "../base/BaseConnectionFlows";
-import { Flow } from "../models/Flow";
-import { BaseServiceType } from "../proto/BaseServiceType";
+import { BaseConnectionFlows, Flow, SendDataFlow, BaseServiceType } from "tsrpc-base";
 import { BaseServer } from "./BaseServer";
 import { BaseServerConnection } from "./BaseServerConnection";
 

@@ -1,8 +1,4 @@
-import { BaseConnection, BaseConnectionDataType } from "../base/BaseConnection";
-import { TransportData } from "../base/TransportData";
-import { Logger } from "../models/Logger";
-import { PrefixLogger, PrefixLoggerOptions } from "../models/PrefixLogger";
-import { ApiReturn } from "../proto/ApiReturn";
+import { BaseConnection, Logger, PrefixLogger, TransportData, ApiReturn, BaseConnectionDataType, PrefixLoggerOptions } from "tsrpc-base";
 import { BaseServer } from "./BaseServer";
 
 export abstract class BaseServerConnection<Server extends BaseServer = any> extends BaseConnection<Server['Conn']['ServiceType']> {

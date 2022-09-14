@@ -4,21 +4,6 @@
   ],
   "useNx": false,
   "version": "4.0.0-dev.0",
-  "command": {
-    "bootstrap": {
-      "hoist": [
-        "rollup",
-        "typescript",
-        "ts-node",
-        "mocha",
-        "@microsoft/*",
-        "@rollup/*",
-        "rollup-*",
-        "@babel/*",
-        "tslib",
-        "tsbuffer",
-        "tsbuffer-*"
-      ]
-    }
-  }
+  "npmClient": "pnpm",
+  "useWorkspaces": true
 }

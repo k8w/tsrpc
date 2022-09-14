@@ -19,5 +19,8 @@
   "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/proto#readme",
   "peerDependencies": {
     "tsbuffer-schema": "^2.2.0"
+  },
+  "devDependencies": {
+    "tsbuffer-schema": "^2.2.0"
   }
 }

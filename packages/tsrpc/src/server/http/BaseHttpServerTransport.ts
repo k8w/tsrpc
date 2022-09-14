@@ -1,4 +1,4 @@
-import { OpResultVoid } from "../../models/OpResult";
+import { OpResultVoid } from "tsrpc-base";
 
 export interface BaseHttpServerTransport {
 

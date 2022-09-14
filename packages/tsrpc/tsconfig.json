@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2019",
     "lib": [
-      "es6",
-      "DOM"
+      "es2019",
+      "es2020.promise",
+      "es2020.bigint",
+      "es2020.string"
     ],
     "module": "es6",
     "outDir": "./dist",

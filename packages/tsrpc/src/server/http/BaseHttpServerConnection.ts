@@ -1,8 +1,4 @@
-import { BaseConnection } from "../../base/BaseConnection";
-import { TransportData } from "../../base/TransportData";
-import { OpResultVoid } from "../../models/OpResult";
-import { TransportOptions } from "../../models/TransportOptions";
-import { ApiReturn } from "../../proto/ApiReturn";
+import { TransportData, TransportOptions, OpResultVoid, BaseConnection, ApiReturn } from "tsrpc-base";
 import { BaseServerConnection, PrivateBaseServerConnectionOptions } from "../BaseServerConnection";
 import { BaseHttpServer } from "./BaseHttpServer";
 import { HttpReq, HttpRes } from "./BaseHttpServerTransport";

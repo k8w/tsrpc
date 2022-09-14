@@ -1,6 +1,6 @@
 {
   "name": "tsrpc-base-server",
-  "version": "2.1.2",
+  "version": "4.0.0-dev.0",
   "description": "TSRPC Base Server",
   "main": "./dist/index.js",
   "exports": {
@@ -29,15 +29,17 @@
     "tsrpc-base": "^4.0.0-dev.0"
   },
   "devDependencies": {
-    "mocha": "^9.2.2",
+    "k8w-extend-native": "^1.4.6",
     "rollup": "^2.75.6",
     "rollup-plugin-dts": "^4.2.2",
     "rollup-plugin-typescript2": "^0.32.1",
-    "ts-node": "^10.8.1",
+    "tsbuffer": "^2.2.3",
+    "tslib": "^2.4.0",
     "typescript": "^4.7.3"
   },
   "peerDependencies": {
-    "tslib": "^2.4.0",
-    "tsbuffer": "^2.2.3"
+    "k8w-extend-native": "^1.4.6",
+    "tsbuffer": "^2.2.3",
+    "tslib": "^2.4.0"
   }
 }
