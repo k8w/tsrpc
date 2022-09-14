@@ -1,5 +1,5 @@
 import { TransportData, TransportOptions, OpResultVoid, BaseConnection, ApiReturn } from "tsrpc-base";
-import { BaseServerConnection, PrivateBaseServerConnectionOptions } from "../BaseServerConnection";
+import { BaseServerConnection, PrivateBaseServerConnectionOptions } from "../base/BaseServerConnection";
 import { BaseHttpServer } from "./BaseHttpServer";
 import { HttpReq, HttpRes } from "./BaseHttpServerTransport";
 

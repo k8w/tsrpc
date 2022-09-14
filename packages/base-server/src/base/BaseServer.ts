@@ -26,6 +26,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
     readonly localProtoInfo: ProtoInfo
 
     protected _status: ServerStatus = ServerStatus.Stopped;
+    get status() { return this._status };
 
     constructor(
         public serviceProto: ServiceProto<Conn['ServiceType']>,
@@ -240,6 +241,10 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
             }
         })
     };
+
+    // TODO
+    implementApi() { }
+    autoImplementApi() { }
 }
 
 export const defaultBaseServerOptions: BaseServerOptions = {

@@ -1,4 +1,5 @@
-import { BaseServer, BaseServerOptions, PrivateBaseServerOptions } from "tsrpc-base-server";
+import { ServiceProto, ApiReturn } from "tsrpc-base";
+import { BaseServer, BaseServerOptions, PrivateBaseServerOptions } from "../base/BaseServer";
 import { BaseHttpServerConnection } from "./BaseHttpServerConnection";
 
 export class BaseHttpServer<Conn extends BaseHttpServerConnection = any> extends BaseServer<Conn>{

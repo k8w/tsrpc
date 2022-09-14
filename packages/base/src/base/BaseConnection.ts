@@ -624,7 +624,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             this.logger.error(`[DecodeBodyErr] Received body:`, box);
             this.logger.error(`[DecodeBodyErr] ${opDecodeBody.errMsg}`);
             // TODO 友好错误提示 检测 flow 使用、检测 proto version
-            return { isSucc: false, errMsg: `Invalid data body` };
+            return { isSucc: false, errMsg: `Invalid data body: ${opDecodeBody.errMsg}` };
         }
 
         return this._recvTransportData(opDecodeBody.res);
