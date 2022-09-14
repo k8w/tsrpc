@@ -1,15 +1,15 @@
 import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, Logger, PrefixLogger, PrefixLoggerOptions, TransportData } from "tsrpc-base";
 import { BaseServer } from "./BaseServer";
 
-export abstract class BaseServerConnection<Server extends BaseServer = any> extends BaseConnection<Server['Conn']['ServiceType']> {
+export abstract class BaseServerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
-    declare options: Server['options']
+    declare options: this['server']['options']
 
     readonly id: number;
     readonly ip: string;
-    flows: Server['flows'];
+    flows: this['server']['flows'];
 
-    constructor(public readonly server: Server, privateOptions: PrivateBaseServerConnectionOptions) {
+    constructor(public readonly server: BaseServer, privateOptions: PrivateBaseServerConnectionOptions) {
         super(privateOptions.dataType, server.options, {
             apiHandlers: server['_apiHandlers'],
             serviceMap: server.serviceMap,
@@ -49,8 +49,8 @@ export abstract class BaseServerConnection<Server extends BaseServer = any> exte
         return promise;
     }
 
-    protected _emitMsg: BaseConnection<Server['Conn']['ServiceType']>['_emitMsg'] = (a, b, c, d) => {
-
+    protected _emitMsg: BaseConnection<ServiceType>['_emitMsg'] = (msgName, msg, msgName2, conn) => {
+        // TODO
     }
 
     /** Please use `server.implementApi` instead. */

@@ -1,14 +1,14 @@
-import { TransportData, TransportOptions, OpResultVoid, BaseConnection, ApiReturn } from "tsrpc-base";
+import { TransportData, TransportOptions, OpResultVoid, BaseConnection, ApiReturn, BaseServiceType } from "tsrpc-base";
 import { BaseServerConnection, PrivateBaseServerConnectionOptions } from "../base/BaseServerConnection";
 import { BaseHttpServer } from "./BaseHttpServer";
 import { HttpReq, HttpRes } from "./BaseHttpServerTransport";
 
-export class BaseHttpServerConnection<Server extends BaseHttpServer = any> extends BaseServerConnection<Server> {
+export class BaseHttpServerConnection<ServiceType extends BaseServiceType = any> extends BaseServerConnection<ServiceType> {
 
     readonly httpReq: HttpReq;
     readonly httpRes: HttpRes;
 
-    constructor(public readonly server: Server, privateOptions: PrivateBaseHttpServerConnectionOptions) {
+    constructor(public readonly server: BaseHttpServer, privateOptions: PrivateBaseHttpServerConnectionOptions) {
         super(server, privateOptions);
         this.httpReq = privateOptions.httpReq;
         this.httpRes = privateOptions.httpRes;
