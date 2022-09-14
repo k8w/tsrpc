@@ -34,10 +34,14 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
             skipDecodeValidate: options.skipDecodeValidate,
         });
         options.logger = setLogLevel(options.logger, options.logLevel)
-        super(options.dataType, options, serviceMap, tsbuffer, {
-            lastModified: serviceProto.lastModified,
-            md5: serviceProto.md5,
-            ...privateOptions.env
+        super(options.dataType, options, {
+            serviceMap,
+            tsbuffer,
+            localProtoInfo: {
+                lastModified: serviceProto.lastModified,
+                md5: serviceProto.md5,
+                ...privateOptions.env
+            }
         })
     }
 

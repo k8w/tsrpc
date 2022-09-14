@@ -1,4 +1,4 @@
-import { BaseConnection, Logger, PrefixLogger, TransportData, ApiReturn, BaseConnectionDataType, PrefixLoggerOptions } from "tsrpc-base";
+import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, Logger, PrefixLogger, PrefixLoggerOptions, TransportData } from "tsrpc-base";
 import { BaseServer } from "./BaseServer";
 
 export abstract class BaseServerConnection<Server extends BaseServer = any> extends BaseConnection<Server['Conn']['ServiceType']> {
@@ -10,7 +10,12 @@ export abstract class BaseServerConnection<Server extends BaseServer = any> exte
     flows: Server['flows'];
 
     constructor(public readonly server: Server, privateOptions: PrivateBaseServerConnectionOptions) {
-        super(privateOptions.dataType, server.options, server.serviceMap, server.tsbuffer, server.localProtoInfo);
+        super(privateOptions.dataType, server.options, {
+            apiHandlers: server['_apiHandlers'],
+            serviceMap: server.serviceMap,
+            tsbuffer: server.tsbuffer,
+            localProtoInfo: server.localProtoInfo
+        });
         (this.logger as Logger) = new PrefixLogger({
             logger: server.logger,
             prefixs: privateOptions.logPrefixs
@@ -43,6 +48,13 @@ export abstract class BaseServerConnection<Server extends BaseServer = any> exte
         })
         return promise;
     }
+
+    protected _emitMsg: BaseConnection<Server['Conn']['ServiceType']>['_emitMsg'] = (a, b, c, d) => {
+
+    }
+
+    /** Please use `server.implementApi` instead. */
+    declare implementApi: never;
 
 }
 

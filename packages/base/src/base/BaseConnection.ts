@@ -32,6 +32,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     // Options
     readonly logger: Logger;
     readonly chalk: Chalk;
+    public readonly serviceMap: ServiceMap;
+    public readonly tsbuffer: TSBuffer;
+    protected readonly _localProtoInfo: ProtoInfo;
 
     // Status
     readonly status: ConnectionStatus = ConnectionStatus.Disconnected;
@@ -86,13 +89,16 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         public readonly dataType: BaseConnectionDataType,
         // Server: all connections shared single options
         public readonly options: BaseConnectionOptions,
-        public readonly serviceMap: ServiceMap,
-        public readonly tsbuffer: TSBuffer,
-        protected readonly _localProtoInfo: ProtoInfo,
+        privateOptions: PrivateBaseConnectionOptions
     ) {
         this._setDefaultFlowOnError();
         this.logger = options.logger;
         this.chalk = options.chalk;
+        this.serviceMap = privateOptions.serviceMap;
+        this.tsbuffer = privateOptions.tsbuffer;
+        this._localProtoInfo = privateOptions.localProtoInfo;
+        this._apiHandlers = privateOptions.apiHandlers ?? {};
+        this._msgListeners = privateOptions.msgListeners ?? new EventEmitter();
     }
 
     // #region API Client
@@ -324,7 +330,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // #region API Server
 
-    protected _apiHandlers: Record<string, ApiHandler<this> | undefined> = {};
+    protected _apiHandlers: Record<string, ApiHandler<this> | undefined>;
 
     /**
      * Associate a `ApiHandler` to a specific `apiName`.
@@ -365,7 +371,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // #region Message
 
-    protected _msgListeners = new EventEmitter<{ [K in keyof ServiceType['msg']]: [ServiceType['msg'][K], K, this] }>();
+    protected _msgListeners: EventEmitter<{ [K in keyof ServiceType['msg']]: [ServiceType['msg'][K], K, this] }>;
 
     /**
      * Send message, without response, not ensuring the server is received and processed correctly.
@@ -406,6 +412,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         return opResult;
     }
 
+    protected _emitMsg?: BaseConnection<ServiceType>['_msgListeners']['emit'];
     protected async _recvMsg(transportData: TransportData & { type: 'msg' }): Promise<OpResultVoid> {
         this.options.logMsg && this.logger.log(`[RecvMsg]`, transportData.serviceName, transportData.body);
 
@@ -420,7 +427,12 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
 
         // MsgHandlers
-        this._msgListeners.emit(transportData.serviceName, transportData.body as ServiceType['msg'][string & keyof ServiceType['msg']], transportData.serviceName, this);
+        if (this._emitMsg) {
+            this._emitMsg(transportData.serviceName, transportData.body as ServiceType['msg'][string & keyof ServiceType['msg']], transportData.serviceName, this);
+        }
+        else {
+            this._msgListeners.emit(transportData.serviceName, transportData.body as ServiceType['msg'][string & keyof ServiceType['msg']], transportData.serviceName, this);
+        }
         return { isSucc: true }
     }
 
@@ -815,3 +827,11 @@ export enum ConnectionStatus {
 }
 
 export type BaseConnectionDataType = 'text' | 'buffer';
+
+export interface PrivateBaseConnectionOptions {
+    apiHandlers?: BaseConnection['_apiHandlers'],
+    msgListeners?: BaseConnection['_msgListeners'],
+    serviceMap: ServiceMap,
+    tsbuffer: TSBuffer,
+    localProtoInfo: ProtoInfo
+}

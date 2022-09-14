@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { Logger, Chalk, ServiceMap, ProtoInfo, ServiceProto, getCustomObjectIdTypes, ServiceMapUtil, setLogLevel, Counter, ConnectionStatus, OpResultVoid, PROMISE_ABORTED, TransportData, BaseConnectionDataType, TransportDataUtil, BoxBuffer, BoxTextEncoding, defaultBaseConnectionOptions, BaseConnectionOptions, LogLevel } from "tsrpc-base";
+import { Logger, Chalk, ServiceMap, ProtoInfo, ServiceProto, getCustomObjectIdTypes, ServiceMapUtil, setLogLevel, Counter, ConnectionStatus, OpResultVoid, PROMISE_ABORTED, TransportData, BaseConnectionDataType, TransportDataUtil, BoxBuffer, BoxTextEncoding, defaultBaseConnectionOptions, BaseConnectionOptions, LogLevel, BaseConnection, EventEmitter, BaseServiceType } from "tsrpc-base";
 import { BaseServerConnection } from "./BaseServerConnection";
 import { BaseServerFlows } from "./BaseServerFlows";
 
@@ -243,8 +243,15 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
     };
 
     // TODO
+    protected _apiHandlers: BaseConnection<Conn['ServiceType']>['_apiHandlers'] = {};
     implementApi() { }
     autoImplementApi() { }
+
+    // TODO
+    protected _msgListeners: BaseConnection<Conn['ServiceType']>['_msgListeners'] = new EventEmitter();
+    onMsg() { }
+    onceMsg() { }
+    offMsg() { }
 }
 
 export const defaultBaseServerOptions: BaseServerOptions = {
