@@ -1,20 +1,43 @@
 import { ApiReturn } from "../../proto/ApiReturn";
-import { BaseServer, BaseServerOptions } from "../BaseServer";
+import { ServiceProto } from "../../proto/ServiceProto";
+import { BaseServer, BaseServerOptions, PrivateBaseServerOptions } from "../BaseServer";
 import { BaseHttpServerConnection } from "./BaseHttpServerConnection";
 
 export class BaseHttpServer<Conn extends BaseHttpServerConnection = any> extends BaseServer<Conn>{
 
     declare options: BaseHttpServerOptions;
 
+    constructor(serviceProto: ServiceProto, options: BaseHttpServerOptions, privateOptions: PrivateBaseHttpServerOptions) {
+        super(serviceProto, options, privateOptions);
+    }
+
     start(): Promise<void> {
         throw new Error("Method not implemented.");
     }
 
-    onConnection(conn: BaseHttpServerConnection) {
+    onConnection(conn: Conn) {
         super.onConnection(conn);
+        const httpReq = conn.httpReq;
+        const httpRes = conn.httpRes;
+
+        httpRes.setStatusCode(200);
+        httpRes.setHeader('X-Powered-By', this.localProtoInfo.tsrpc);
+
+        // CORS
+        if (this.options.cors) {
+            httpRes.setHeader('Access-Control-Allow-Origin', this.options.cors);
+            httpRes.setHeader('Access-Control-Allow-Headers', 'Content-Type,*');
+            if (this.options.corsMaxAge) {
+                httpRes.setHeader('Access-Control-Max-Age', '' + this.options.corsMaxAge);
+            }
+            if (httpReq.method === 'OPTIONS') {
+                httpRes.setStatusCode(200);
+                httpRes.end();
+                return;
+            }
+        }
 
         // TODO
-        // cors corsMaxAge
         // socketTimeout keepAliveTimeout
     }
 
@@ -95,6 +118,6 @@ export interface BaseHttpServerOptions extends BaseServerOptions {
     jsonHostPath?: never,
 }
 
-export interface PrivateBaseHttpServerOptions {
+export interface PrivateBaseHttpServerOptions extends PrivateBaseServerOptions {
     transport: any;
 }
