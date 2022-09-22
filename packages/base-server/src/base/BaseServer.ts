@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { Logger, Chalk, ServiceMap, ProtoInfo, ServiceProto, getCustomObjectIdTypes, ServiceMapUtil, setLogLevel, Counter, ConnectionStatus, OpResultVoid, PROMISE_ABORTED, TransportData, BaseConnectionDataType, TransportDataUtil, BoxBuffer, BoxTextEncoding, defaultBaseConnectionOptions, BaseConnectionOptions, LogLevel, BaseConnection, EventEmitter, BaseServiceType } from "tsrpc-base";
+import { BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, getCustomObjectIdTypes, Logger, LogLevel, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
 import { BaseServerConnection } from "./BaseServerConnection";
 import { BaseServerFlows } from "./BaseServerFlows";
 
@@ -55,10 +55,29 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
     }
 
     /**
+     * Start the server
+     */
+    async start(): Promise<void> {
+        if (this._status !== ServerStatus.Stopped) {
+            throw new Error(`The server is started already. (status=${this._status})`)
+        }
+
+        this._status = ServerStatus.Starting;
+        try {
+            await this._start();
+        }
+        catch (e) {
+            this._status = ServerStatus.Stopped;
+            throw e;
+        }
+        this._status = ServerStatus.Started;
+    }
+
+    /**
      * Listen port, wait connection, and call this.onConnection()
      * @throws Throw `Error` if start failed
      */
-    abstract start(): Promise<void>;
+    protected abstract _start(): Promise<void>;
 
     protected _connId = new Counter();
     onConnection(conn: Conn) {
@@ -256,17 +275,22 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
 
 export const defaultBaseServerOptions: BaseServerOptions = {
     ...defaultBaseConnectionOptions,
-    defaultDataType: 'text',
-    allowedDataTypes: ['text', 'buffer'],
+    json: false,
     strictNullChecks: false,
     logLevel: 'debug'
 }
 
 export interface BaseServerOptions extends BaseConnectionOptions {
-    /** @defaultValue 'text' */
-    defaultDataType: BaseConnectionDataType,
-    /** @defaultValue ['text', 'buffer'] */
-    allowedDataTypes: BaseConnectionDataType[],
+    /**
+     * Whether allow JSON transportation.
+     * If you want to use JSON, make sure to set `json: true` on both server and client.
+     * 
+     * Binary transportation is always enabled. 
+     * For security and efficient reason, we recommend to you use binary transportation.
+     * 
+     * @defaultValue `false`
+     */
+    json: boolean,
 
     /** @defaultValue 'debug' */
     logLevel: LogLevel,
@@ -275,9 +299,7 @@ export interface BaseServerOptions extends BaseConnectionOptions {
     strictNullChecks: boolean,
 
     // #region Deprecated
-    /** @deprecated Use `allowedDataTypes` instead */
-    json?: never,
-    /** @deprecated Use `allowedDataTypes` instead */
+    /** @deprecated Use `json` instead */
     jsonEnabled?: never,
     /** @deprecated Use `apiCallTimeout` instead */
     apiTimeout?: never,

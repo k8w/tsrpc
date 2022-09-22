@@ -10,8 +10,8 @@
     "importHelpers": true,
     "strict": true,
     "moduleResolution": "node",
-    "types": [],
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "removeComments": true
   },
   "include": [
     "src"

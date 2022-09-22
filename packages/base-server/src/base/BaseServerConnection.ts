@@ -8,6 +8,7 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
     readonly id: number;
     readonly ip: string;
     flows: this['server']['flows'];
+    declare logger: PrefixLogger;
 
     constructor(public readonly server: BaseServer, privateOptions: PrivateBaseServerConnectionOptions) {
         super(privateOptions.dataType, server.options, {
@@ -16,7 +17,7 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
             tsbuffer: server.tsbuffer,
             localProtoInfo: server.localProtoInfo
         });
-        (this.logger as Logger) = new PrefixLogger({
+        this.logger = new PrefixLogger({
             logger: server.logger,
             prefixs: privateOptions.logPrefixs
         });

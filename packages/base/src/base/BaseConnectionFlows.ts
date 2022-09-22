@@ -112,7 +112,7 @@ export type SendDataFlow<Conn extends BaseConnection<any>, ServiceType extends B
 export type RecvDataFlow<Conn extends BaseConnection<any>> = {
     data: string | Uint8Array,
     /** If you want to customize the data decoding, set this in pre flow */
-    transportData?: TransportData
+    decodedData?: TransportData
     readonly conn: Conn,
 };
 

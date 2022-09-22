@@ -30,8 +30,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     declare ServiceType: ServiceType;
 
     // Options
-    readonly logger: Logger;
-    readonly chalk: Chalk;
+    logger: Logger;
+    chalk: Chalk;
     public readonly serviceMap: ServiceMap;
     public readonly tsbuffer: TSBuffer;
     protected readonly _localProtoInfo: ProtoInfo;
@@ -86,7 +86,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     protected _remoteProtoInfo?: ProtoInfo;
 
     constructor(
-        public readonly dataType: BaseConnectionDataType,
+        public dataType: BaseConnectionDataType,
         // Server: all connections shared single options
         public readonly options: BaseConnectionOptions,
         privateOptions: PrivateBaseConnectionOptions
@@ -608,8 +608,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             return PROMISE_ABORTED;
         }
         // Decode by preFlow
-        if (pre.transportData) {
-            return this._recvTransportData(pre.transportData);
+        if (pre.decodedData) {
+            return this._recvTransportData(pre.decodedData);
         }
         data = pre.data;
 
