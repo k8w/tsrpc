@@ -72,13 +72,13 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
     // #region Override text encode options
     declare protected _recvData: (data: string | Uint8Array, reqSn: number, resHeaders: Record<string, string> | undefined) => Promise<OpResultVoid>;
 
-    protected _encodeSkipSN = true;
+    protected override _encodeSkipSN = true;
 
-    protected _encodeBoxText: (typeof TransportDataUtil)['encodeBoxText'] = (box: BoxTextEncoding & { type: 'req' }, skipSN) => {
+    protected override _encodeBoxText: (typeof TransportDataUtil)['encodeBoxText'] = (box: BoxTextEncoding & { type: 'req' }, skipSN) => {
         return { isSucc: true, res: box.body };
     }
 
-    protected _decodeBoxText: (typeof TransportDataUtil)['decodeBoxText'] = (data, pendingCallApis, skipValidate, reqSn: number, resHeaders: Record<string, string> | undefined) => {
+    protected override _decodeBoxText: (typeof TransportDataUtil)['decodeBoxText'] = (data, pendingCallApis, skipValidate, reqSn: number, resHeaders: Record<string, string> | undefined) => {
         const pendingApi = pendingCallApis.get(reqSn);
         if (!pendingApi) {
             return { isSucc: false, errMsg: `Invalid SN: ${reqSn}` };

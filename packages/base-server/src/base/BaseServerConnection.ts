@@ -1,4 +1,4 @@
-import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, Logger, PrefixLogger, PrefixLoggerOptions, TransportData } from "tsrpc-base";
+import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
 import { BaseServer } from "./BaseServer";
 
 export abstract class BaseServerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
@@ -25,13 +25,30 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
         this.ip = privateOptions.ip;
         this.flows = server.flows;
 
-        // To be override ...
+        // To be override...
         // Init connection (http req/res, ws conn, ...)
     }
 
     protected override _disconnect(isManual: boolean, reason?: string): void {
         super._disconnect(isManual, reason);
         this.server.connections.delete(this);
+    }
+
+    // Server may disable JSON transport
+    protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResultVoid> {
+        if (dataType === 'text' && !this.server.options.json) {
+            if (box.type === 'req') {
+                this._sendTransportData({
+                    type: 'err',
+                    err: new TsrpcError(`The server disabled JSON mode, please use binary instead. (Set 'json: false' at the client)`, { type: TsrpcErrorType.RemoteError }),
+                    sn: box.sn,
+                    protoInfo: box.protoInfo && this.server.localProtoInfo
+                });
+            }
+            return { isSucc: false, errMsg: `Text input is not allowed when set 'json: false'` }
+        }
+
+        return super._recvBox(box, dataType);
     }
 
     // For server graceful stop

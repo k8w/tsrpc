@@ -74,13 +74,13 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
     }
 
     /**
-     * Listen port, wait connection, and call this.onConnection()
+     * Listen port, wait connection, and call this.addConnection()
      * @throws Throw `Error` if start failed
      */
     protected abstract _start(): Promise<void>;
 
     protected _connId = new Counter();
-    onConnection(conn: Conn) {
+    addConnection(conn: Conn) {
         this.connections.add(conn);
         conn['_setStatus'](ConnectionStatus.Connected);
 

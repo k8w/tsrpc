@@ -1,4 +1,4 @@
-import { BaseServiceType, ServiceProto, OpResultVoid, ConnectionStatus, PROMISE_ABORTED, TransportData, TransportOptions } from "tsrpc-base";
+import { BaseServiceType, ConnectionStatus, OpResultVoid, PROMISE_ABORTED, ServiceProto, TransportData, TransportOptions } from "tsrpc-base";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../base/BaseClient";
 import { BaseWsClientTransport } from "./BaseWsClientTransport";
 
@@ -128,7 +128,7 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
         this._recvData(data);
     };
 
-    protected _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid> {
+    protected override _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid> {
         return this._ws.send(data);
     }
 

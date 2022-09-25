@@ -590,7 +590,13 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
     };
 
-    protected async _recvData(data: string | Uint8Array, ...rest: any[]): Promise<OpResultVoid> {
+    /**
+     * 
+     * @param data 
+     * @param decodeBoxTextOptions Will pass through to TransportUtil.decodeBoxText()
+     * @returns 
+     */
+    protected async _recvData(data: string | Uint8Array, ...decodeBoxTextOptions: any[]): Promise<OpResultVoid> {
         // Ignore all data if connection is not opened
         if (this.status !== ConnectionStatus.Connected) {
             return PROMISE_ABORTED;
@@ -615,7 +621,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Decode box
         const opDecodeBox = typeof data === 'string'
-            ? (this._decodeBoxText ?? TransportDataUtil.decodeBoxText)(data, this._pendingCallApis, this.options.skipDecodeValidate, ...rest)
+            ? (this._decodeBoxText ?? TransportDataUtil.decodeBoxText)(data, this._pendingCallApis, this.options.skipDecodeValidate, ...decodeBoxTextOptions)
             : TransportDataUtil.decodeBoxBuffer(data, this._pendingCallApis, this.serviceMap, this.options.skipDecodeValidate);
         if (!opDecodeBox.isSucc) {
             this.logger.error(`[DecodeBoxErr] Received data:`, data);
@@ -636,6 +642,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             this.logger.error(`[DecodeBodyErr] Received body:`, box);
             this.logger.error(`[DecodeBodyErr] ${opDecodeBody.errMsg}`);
             // TODO 友好错误提示 检测 flow 使用、检测 proto version
+            // TODO send err if is req
             return { isSucc: false, errMsg: `Invalid data body: ${opDecodeBody.errMsg}` };
         }
 
