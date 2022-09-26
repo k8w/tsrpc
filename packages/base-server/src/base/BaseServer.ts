@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, getCustomObjectIdTypes, Logger, LogLevel, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
+import { ApiHandler, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, getCustomObjectIdTypes, Logger, LogLevel, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
 import { BaseServerConnection } from "./BaseServerConnection";
 import { BaseServerFlows } from "./BaseServerFlows";
 
@@ -125,6 +125,59 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
      * Stop server immediately
      */
     protected abstract _stop(): void;
+
+    // #region API Host
+    // TODO
+    protected _apiHandlers: BaseConnection<Conn['ServiceType']>['_apiHandlers'] = {};
+
+    implementApi: BaseConnection<Conn['ServiceType']>['implementApi'] = BaseConnection.prototype.implementApi;
+
+    protected _implementApiDelay<Api extends string & keyof Conn['ServiceType']['api']>(apiName: Api, getHandler: () => Promise<ApiHandler<any>>, maxDelayTime?: number): void {
+        // Delay get handler
+        let promiseHandler: Promise<ApiHandler<any>> | undefined;
+        const doGetHandler = () => {
+            if (promiseHandler) {
+                return promiseHandler;
+            }
+
+            promiseHandler = getHandler();
+            // 获取成功后重新 implement 为真实 API
+            promiseHandler.then(handler => {
+                this._apiHandlers[apiName] = undefined;
+                this.implementApi(apiName, handler);
+            }).catch(e => {
+                this.logger.error(this.chalk(`Implement API '${apiName}' failed.`, ['error']), e);
+                this._apiHandlers[apiName] = undefined;
+            })
+
+            return promiseHandler;
+        }
+        if (maxDelayTime) {
+            setTimeout(() => { doGetHandler() }, maxDelayTime);
+        }
+
+        // Implement as a delay wrapper
+        const delayHandler: ApiHandler<any> = call => {
+            return doGetHandler().then(handler => {
+                handler(call)
+            }).catch(e => {
+                call['_errorNotImplemented']()
+            })
+        }
+        this._apiHandlers[apiName as string] = delayHandler;
+    }
+
+    async autoImplementApi(apiPath: string, delay?: boolean | number): Promise<{ succ: string[], fail: string[] }> {
+        throw new Error('TODO');
+    }
+    // #endregion
+
+    // #region Msg Host
+    // TODO
+    protected _msgListeners: BaseConnection<Conn['ServiceType']>['_msgListeners'] = new EventEmitter();
+    onMsg() { }
+    onceMsg() { }
+    offMsg() { }
 
     /**
      * Send the same message to many connections.
@@ -260,17 +313,8 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
             }
         })
     };
+    // #endregion
 
-    // TODO
-    protected _apiHandlers: BaseConnection<Conn['ServiceType']>['_apiHandlers'] = {};
-    implementApi() { }
-    autoImplementApi() { }
-
-    // TODO
-    protected _msgListeners: BaseConnection<Conn['ServiceType']>['_msgListeners'] = new EventEmitter();
-    onMsg() { }
-    onceMsg() { }
-    offMsg() { }
 }
 
 export const defaultBaseServerOptions: BaseServerOptions = {

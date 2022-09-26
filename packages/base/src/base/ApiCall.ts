@@ -72,10 +72,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
         // Get Handler
         const handler = this.conn['_apiHandlers'][this.apiName];
         if (!handler) {
-            return this.error(`Remote not implemented the API: ${this.apiName}`, {
-                type: TsrpcErrorType.RemoteError,
-                code: 'UNIMPLEMENTED_API'
-            })
+            return this._errorNotImplemented();
         }
 
         // Exec
@@ -101,6 +98,13 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
             isSucc: false,
             err: typeof errOrMsg === 'string' ? new TsrpcError(errOrMsg, data) : errOrMsg
         });
+    }
+
+    protected _errorNotImplemented() {
+        return this.error(`Remote not implemented the API: ${this.apiName}`, {
+            type: TsrpcErrorType.RemoteError,
+            code: 'UNIMPLEMENTED_API'
+        })
     }
 
     protected async _sendReturn(ret: ApiReturn<Res>): Promise<ApiReturn<Res>> {
