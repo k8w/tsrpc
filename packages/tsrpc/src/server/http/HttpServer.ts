@@ -2,6 +2,7 @@ import http, { IncomingMessage, ServerResponse } from "http";
 import https from "https";
 import { ApiReturn, BaseConnectionDataType, BaseServiceType, ServiceProto } from "tsrpc-base";
 import { BaseServer, BaseServerOptions, PrivateBaseServerOptions } from "tsrpc-base-server";
+import { processUncaughtException } from "../models/processUncaughtException";
 import { HttpServerConnection } from "./HttpServerConnection";
 import { HttpUtil } from "./models/HttpUtil";
 
@@ -11,6 +12,7 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
 
     constructor(serviceProto: ServiceProto, options: HttpServerOptions, privateOptions: PrivateHttpServerOptions) {
         super(serviceProto, options, privateOptions);
+        processUncaughtException(this.logger);
     }
 
     /** Native `http.Server` of NodeJS */
