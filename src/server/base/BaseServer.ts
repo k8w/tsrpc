@@ -173,7 +173,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         });
         this.serviceMap = ServiceMapUtil.getServiceMap(proto);
         this.logger = this.options.logger;
-        setLogLevel(this.logger, this.options.logLevel);
+        if (this.logger) {
+            this.logger = setLogLevel(this.logger, this.options.logLevel);
+        }
 
         // Process uncaught exception, so that Node.js process would not exit easily
         BaseServer.processUncaughtException(this.logger);

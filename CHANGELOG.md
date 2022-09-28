@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.6] - 2022-09-28
+### Fixed
+- Fixed issue that `logLevel` not works
+
 ## [3.4.5] - 2022-08-10
 ### Fixed
 - Ignore incoming data after heartbeat timeout
