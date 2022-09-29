@@ -822,8 +822,8 @@ export interface PendingCallApiItem {
     onReturn?: (ret: ApiReturn<any>) => void
 }
 
-export type ApiHandler<Conn extends BaseConnection> = <T extends Conn>(call: ApiCall<any, any, T>) => (void | Promise<void>);
-export type MsgHandler<Conn extends BaseConnection, MsgName extends keyof Conn['ServiceType']['msg']>
+export type ApiHandler<Conn extends BaseConnection = BaseConnection> = <T extends Conn>(call: ApiCall<any, any, T>) => (void | Promise<void>);
+export type MsgHandler<Conn extends BaseConnection = BaseConnection, MsgName extends keyof Conn['ServiceType']['msg'] = any>
     = <T extends Conn>(msg: T['ServiceType']['msg'][MsgName], msgName: MsgName, conn: T) => void | Promise<void>;
 
 export enum ConnectionStatus {

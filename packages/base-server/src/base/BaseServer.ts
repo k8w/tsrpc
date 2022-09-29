@@ -1,5 +1,6 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiHandler, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, getCustomObjectIdTypes, Logger, LogLevel, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
+import { ApiHandler, ApiServiceDef, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, getCustomObjectIdTypes, Logger, LogLevel, OpResult, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
+import { PathUtil } from "../models/PathUtil";
 import { BaseServerConnection } from "./BaseServerConnection";
 import { BaseServerFlows } from "./BaseServerFlows";
 
@@ -8,15 +9,16 @@ import { BaseServerFlows } from "./BaseServerFlows";
  * Implement on a transportation protocol (like HTTP WebSocket) by extend it.
  * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
  */
-export abstract class BaseServer<Conn extends BaseServerConnection = any>{
+export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
 
-    declare Conn: Conn;
+    declare ServiceType: ServiceType;
+    declare Conn: BaseServerConnection<ServiceType>;
 
     // TODO
-    flows: BaseServerFlows<this> = null!;
+    flows: BaseServerFlows<BaseServerConnection<ServiceType>, ServiceType> = null!;
 
     /** { [id: number]: Conn } */
-    readonly connections = new Set<Conn>;
+    readonly connections = new Set<this['Conn']>;
 
     // Options
     readonly logger: Logger;
@@ -29,7 +31,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
     get status() { return this._status };
 
     constructor(
-        public serviceProto: ServiceProto<Conn['ServiceType']>,
+        public serviceProto: ServiceProto<ServiceType>,
         public options: BaseServerOptions,
         privateOptions: PrivateBaseServerOptions
     ) {
@@ -71,6 +73,9 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
             throw e;
         }
         this._status = ServerStatus.Started;
+
+        // TODO: started succ, but some api not implemented
+        this.logger.log('Server started successfully');
     }
 
     /**
@@ -80,7 +85,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
     protected abstract _start(): Promise<void>;
 
     protected _connId = new Counter();
-    addConnection(conn: Conn) {
+    addConnection(conn: this['Conn']) {
         this.connections.add(conn);
         conn['_setStatus'](ConnectionStatus.Connected);
 
@@ -127,54 +132,116 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
     protected abstract _stop(): void;
 
     // #region API Host
-    // TODO
-    protected _apiHandlers: BaseConnection<Conn['ServiceType']>['_apiHandlers'] = {};
+    protected _apiHandlers: BaseConnection<ServiceType>['_apiHandlers'] = {};
 
-    implementApi: BaseConnection<Conn['ServiceType']>['implementApi'] = BaseConnection.prototype.implementApi;
+    implementApi: BaseConnection<ServiceType>['implementApi'] = BaseConnection.prototype.implementApi;
 
-    protected _implementApiDelay<Api extends string & keyof Conn['ServiceType']['api']>(apiName: Api, getHandler: () => Promise<ApiHandler<any>>, maxDelayTime?: number): void {
+    protected _implementApiDelay<Api extends string & keyof ServiceType['api']>(apiName: Api, loadHandler: () => Promise<OpResult<ApiHandler>>, maxDelayTime?: number): void {
         // Delay get handler
-        let promiseHandler: Promise<ApiHandler<any>> | undefined;
+        let promiseHandler: Promise<OpResult<ApiHandler>> | undefined;
         const doGetHandler = () => {
             if (promiseHandler) {
                 return promiseHandler;
             }
 
-            promiseHandler = getHandler();
+            promiseHandler = loadHandler();
             // 获取成功后重新 implement 为真实 API
-            promiseHandler.then(handler => {
+            promiseHandler.then(op => {
                 this._apiHandlers[apiName] = undefined;
-                this.implementApi(apiName, handler);
-            }).catch(e => {
-                this.logger.error(this.chalk(`Implement API '${apiName}' failed.`, ['error']), e);
-                this._apiHandlers[apiName] = undefined;
+                if (!op.isSucc) {
+                    this.logger.error(this.chalk(`Implement API '${apiName}' failed.`, ['error']), op.errMsg);
+                    return;
+                }
+                this.implementApi(apiName, op.res);
             })
 
             return promiseHandler;
         }
+
         if (maxDelayTime) {
             setTimeout(() => { doGetHandler() }, maxDelayTime);
         }
 
         // Implement as a delay wrapper
-        const delayHandler: ApiHandler<any> = call => {
-            return doGetHandler().then(handler => {
-                handler(call)
-            }).catch(e => {
-                call['_errorNotImplemented']()
+        const delayHandler: ApiHandler = call => {
+            return doGetHandler().then(op => {
+                if (!op.isSucc) {
+                    call['_errorNotImplemented']();
+                    return;
+                }
+                op.res(call)
             })
         }
         this._apiHandlers[apiName as string] = delayHandler;
     }
 
-    async autoImplementApi(apiPath: string, delay?: boolean | number): Promise<{ succ: string[], fail: string[] }> {
-        throw new Error('TODO');
+    async autoImplementApi(apiDir: string, delay?: boolean | number): Promise<{ succ: string[], fail: string[] }> {
+        const apiServices = Object.values(this.serviceMap.apiName2Service) as ApiServiceDef[];
+        const output: { succ: string[], fail: string[] } = { succ: [], fail: [] };
+
+        for (let service of apiServices) {
+            const apiName = service.name;
+            const loadHandler = () => {
+                return this._loadApiHandler(apiName, apiDir, this.logger);
+            }
+
+            // Delay
+            if (delay) {
+                this._implementApiDelay(apiName, loadHandler, typeof delay === 'number' ? delay : undefined)
+                continue;
+            }
+
+            // Immediately
+            const op = await loadHandler();
+            if (!op.isSucc) {
+                this.logger.error(this.chalk(`Implement API ${this.chalk(apiName, ['debug', 'underline'])} failed: `, ['error']), op.errMsg);
+                output.fail.push(apiName);
+                continue;
+            }
+            this.implementApi(apiName, op.res);
+            output.succ.push(apiName);
+        }
+
+        if (output.fail.length) {
+            this.logger.error(this.chalk(`${output.fail.length} API implemented failed: `, ['error']) + output.fail.map(v => this.chalk(v, ['debug', 'underline'])).join(' '))
+        }
+
+        return output;
+    }
+
+    protected async _loadApiHandler(apiName: string & keyof ServiceType['api'], apiDir: string, logger: Logger): Promise<OpResult<ApiHandler>> {
+        // get api last name
+        const match = apiName.match(/^\/?(.+\/)*(.+)$/);
+        if (!match) {
+            return { isSucc: false, errMsg: `Invalid api name: ${apiName}` };
+        }
+        const handlerPath = match[1] ?? '';
+        const handlerName = match[2];
+
+        // try import
+        apiDir = apiDir.replace(/\\/g, '/');
+        const modulePath = PathUtil.join(apiDir, handlerPath, 'Api' + handlerName)
+        try {
+            var module = await import(modulePath);
+        }
+        catch (e: unknown) {
+            return { isSucc: false, errMsg: (e as Error).stack ?? (e as Error).message };
+        }
+
+        // 优先 default，其次 ApiName 同名
+        let handler = module.default ?? module['Api' + handlerName];
+        if (handler) {
+            return { isSucc: true, res: handler };
+        }
+        else {
+            return { isSucc: false, errMsg: `Missing 'export Api${handlerName}' or 'export default' in: ${modulePath} ` }
+        }
     }
     // #endregion
 
     // #region Msg Host
     // TODO
-    protected _msgListeners: BaseConnection<Conn['ServiceType']>['_msgListeners'] = new EventEmitter();
+    protected _msgListeners: BaseConnection<ServiceType>['_msgListeners'] = new EventEmitter();
     onMsg() { }
     onceMsg() { }
     offMsg() { }
@@ -187,7 +254,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
      * @param connIds - `id` of target connections, `undefined` means broadcast to every connections.
      * @returns Send result, `isSucc: true` means the message buffer is sent to kernel, not represents the clients received.
      */
-    async broadcastMsg<T extends string & keyof Conn['ServiceType']['msg']>(msgName: T, msg: Conn['ServiceType']['msg'][T], conns?: Conn[]): Promise<OpResultVoid> {
+    async broadcastMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], conns?: this['Conn'][]): Promise<OpResultVoid> {
         let isAllConn = false;
         if (!conns) {
             conns = Array.from(this.connections);
@@ -216,7 +283,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
             return PROMISE_ABORTED;
         }
         msgName = pre.msgName as T;
-        msg = pre.msg;
+        msg = pre.msg as ServiceType['msg'][T];
         conns = pre.conns;
 
         // GetService
@@ -233,7 +300,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
         }
 
         // 区分 dataType 不同的 conns
-        let connGroups: { conns: Conn[], dataType: BaseConnectionDataType, data: any }[] = conns.groupBy(v => v.dataType).map(v => ({
+        let connGroups: { conns: BaseServerConnection[], dataType: BaseConnectionDataType, data: any }[] = conns.groupBy(v => v.dataType).map(v => ({
             conns: v,
             dataType: v.key,
             data: null
@@ -255,8 +322,8 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
                 ? TransportDataUtil.encodeBoxBuffer(opEncodeBody.res as BoxBuffer)
                 : (groupItem.conns[0]['_encodeBoxText'] ?? TransportDataUtil.encodeBoxText)(opEncodeBody.res as BoxTextEncoding, groupItem.conns[0]['_encodeSkipSN'])
             if (!opEncodeBox.isSucc) {
-                this.logger.error(`[BroadcastMsgErr] Encode ${groupItem.dataType === 'buffer' ? 'BoxBuffer' : 'BoxText'} error.\n  |- ${opEncodeBox.errMsg}`);
-                return { isSucc: false, errMsg: `Encode ${groupItem.dataType === 'buffer' ? 'BoxBuffer' : 'BoxText'} error.\n  |- ${opEncodeBox.errMsg}` };
+                this.logger.error(`[BroadcastMsgErr] Encode ${groupItem.dataType === 'buffer' ? 'BoxBuffer' : 'BoxText'} error.\n | - ${opEncodeBox.errMsg} `);
+                return { isSucc: false, errMsg: `Encode ${groupItem.dataType === 'buffer' ? 'BoxBuffer' : 'BoxText'} error.\n | - ${opEncodeBox.errMsg} ` };
             }
 
             // Pre SendData Flow (run once only)
@@ -302,7 +369,7 @@ export abstract class BaseServer<Conn extends BaseServerConnection = any>{
             for (let i = 0; i < results.length; ++i) {
                 let op = results[i];
                 if (!op.isSucc) {
-                    errMsgs.push(`Conn$${conns![i].id}: ${op.errMsg}`)
+                    errMsgs.push(`Conn$${conns![i].id}: ${op.errMsg} `)
                 };
             }
             if (errMsgs.length) {

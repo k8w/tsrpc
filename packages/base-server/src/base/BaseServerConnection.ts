@@ -1,5 +1,6 @@
-import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
+import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseConnectionFlows, BaseServiceType, BoxDecoding, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
 import { BaseServer } from "./BaseServer";
+import { BaseServerFlows } from "./BaseServerFlows";
 
 export abstract class BaseServerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
@@ -7,10 +8,11 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
 
     readonly id: number;
     readonly ip: string;
-    flows: this['server']['flows'];
+    // flows: this['server']['flows'];
+    flows: BaseServerFlows<this, ServiceType>;
     declare logger: PrefixLogger;
 
-    constructor(public readonly server: BaseServer, privateOptions: PrivateBaseServerConnectionOptions) {
+    constructor(public readonly server: BaseServer<ServiceType>, privateOptions: PrivateBaseServerConnectionOptions) {
         super(privateOptions.dataType, server.options, {
             apiHandlers: server['_apiHandlers'],
             serviceMap: server.serviceMap,

@@ -1,17 +1,17 @@
 import { Overwrite } from "tsbuffer-schema";
-import { BaseConnectionFlows, Flow, SendDataFlow, BaseServiceType } from "tsrpc-base";
+import { BaseConnectionFlows, BaseServiceType, Flow, SendDataFlow } from "tsrpc-base";
 import { BaseServer } from "./BaseServer";
 import { BaseServerConnection } from "./BaseServerConnection";
 
-export type BaseServerFlows<Server extends BaseServer> = Overwrite<BaseConnectionFlows<Server['Conn'], Server['Conn']['ServiceType']>, {
-    preBroadcastMsgFlow: Flow<BroadcastMsgFlow<Server['Conn'], Server['Conn']['ServiceType']>>,
-    preSendDataFlow: Flow<SendDataFlow<Server['Conn'], Server['Conn']['ServiceType']> & {
+export type BaseServerFlows<Conn extends BaseServerConnection<ServiceType>, ServiceType extends BaseServiceType> = Overwrite<BaseConnectionFlows<Conn, ServiceType>, {
+    preBroadcastMsgFlow: Flow<BroadcastMsgFlow<Conn, ServiceType>>,
+    preSendDataFlow: Flow<SendDataFlow<Conn, ServiceType> & {
         /** When `server.broadcastMsg()`, preSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
-        readonly conns?: Server['Conn'][]
+        readonly conns: Conn[]
     }>,
-    postSendDataFlow: Flow<SendDataFlow<Server['Conn'], Server['Conn']['ServiceType']> & {
+    postSendDataFlow: Flow<SendDataFlow<Conn, ServiceType> & {
         /** When `server.broadcastMsg()`, postSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
-        readonly conns?: Server['Conn'][]
+        readonly conns: Conn[]
     }>,
 
     /** @deprecated Use `preRecvDataFlow` instead */
