@@ -4,7 +4,7 @@ import { BaseServerFlows } from "./BaseServerFlows";
 
 export abstract class BaseServerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
-    declare options: this['server']['options']
+    declare options: this['server']['options'];
 
     readonly id: number;
     readonly ip: string;

@@ -1,14 +1,15 @@
 import http, { IncomingMessage, ServerResponse } from "http";
 import https from "https";
 import { ApiReturn, BaseConnectionDataType, BaseServiceType, ServiceProto } from "tsrpc-base";
-import { BaseServer, BaseServerOptions, PrivateBaseServerOptions } from "tsrpc-base-server";
+import { BaseServer, BaseServerConnection, BaseServerOptions, PrivateBaseServerOptions } from "tsrpc-base-server";
 import { processUncaughtException } from "../models/processUncaughtException";
 import { HttpServerConnection } from "./HttpServerConnection";
 import { HttpUtil } from "./models/HttpUtil";
 
-export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<HttpServerConnection<ServiceType>>{
+export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<ServiceType>{
 
     declare options: HttpServerOptions;
+    declare Conn: HttpServerConnection<ServiceType>;
 
     constructor(serviceProto: ServiceProto, options: HttpServerOptions, privateOptions: PrivateHttpServerOptions) {
         super(serviceProto, options, privateOptions);
