@@ -25,7 +25,7 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
         });
         this.id = server['_connId'].getNext();
         this.ip = privateOptions.ip;
-        this.flows = server.flows;
+        this.flows = server.flows as BaseServerFlows<this, ServiceType>;
 
         // To be override...
         // Init connection (http req/res, ws conn, ...)
