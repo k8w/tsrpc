@@ -12,7 +12,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "rm -rf dist && rollup -c"
+    "build": "rm -rf dist && rollup -c && node scripts/postBuild.js"
   },
   "repository": {
     "type": "git",

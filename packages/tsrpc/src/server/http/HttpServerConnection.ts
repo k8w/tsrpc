@@ -1,8 +1,8 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { ApiCall, ApiReturn, ApiService, BaseConnection, BaseServiceType, BoxTextEncoding, MsgService, OpResultVoid, ProtoInfo, TransportData, TransportDataUtil, TransportOptions, TsrpcError, TsrpcErrorType } from "tsrpc-base";
 import { BaseServerConnection, PrivateBaseServerConnectionOptions } from "tsrpc-base-server";
+import { TSRPC_VERSION } from '../models/version';
 import { HttpServer } from './HttpServer';
-import { TSRPC_VERSION } from './models/version';
 
 export class HttpServerConnection<ServiceType extends BaseServiceType = any> extends BaseServerConnection<ServiceType> {
     readonly httpReq: IncomingMessage;
