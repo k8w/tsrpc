@@ -101,9 +101,9 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
     }
 
     protected _errorNotImplemented() {
-        return this.error(`Remote not implemented the API: ${this.apiName}`, {
+        return this.error(`API not implemented: ${this.apiName}`, {
             type: TsrpcErrorType.RemoteError,
-            code: 'UNIMPLEMENTED_API'
+            code: 'API_NOT_IMPLEMENTED'
         })
     }
 
