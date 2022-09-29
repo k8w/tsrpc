@@ -12,7 +12,7 @@ import { BaseServerFlows } from "./BaseServerFlows";
 export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
 
     declare ServiceType: ServiceType;
-    declare Conn: BaseServerConnection<ServiceType>;
+    declare abstract Conn: BaseServerConnection<ServiceType>;
 
     // TODO
     flows: BaseServerFlows<BaseServerConnection<ServiceType>, ServiceType> = null!;
