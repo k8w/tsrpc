@@ -148,11 +148,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
             // 获取成功后重新 implement 为真实 API
             promiseHandler.then(op => {
                 this._apiHandlers[apiName] = undefined;
-                if (!op.isSucc) {
-                    this.logger.error(this.chalk(`Implement API '${apiName}' failed.`, ['error']), op.errMsg);
-                    return;
+                if (op.isSucc) {
+                    this.implementApi(apiName, op.res);
                 }
-                this.implementApi(apiName, op.res);
             })
 
             return promiseHandler;
@@ -175,36 +173,57 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
         this._apiHandlers[apiName as string] = delayHandler;
     }
 
-    async autoImplementApi(apiDir: string, delay?: boolean | number): Promise<{ succ: string[], fail: string[] }> {
-        const apiServices = Object.values(this.serviceMap.apiName2Service) as ApiServiceDef[];
-        const output: { succ: string[], fail: string[] } = { succ: [], fail: [] };
+    /**
+     * 
+     * @param apiDir The same structure with protocols folder, each `PtlXXX.ts` has a corresponding `ApiXXX.ts`
+     * @param delay Delay or maxDelayTime(ms), `true` means no maxDelayTime (delay to when the api is called).
+     * @returns 
+     */
+    async autoImplementApi(apiDir: string, delay?: boolean | number): Promise<{ succ: string[], fail: { apiName: string, errMsg: string }[], delay: string[] }> {
+        this.logger.log('Start autoImplementApi...' + (delay ? ' (delay)' : ''));
 
+        const apiServices = Object.values(this.serviceMap.apiName2Service) as ApiServiceDef[];
+        const output = { succ: [], fail: [], delay: [] } as Awaited<ReturnType<this['autoImplementApi']>>;
+
+        let index = 0;
         for (let service of apiServices) {
+            ++index;
             const apiName = service.name;
             const loadHandler = () => {
-                return this._loadApiHandler(apiName, apiDir, this.logger);
+                let promise = this._loadApiHandler(apiName, apiDir, this.logger);
+                promise.then(v => {
+                    if (!v.isSucc) {
+                        this.logger.error(this.chalk(`Implement API failed: ${this.chalk(apiName, ['debug', 'underline'])}.`, ['error']), v.errMsg);
+                    }
+                })
+                return promise;
             }
 
             // Delay
             if (delay) {
-                this._implementApiDelay(apiName, loadHandler, typeof delay === 'number' ? delay : undefined)
+                this._implementApiDelay(apiName, loadHandler, typeof delay === 'number' ? delay : undefined);
+                output.delay.push(apiName);
+                this.logger.log(`[${index}/${apiServices.length}] ${this.chalk(apiName, ['debug', 'underline'])} ${this.chalk('delayed', ['gray'])}`)
                 continue;
             }
 
             // Immediately
             const op = await loadHandler();
-            if (!op.isSucc) {
-                this.logger.error(this.chalk(`Implement API ${this.chalk(apiName, ['debug', 'underline'])} failed: `, ['error']), op.errMsg);
-                output.fail.push(apiName);
-                continue;
+            if (op.isSucc) {
+                this._apiHandlers[apiName] = op.res;
+                output.succ.push(apiName);
             }
-            this.implementApi(apiName, op.res);
-            output.succ.push(apiName);
+            else {
+                output.fail.push({ apiName, errMsg: op.errMsg });
+            }
+            this.logger.log(`[${index}/${apiServices.length}] ${this.chalk(apiName, ['debug', 'underline'])} ${op.isSucc ? this.chalk('succ', ['info']) : this.chalk('failed', ['error'])}`)
         }
 
-        if (output.fail.length) {
-            this.logger.error(this.chalk(`${output.fail.length} API implemented failed: `, ['error']) + output.fail.map(v => this.chalk(v, ['debug', 'underline'])).join(' '))
-        }
+        // Final result log
+        this.logger.log('Finished autoImplementApi: ' + (delay ?
+            `delay ${output.delay.length}/${apiServices.length}.` :
+            `succ ${this.chalk(`${output.succ}/${apiServices.length}`, [output.fail.length ? 'warn' : 'info'])}, failed ${this.chalk('' + output.fail.length, output.fail.length ? ['error', 'bold'] : ['normal'])}.`
+        ));
 
         return output;
     }
@@ -220,12 +239,12 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
 
         // try import
         apiDir = apiDir.replace(/\\/g, '/');
-        const modulePath = PathUtil.join(apiDir, handlerPath, 'Api' + handlerName)
+        const modulePath = PathUtil.join(apiDir, handlerPath, 'Api' + handlerName);
         try {
             var module = await import(modulePath);
         }
         catch (e: unknown) {
-            return { isSucc: false, errMsg: (e as Error).stack ?? (e as Error).message };
+            return { isSucc: false, errMsg: this.chalk(`Import module failed: ${this.chalk(modulePath, ['underline'])}. `, ['error']) + (e as Error).stack ?? (e as Error).message };
         }
 
         // 优先 default，其次 ApiName 同名
@@ -234,7 +253,12 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
             return { isSucc: true, res: handler };
         }
         else {
-            return { isSucc: false, errMsg: `Missing 'export Api${handlerName}' or 'export default' in: ${modulePath} ` }
+            let similarMember = Object.keys(module).find(v => /Api\w+/.test(v));
+            return {
+                isSucc: false,
+                errMsg: `Missing 'export Api${handlerName}' or 'export default' in: ${modulePath}` +
+                    (similarMember ? this.chalk(`\n\tYou may rename '${similarMember}' to 'Api${handlerName}'`, ['debug']) : '')
+            }
         }
     }
     // #endregion

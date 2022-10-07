@@ -340,10 +340,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      */
     implementApi<Api extends string & keyof ServiceType['api']>(apiName: Api, handler: ApiHandler<any>): void {
         if (this._apiHandlers[apiName as string]) {
-            throw new Error('ImplementApi duplicately for: ' + apiName);
+            throw new Error('Implement API duplicately: ' + apiName);
         }
         this._apiHandlers[apiName as string] = handler;
-        this.logger.log(`API implemented succ: ${this.chalk(apiName, ['underline'])}`);
+        this.logger.log(`Implement API successfully: ${this.chalk(apiName, ['underline'])}`);
     };
 
     protected _recvApiReq(transportData: TransportData & { type: 'req' }): Promise<ApiReturn<any>> {
