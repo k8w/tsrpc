@@ -1,18 +1,25 @@
 import http, { IncomingMessage, ServerResponse } from "http";
 import https from "https";
 import { ApiReturn, BaseConnectionDataType, BaseServiceType, ServiceProto } from "tsrpc-base";
-import { BaseServer, BaseServerConnection, BaseServerOptions, PrivateBaseServerOptions } from "tsrpc-base-server";
+import { BaseServer, BaseServerOptions } from "tsrpc-base-server";
+import { getClassObjectId } from "../../models/getClassObjectId";
 import { processUncaughtException } from "../models/processUncaughtException";
+import { TSRPC_VERSION } from "../models/version";
 import { HttpServerConnection } from "./HttpServerConnection";
-import { HttpUtil } from "./models/HttpUtil";
 
 export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<ServiceType>{
 
     declare options: HttpServerOptions;
     declare Conn: HttpServerConnection<ServiceType>;
 
-    constructor(serviceProto: ServiceProto, options: HttpServerOptions, privateOptions: PrivateHttpServerOptions) {
-        super(serviceProto, options, privateOptions);
+    constructor(serviceProto: ServiceProto, options: HttpServerOptions) {
+        super(serviceProto, options, {
+            classObjectId: getClassObjectId(),
+            env: {
+                tsrpc: TSRPC_VERSION,
+                node: process.version
+            }
+        });
         processUncaughtException(this.logger);
     }
 
@@ -123,8 +130,4 @@ export interface HttpServerOptions extends BaseServerOptions {
     encodeReturnText?: (ret: ApiReturn<any>) => string,
 
     // Deprecated
-}
-
-export interface PrivateHttpServerOptions extends PrivateBaseServerOptions {
-    transport: any;
 }
