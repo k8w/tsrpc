@@ -26,18 +26,18 @@
   },
   "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base-client#readme",
   "dependencies": {
-    "tsrpc-base": "^4.0.0-dev.0"
+    "tsrpc-base": "workspace:^4.0.0-dev.0"
   },
   "devDependencies": {
-    "rollup": "^2.75.6",
+    "rollup": "^2.79.1",
     "rollup-plugin-dts": "^4.2.2",
     "rollup-plugin-typescript2": "^0.32.1",
-    "tsbuffer": "^2.2.3",
+    "tsbuffer": "^2.2.5",
     "tslib": "^2.4.0",
-    "typescript": "^4.7.3"
+    "typescript": "^4.8.4"
   },
   "peerDependencies": {
-    "tsbuffer": "^2.2.3",
+    "tsbuffer": "^2.2.5",
     "tslib": "^2.4.0"
   }
 }
