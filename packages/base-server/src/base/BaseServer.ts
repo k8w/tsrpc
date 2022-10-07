@@ -74,7 +74,6 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
         }
         this._status = ServerStatus.Started;
 
-        // TODO: started succ, but some api not implemented
         this.logger.log('Server started successfully');
     }
 
