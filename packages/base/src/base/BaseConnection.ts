@@ -340,7 +340,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      */
     implementApi<Api extends string & keyof ServiceType['api']>(apiName: Api, handler: ApiHandler<any>): void {
         if (this._apiHandlers[apiName as string]) {
-            throw new Error('implementApi duplicately for: ' + apiName);
+            throw new Error('ImplementApi duplicately for: ' + apiName);
         }
         this._apiHandlers[apiName as string] = handler;
         this.logger.log(`API implemented succ: ${this.chalk(apiName, ['underline'])}`);
@@ -412,6 +412,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         return opResult;
     }
 
+    /**
+     * Custom alternative to `this._msgListeners.emit`
+     * For example, do something before or after `emit`
+     */
     protected _emitMsg?: BaseConnection<ServiceType>['_msgListeners']['emit'];
     protected async _recvMsg(transportData: TransportData & { type: 'msg' }): Promise<OpResultVoid> {
         this.options.logMsg && this.logger.log(`[RecvMsg]`, transportData.serviceName, transportData.body);
