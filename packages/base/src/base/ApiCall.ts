@@ -1,4 +1,3 @@
-import { Logger } from "../models/Logger";
 import { PrefixLogger } from "../models/PrefixLogger";
 import { ApiService } from "../models/ServiceMapUtil";
 import { ApiReturn } from "../proto/ApiReturn";
@@ -14,7 +13,7 @@ import { BaseConnection, PROMISE_ABORTED } from "./BaseConnection";
 
 export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseConnection> {
 
-    logger: Logger;
+    logger: PrefixLogger;
     return?: ApiReturn<Res>;
     service!: ApiService;
 

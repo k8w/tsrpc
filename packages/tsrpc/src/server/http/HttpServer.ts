@@ -24,14 +24,9 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
 
         const requestListener = (req: IncomingMessage, res: ServerResponse) => {
             // Create Connection
-            const ip = HttpUtil.getClientIp(req);
             const conn = new HttpServerConnection(this, {
-                // 默认 buffer，收完数据后，preRecvDataFlow 后根据 header 解析
-                dataType: 'buffer',
                 httpReq: req,
-                httpRes: res,
-                ip: ip,
-                logPrefixs: [this.chalk(`[${ip}]`, ['gray'])]
+                httpRes: res
             });
             this.addConnection(conn);
         }

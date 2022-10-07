@@ -14,14 +14,14 @@ importers:
       rollup: ^2.75.6
       rollup-plugin-dts: ^4.2.2
       rollup-plugin-typescript2: ^0.32.1
-      tsbuffer: ^2.2.3
+      tsbuffer: 2.2.5
       tsbuffer-schema: ^2.2.0
       tsbuffer-validator: ^2.1.0
       tslib: ^2.4.0
       tsrpc-proto: ^4.0.0-dev.0
       typescript: ^4.7.3
     dependencies:
-      tsbuffer: 2.2.3
+      tsbuffer: 2.2.5
       tsrpc-proto: link:../proto
     devDependencies:
       k8w-extend-native: 1.4.6
@@ -4285,6 +4285,15 @@ packages:
       k8w-extend-native: 1.4.6
       tsbuffer-schema: 2.2.0
       tslib: 2.4.0
+    dev: true
+
+  /tsbuffer-validator/2.1.1:
+    resolution: {integrity: sha512-12JVltPQjv2hZqfd9TZhTjCyQ0bvtRlTXyczOAaH+CnryWI9Twt0i9ZGaM5fb2QMxW5BOhToOIbwO8opDqpCEg==}
+    dependencies:
+      k8w-extend-native: 1.4.6
+      tsbuffer-schema: 2.2.0
+      tslib: 2.4.0
+    dev: false
 
   /tsbuffer/2.2.3:
     resolution: {integrity: sha512-y09egv1BJr4bDSIau88oH14n5AMN1UtDPZ6Fknmj7vb575Xf6OqK90Z7vKdhHOkTJg/1nkkf2iAz7EvC8WVKzA==}
@@ -4292,6 +4301,15 @@ packages:
       k8w-extend-native: 1.4.6
       tsbuffer-validator: 2.1.0
       tslib: 2.4.0
+    dev: true
+
+  /tsbuffer/2.2.5:
+    resolution: {integrity: sha512-QqSpiL4eq0EJq6yXL8F7oHBXE5Mu7BjtlXIwtqYRrMy7k+nPLnnV8vOSDwJOQ/kmei9B2846cD9xw+A1QLPk4Q==}
+    dependencies:
+      k8w-extend-native: 1.4.6
+      tsbuffer-validator: 2.1.1
+      tslib: 2.4.0
+    dev: false
 
   /tsconfig-paths/3.14.1:
     resolution: {integrity: sha512-fxDhWnFSLt3VuTwtvJt5fpwxBHg5AdKWMsgcPOOIilyjymcYVZoCQF8fvFRezCNfblEXmi+PcM1eYHeOAgXCOQ==}

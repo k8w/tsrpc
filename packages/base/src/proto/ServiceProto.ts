@@ -53,13 +53,13 @@ export type ServiceDef = ApiServiceDef | MsgServiceDef;
  * @typeParam ServiceType - API request and response types, and Msg types.
  */
 export interface ServiceProto<ServiceType extends BaseServiceType = any> {
-    /** Last modified time, e.g. "2022-07-17 16:21:15" */
-    lastModified: string,
+    /** Last modified time */
+    lastModified: number,
     /** To compare whether 2 proto are the same */
     md5: string,
 
     /** 
-     * Service is the basic interactive unit for server and client.
+     * Service is the basic interactive unit for local and remote.
      * Include {@link ApiServiceDef} and {@link MsgServiceDef}.
      */
     services: ServiceDef[];

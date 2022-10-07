@@ -184,7 +184,7 @@ export class TransportDataUtil {
         return { isSucc: true, res: box };
     }
 
-    static decodeBodyBuffer(box: BoxBuffer, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<TransportData> {
+    static decodeBodyBuffer(box: BoxBuffer, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<TransportData> & { errPhase?: 'decode' | 'validate' } {
         let opBodyInfo = this._getBodyInfo(box, serviceMap);
         if (!opBodyInfo.isSucc) { return opBodyInfo };
 
@@ -226,7 +226,7 @@ export class TransportDataUtil {
         }
     }
 
-    static decodeBodyText(box: BoxTextDecoding, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<TransportData> {
+    static decodeBodyText(box: BoxTextDecoding, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<TransportData> & { errPhase?: 'decode' | 'validate' } {
         let opBodyInfo = this._getBodyInfo(box, serviceMap);
         if (!opBodyInfo.isSucc) { return opBodyInfo };
 

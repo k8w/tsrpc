@@ -1,8 +1,9 @@
 import { IncomingMessage, ServerResponse } from 'http';
-import { ApiCall, ApiReturn, ApiService, BaseConnection, BaseServiceType, BoxTextEncoding, MsgService, OpResultVoid, ProtoInfo, TransportData, TransportDataUtil, TransportOptions, TsrpcError, TsrpcErrorType } from "tsrpc-base";
-import { BaseServerConnection, PrivateBaseServerConnectionOptions } from "tsrpc-base-server";
+import { ApiCall, ApiReturn, ApiService, BaseConnection, BaseServiceType, BoxTextDecoding, BoxTextEncoding, MsgService, OpResult, OpResultVoid, ProtoInfo, TransportData, TransportDataUtil, TransportOptions, TsrpcError, TsrpcErrorType } from "tsrpc-base";
+import { BaseServerConnection } from "tsrpc-base-server";
 import { TSRPC_VERSION } from '../models/version';
 import { HttpServer } from './HttpServer';
+import { HttpUtil } from './models/HttpUtil';
 
 export class HttpServerConnection<ServiceType extends BaseServiceType = any> extends BaseServerConnection<ServiceType> {
     readonly httpReq: IncomingMessage;
@@ -11,7 +12,13 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
     transportData?: TransportData;
 
     constructor(public readonly server: HttpServer<ServiceType>, privateOptions: PrivateHttpServerConnectionOptions) {
-        super(server, privateOptions);
+        const ip = HttpUtil.getClientIp(privateOptions.httpReq);
+        super(server, {
+            // 默认 buffer，收完数据后，preRecvDataFlow 后根据 header 解析
+            dataType: 'buffer',
+            ip: ip,
+            logPrefixs: [server.chalk(`[${ip}]`, ['gray'])]
+        });
         const req = this.httpReq = privateOptions.httpReq;
         const res = this.httpRes = privateOptions.httpRes;
 
@@ -87,7 +94,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
             else {
                 isManual = true;
             }
-            
+
             this._disconnect(isManual, reason);
         });
     }
@@ -110,6 +117,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
         // Make ApiCall
         const call = new ApiCall(this, transportData.serviceName, transportData.sn, transportData.body, transportData.protoInfo);
         this.call = call;
+        this.logger = call.logger;
         return call.execute();
     }
 
@@ -130,6 +138,20 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
      * So it isn't that every info is stored in the body, so it need to customized the decode box text method.
      */
     protected override _decodeBoxText: (typeof TransportDataUtil)['decodeBoxText'] = (data, pendingCallApis, skipValidate) => {
+        let op = this._doDecodeBoxText(data);
+        if (!op.isSucc) {
+            this._sendTransportData({
+                type: 'err',
+                err: new TsrpcError(op.errMsg, { type: TsrpcErrorType.RemoteError }),
+                sn: this.id,
+                protoInfo: this.server.localProtoInfo
+            })
+        }
+
+        return op;
+    }
+
+    protected _doDecodeBoxText(data: string): OpResult<BoxTextDecoding> {
         const isMsg = this.httpReq.headers['x-tsrpc-data-type'] === 'msg';
         let url = this.httpReq.url!;
         const urlEndPos = url.indexOf('?');
@@ -148,14 +170,10 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
             service = this.serviceMap.apiName2Service[serviceName]
         }
         if (service === undefined) {
-            const errMsg = `Invalid ${isMsg ? 'msg' : 'api'} path: ${serviceName}`;
-            this._sendTransportData({
-                type: 'err',
-                err: new TsrpcError(errMsg, { type: TsrpcErrorType.RemoteError }),
-                sn: sn,
-                protoInfo: this.server.localProtoInfo
-            })
-            return { isSucc: false, errMsg: errMsg };
+            return {
+                isSucc: false,
+                errMsg: `Invalid ${isMsg ? 'msg' : 'api'} path: ${serviceName}`
+            };
         }
 
         // Parse protoInfo
@@ -176,14 +194,10 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
             body = JSON.parse(data);
         }
         catch (e) {
-            const errMsg = `Request body is not a valid JSON.${this.flows.preRecvDataFlow.nodes.length ? ' You are using "preRecvDataFlow", please check whether it transformed the data properly.' : ''}\n  |- ${e}`;
-            this._sendTransportData({
-                type: 'err',
-                err: new TsrpcError(errMsg, { type: TsrpcErrorType.RemoteError }),
-                sn: sn,
-                protoInfo: this.server.localProtoInfo
-            })
-            return { isSucc: false, errMsg: errMsg };
+            return {
+                isSucc: false,
+                errMsg: `Request body is not a valid JSON.${this.flows.preRecvDataFlow.nodes.length ? ' You are using "preRecvDataFlow", please check whether it transformed the data properly.' : ''}\n  |- ${e}`
+            };
         }
 
         return {
@@ -208,7 +222,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
     // #endregion
 }
 
-export interface PrivateHttpServerConnectionOptions extends PrivateBaseServerConnectionOptions {
+export interface PrivateHttpServerConnectionOptions {
     httpReq: IncomingMessage,
-    httpRes: ServerResponse,
+    httpRes: ServerResponse
 }

@@ -41,11 +41,12 @@ export type TransportDataSchema = {
 } | {
     /** Preserve for custom usage */
     type: 'custom',
+    buf?: Uint8Array,
     [key: string]: any
 };
 
 export interface ProtoInfo {
-    lastModified: string,
+    lastModified: number,
     md5: string,
     /** @example "tsrpc-browser@4.1.0" */
     tsrpc: string,
@@ -76,8 +77,8 @@ export enum TsrpcErrorType {
      * and report some debug info at the same time.
      */
     RemoteError = 'RemoteError',
-    /** Local exception, for example parse server output error. 
-     * (May because of the proto file is not the same between server and client)
+    /** Local exception, for example parse remote output error. 
+     * (May because of the proto file is not the same between local and remote)
      */
     LocalError = 'LocalError',
     /**

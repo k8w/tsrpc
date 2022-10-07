@@ -584,14 +584,14 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 return { isSucc: true }
             }
             case 'custom': {
-                // this.flows.postRecvCustomDataFlow.exec({
-                //     data: transportData,
-                //     conn: this
-                // }, this.logger);
+                this._recvCustom?.(transportData);
                 return { isSucc: true }
             }
         }
     };
+
+    /** Hook for custom data */
+    protected _recvCustom?: (transportData: TransportData & { type: 'custom' }) => void;
 
     /**
      * 
@@ -621,19 +621,21 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             return this._recvTransportData(pre.decodedData);
         }
         data = pre.data;
+        const dataType = typeof data === 'string' ? 'text' : 'buffer';
 
         // Decode box
         const opDecodeBox = typeof data === 'string'
             ? (this._decodeBoxText ?? TransportDataUtil.decodeBoxText)(data, this._pendingCallApis, this.options.skipDecodeValidate, ...decodeBoxTextOptions)
             : TransportDataUtil.decodeBoxBuffer(data, this._pendingCallApis, this.serviceMap, this.options.skipDecodeValidate);
         if (!opDecodeBox.isSucc) {
-            this.logger.error(`[DecodeBoxErr] Received data:`, data);
-            this.logger.error(`[DecodeBoxErr] ${opDecodeBox.errMsg}`);
-            // TODO 友好错误提示 检测 flow 使用
-            return { isSucc: false, errMsg: `Received an invalid ${typeof data === 'string' ? 'text' : 'buffer'} data` };
+            this.logger.debug(`[DecodeBoxErr] data:`, data, `\nerrMsg=${opDecodeBox.errMsg} dataType=${dataType} dataLength=${data.length}`);
+            this.logger.error(`[DecodeBoxErr] Cannot unbox the received data, you may check below:
+  1. Is the local and remote both TSRPC 4.x? (3.x can not communiate with 4.x)
+  2. Is the data transformed by Flow properly? Try to disable data flows and retry.`);
+            return { isSucc: false, errMsg: `Invalid ${typeof data === 'string' ? 'text' : 'buffer'} data` };
         }
 
-        return this._recvBox(opDecodeBox.res, typeof data === 'string' ? 'text' : 'buffer');
+        return this._recvBox(opDecodeBox.res, dataType);
     };
 
     protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResultVoid> {
@@ -642,11 +644,74 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             ? TransportDataUtil.decodeBodyText(box as BoxTextDecoding, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)
             : TransportDataUtil.decodeBodyBuffer(box as BoxBuffer, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)
         if (!opDecodeBody.isSucc) {
-            this.logger.error(`[DecodeBodyErr] Received body:`, box);
-            this.logger.error(`[DecodeBodyErr] ${opDecodeBody.errMsg}`);
-            // TODO 友好错误提示 检测 flow 使用、检测 proto version
-            // TODO send err if is req
-            return { isSucc: false, errMsg: `Invalid data body: ${opDecodeBody.errMsg}` };
+            // Only req res msg would fail
+            const flag = box.type === 'req' ? '[DecodeReqErr]' : box.type === 'res' ? '[DecodeResErr]' : box.type === 'msg' ? '[DecodeMsgErr]' : '[DecodeBodyErr]';
+            this.options.debugBuf && this.logger.debug(`${flag} box:`, box, 'errMsg:', opDecodeBody.errMsg);
+
+            // If serviceProto not match, logger.error it
+            let isProtoNotSynced = false;
+            if ('protoInfo' in box && box.protoInfo) {
+                const remoteProtoInfo = box.protoInfo as ProtoInfo;
+                if (remoteProtoInfo.md5 !== this._localProtoInfo.md5) {
+                    isProtoNotSynced = true;
+
+                    const isLocalNewer = this._localProtoInfo.lastModified > remoteProtoInfo.lastModified;
+
+                    // Align log content by tail space
+                    const local = `Local${isLocalNewer ? this.chalk(' (newer)', ['info']) : this.chalk(' (outdated)', ['warn'])}`;
+                    const remote = `Remote${isLocalNewer ? this.chalk(' (outdated)', ['warn']) : this.chalk(' (newer)', ['info'])}`;
+                    const maxLength = Math.max(local.length, remote.length);
+                    const localTailSpace = ' '.repeat(maxLength - local.length);
+                    const remoteTailSpace = ' '.repeat(maxLength - remote.length);
+
+                    this.logger.error(`${flag} The serviceProto is not synced between the local and remote, please resync it.
+  - ${local}${localTailSpace}  lastModified=${this.chalk(new Date(this._localProtoInfo.lastModified).format(), ['debug'])}  md5=${this._localProtoInfo.md5}
+  - ${remote}${remoteTailSpace}  lastModified=${this.chalk(new Date(remoteProtoInfo.lastModified).format(), ['debug'])}  md5=${remoteProtoInfo.md5}`)
+                }
+            }
+
+            // Log and return error reason
+            let errReason: string, logReason: string | undefined;
+            // Text (JSON) or errPhase==validate, errMsg is useful, log it.
+            if (dataType === 'text' || opDecodeBody.errPhase === 'validate') {
+                errReason = opDecodeBody.errMsg;
+            }
+            else if (isProtoNotSynced) {
+                errReason = 'The serviceProto is not synced, decode buffer failed.'
+            }
+            // Buffer && errPhase==decode, log a human readable message
+            else {
+                errReason = 'Decode buffer failed, please check the serviceProto and Flow.'
+                logReason = `Decode buffer failed, you may check below:
+  1. Is the serviceProto the same between the local and remote? (Check field 'md5')
+  2. Is the buffer changed by Flow? Try to disable data flows and retry.`;
+            }
+            this.logger.error(`${flag} ${logReason || errReason}`);
+
+            // req: send err
+            if (box.type === 'req') {
+                this._sendTransportData({
+                    type: 'err',
+                    sn: box.sn,
+                    err: new TsrpcError(errReason, {
+                        type: TsrpcErrorType.RemoteError
+                    }),
+                    protoInfo: this._localProtoInfo
+                });
+            }
+            // ret: transform to err
+            else if (box.type === 'res') {
+                this._recvTransportData({
+                    type: 'err',
+                    sn: box.sn,
+                    protoInfo: box.protoInfo,
+                    err: new TsrpcError(errReason, {
+                        type: TsrpcErrorType.LocalError
+                    })
+                })
+            }
+
+            return { isSucc: false, errMsg: errReason };
         }
 
         return this._recvTransportData(opDecodeBody.res);

@@ -1,7 +1,7 @@
 import { InterfaceTypeSchema, TSBufferProto, UnionTypeSchema } from "tsbuffer-schema";
 
 export const TransportDataProto: TSBufferProto = {
-  "BoxBuffer": {
+  "TransportDataSchema": {
     "type": "Union",
     "members": [
       {
@@ -27,16 +27,18 @@ export const TransportDataProto: TSBufferProto = {
             },
             {
               "id": 2,
-              "name": "apiName",
+              "name": "serviceId",
               "type": {
-                "type": "String"
+                "type": "Number",
+                "scalarType": "uint"
               }
             },
             {
               "id": 3,
               "name": "sn",
               "type": {
-                "type": "Number"
+                "type": "Number",
+                "scalarType": "uint"
               }
             },
             {
@@ -76,7 +78,8 @@ export const TransportDataProto: TSBufferProto = {
               "id": 2,
               "name": "sn",
               "type": {
-                "type": "Number"
+                "type": "Number",
+                "scalarType": "uint"
               }
             },
             {
@@ -116,7 +119,8 @@ export const TransportDataProto: TSBufferProto = {
               "id": 2,
               "name": "sn",
               "type": {
-                "type": "Number"
+                "type": "Number",
+                "scalarType": "uint"
               }
             },
             {
@@ -154,9 +158,10 @@ export const TransportDataProto: TSBufferProto = {
             },
             {
               "id": 2,
-              "name": "msgName",
+              "name": "serviceId",
               "type": {
-                "type": "String"
+                "type": "Number",
+                "scalarType": "uint"
               }
             }
           ]
@@ -179,7 +184,8 @@ export const TransportDataProto: TSBufferProto = {
               "id": 1,
               "name": "sn",
               "type": {
-                "type": "Number"
+                "type": "Number",
+                "scalarType": "uint"
               }
             },
             {
@@ -205,6 +211,15 @@ export const TransportDataProto: TSBufferProto = {
                 "type": "Literal",
                 "literal": "custom"
               }
+            },
+            {
+              "id": 1,
+              "name": "buf",
+              "type": {
+                "type": "Buffer",
+                "arrayType": "Uint8Array"
+              },
+              "optional": true
             }
           ],
           "indexSignature": {
@@ -224,7 +239,7 @@ export const TransportDataProto: TSBufferProto = {
         "id": 0,
         "name": "lastModified",
         "type": {
-          "type": "String"
+          "type": "Number"
         }
       },
       {
@@ -332,7 +347,7 @@ export const TransportDataProto: TSBufferProto = {
 };
 
 // JSON data is any (json obj)
-TransportDataProto['BoxJsonObject'] = Object.merge({}, TransportDataProto['BoxBuffer']);
+TransportDataProto['BoxJsonObject'] = Object.merge({}, TransportDataProto['TransportDataSchema']);
 (TransportDataProto['BoxJsonObject'] as UnionTypeSchema).members.forEach(v => {
   (v.type as InterfaceTypeSchema).properties!.forEach(p => {
     // body -> any
