@@ -1,4 +1,4 @@
-import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseConnectionFlows, BaseServiceType, BoxDecoding, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
+import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
 import { BaseServer } from "./BaseServer";
 import { BaseServerFlows } from "./BaseServerFlows";
 
@@ -14,7 +14,7 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
 
     constructor(public readonly server: BaseServer<ServiceType>, privateOptions: PrivateBaseServerConnectionOptions) {
         super(privateOptions.dataType, server.options, {
-            apiHandlers: server['_apiHandlers'],
+            apiHandlers: server['_apiHandlers'],    // Share apiHandlers with server
             serviceMap: server.serviceMap,
             tsbuffer: server.tsbuffer,
             localProtoInfo: server.localProtoInfo
@@ -69,8 +69,11 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
         return promise;
     }
 
-    protected _emitMsg: BaseConnection<ServiceType>['_emitMsg'] = (msgName, msg, msgName2, conn) => {
-        // TODO
+    protected _emitMsg: BaseConnection<ServiceType>['_emitMsg'] = (msgName, msg, msgName2, conn: any) => {
+        // Conn listeners
+        this._msgListeners.emit(msgName, msg, msgName2, conn);
+        // Server listeners
+        this.server['_msgListeners'].emit(msgName, msg, msgName2, conn);
     }
 
     /** Please use `server.implementApi` instead. */

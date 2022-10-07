@@ -98,7 +98,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         this.tsbuffer = privateOptions.tsbuffer;
         this._localProtoInfo = privateOptions.localProtoInfo;
         this._apiHandlers = privateOptions.apiHandlers ?? {};
-        this._msgListeners = privateOptions.msgListeners ?? new EventEmitter();
     }
 
     // #region API Client
@@ -371,7 +370,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // #region Message
 
-    protected _msgListeners: EventEmitter<{ [K in keyof ServiceType['msg']]: [ServiceType['msg'][K], K, this] }>;
+    protected _msgListeners: EventEmitter<{ [K in keyof ServiceType['msg']]: [ServiceType['msg'][K], K, this] }> = new EventEmitter();
 
     /**
      * Send message, without response, not ensuring the server is received and processed correctly.
@@ -841,7 +840,6 @@ export type BaseConnectionDataType = 'text' | 'buffer';
 
 export interface PrivateBaseConnectionOptions {
     apiHandlers?: BaseConnection['_apiHandlers'],
-    msgListeners?: BaseConnection['_msgListeners'],
     serviceMap: ServiceMap,
     tsbuffer: TSBuffer,
     localProtoInfo: ProtoInfo

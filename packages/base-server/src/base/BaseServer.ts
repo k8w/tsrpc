@@ -132,6 +132,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
     protected abstract _stop(): void;
 
     // #region API Host
+    /** Shared with connections */
     protected _apiHandlers: BaseConnection<ServiceType>['_apiHandlers'] = {};
 
     implementApi: BaseConnection<ServiceType>['implementApi'] = BaseConnection.prototype.implementApi;
@@ -264,11 +265,13 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
     // #endregion
 
     // #region Msg Host
-    // TODO
+    /** NOT shared with connections.
+     * Connection-level listeners would trigger firstly, then the server-level.
+     */
     protected _msgListeners: BaseConnection<ServiceType>['_msgListeners'] = new EventEmitter();
-    onMsg() { }
-    onceMsg() { }
-    offMsg() { }
+    onMsg: BaseConnection<ServiceType>['onMsg'] = BaseConnection.prototype.onMsg;
+    onceMsg: BaseConnection<ServiceType>['onceMsg'] = BaseConnection.prototype.onceMsg;
+    offMsg: BaseConnection<ServiceType>['offMsg'] = BaseConnection.prototype.offMsg;
 
     /**
      * Send the same message to many connections.
