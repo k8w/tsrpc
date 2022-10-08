@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { BaseServiceType, BaseConnection, ServiceProto, ServiceMapUtil, getCustomObjectIdTypes, setLogLevel, defaultBaseConnectionOptions, BaseConnectionOptions, BaseConnectionDataType, LogLevel, ProtoInfo } from "tsrpc-base";
+import { BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, defaultBaseConnectionOptions, Flow, getCustomObjectIdTypes, LogLevel, ProtoInfo, ServiceMapUtil, ServiceProto, setLogLevel } from "tsrpc-base";
 import { BaseClientFlows } from "./BaseClientFlows";
 
 /**
@@ -20,8 +20,20 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
 
     declare readonly options: BaseClientOptions;
 
-    // TODO
-    flows: BaseClientFlows<this> = {} as any;
+    flows: BaseClientFlows<this> = {
+        postConnectFlow: new Flow(),
+        postDisconnectFlow: new Flow(),
+        preCallApiFlow: new Flow(),
+        preCallApiReturnFlow: new Flow(),
+        preApiCallFlow: new Flow(),
+        preApiCallReturnFlow: new Flow(),
+        preSendMsgFlow: new Flow(),
+        preRecvMsgFlow: new Flow(),
+        preSendDataFlow: new Flow(),
+        postSendDataFlow: new Flow(),
+        preRecvDataFlow: new Flow(),
+        preConnectFlow: new Flow(),
+    };
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseClientOptions, privateOptions: PrivateBaseClientOptions) {
         const serviceMap = ServiceMapUtil.getServiceMap(serviceProto);

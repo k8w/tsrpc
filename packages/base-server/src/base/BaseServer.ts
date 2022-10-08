@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiHandler, ApiServiceDef, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, getCustomObjectIdTypes, Logger, LogLevel, OpResult, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
+import { ApiHandler, ApiServiceDef, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, Flow, getCustomObjectIdTypes, Logger, LogLevel, OpResult, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
 import { PathUtil } from "../models/PathUtil";
 import { BaseServerConnection } from "./BaseServerConnection";
 import { BaseServerFlows } from "./BaseServerFlows";
@@ -14,8 +14,20 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
     declare ServiceType: ServiceType;
     declare abstract Conn: BaseServerConnection<ServiceType>;
 
-    // TODO
-    flows: BaseServerFlows<BaseServerConnection<ServiceType>, ServiceType> = null!;
+    flows: BaseServerFlows<BaseServerConnection<ServiceType>, ServiceType> = {
+        postConnectFlow: new Flow(),
+        postDisconnectFlow: new Flow(),
+        preCallApiFlow: new Flow(),
+        preCallApiReturnFlow: new Flow(),
+        preApiCallFlow: new Flow(),
+        preApiCallReturnFlow: new Flow(),
+        preSendMsgFlow: new Flow(),
+        preRecvMsgFlow: new Flow(),
+        preSendDataFlow: new Flow(),
+        postSendDataFlow: new Flow(),
+        preRecvDataFlow: new Flow(),
+        preBroadcastMsgFlow: new Flow(),
+    };
 
     /** { [id: number]: Conn } */
     readonly connections = new Set<this['Conn']>;
@@ -325,7 +337,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
             body: msg
         }
 
-        // 区分 dataType 不同的 conns
+        // Group conns by dataType (different encode method)
         let connGroups: { conns: BaseServerConnection[], dataType: BaseConnectionDataType, data: any }[] = conns.groupBy(v => v.dataType).map(v => ({
             conns: v,
             dataType: v.key,
