@@ -1,4 +1,4 @@
-import { BaseServiceType, ServiceProto, TransportData, TransportOptions, OpResultVoid, PROMISE_ABORTED, TsrpcError, TsrpcErrorType, TransportDataUtil, BoxTextEncoding, ApiReturn, ProtoInfo } from "tsrpc-base";
+import { ApiReturn, BaseServiceType, BoxTextEncoding, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceProto, TransportData, TransportDataUtil, TransportOptions, TsrpcError, TsrpcErrorType } from "tsrpc-base";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../base/BaseClient";
 import { BaseHttpClientTransport } from "./BaseHttpClientTransport";
 
@@ -87,6 +87,8 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
         // Parse body
         let body: ApiReturn<any>;
         try {
+            // TODO decodeReturnText throw 的 TsrpcError 直接抛给前端
+            // TODO 是合法的 JSON 但不是合法的 ApiReturn
             body = (this.options.decodeReturnText ?? JSON.parse)(data);
         }
         catch (e) {
