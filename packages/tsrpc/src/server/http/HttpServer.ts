@@ -52,8 +52,12 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
     }
 
     // TODO
-    inputJSON(apiName: string, req: object, sourceIp?: string) { }
-    inputBuffer(buf: Uint8Array, sourceIp?: string) { }
+    inputJSON(apiName: string, req: object, sourceIp?: string) {
+        // _recvBox
+    }
+    inputBuffer(buf: Uint8Array, sourceIp?: string) {
+        // _recvBox
+    }
 
 }
 
