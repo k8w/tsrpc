@@ -52,10 +52,14 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
     }
 
     // TODO
-    inputJSON(apiName: string, req: object, sourceIp?: string) {
+    // Proxy：从别处接收输入，灌给 Server，再监听 Server 输出，灌给 Source
+    // HttpServerProxy.request
+    // 事件函数
+    // HTTP 函数
+    inputJSON(apiName: string, req: object, options?: { headers?: Record<string, string>, ip?: string }) {
         // _recvBox
     }
-    inputBuffer(buf: Uint8Array, sourceIp?: string) {
+    inputBuffer(buf: Uint8Array, ip?: string) {
         // _recvBox
     }
 
