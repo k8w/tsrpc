@@ -214,10 +214,9 @@ describe('WS Server & Client basic', function () {
         let ret = await client.callApi('Test', { name: 'xxx' });
         assert.ok(ret.isSucc);
 
-        return new Promise(rs => {
+        await new Promise<void>(rs => {
             server.listenMsg('Test', async v => {
                 assert.deepStrictEqual(v.msg, { content: 'abc' });
-                await server.stop();
                 rs();
             });
 
@@ -225,6 +224,19 @@ describe('WS Server & Client basic', function () {
                 content: 'abc'
             });
         })
+
+        await new Promise<void>(rs => {
+            client.listenMsg('Test', async msg => {
+                assert.deepStrictEqual(msg, { content: 'abc' });
+                rs();
+            });
+
+            server.connections[0].sendMsg('Test', {
+                content: 'abc'
+            });
+        })
+
+        await server.stop();
     });
 
     it('server send msg', async function () {

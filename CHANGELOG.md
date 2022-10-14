@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.4.7] - 2022-10-15
+### Fixed
+- Issue that `ws.onClose` is not called when `wsClient.disconnect()` manually at CocosCreator Android platform.
+- Issue that the name of Api cannot be the same with it of Msg when using `WsClient` in JSON mode.
+
 ## [3.4.6] - 2022-09-28
 ### Fixed
 - Fixed issue that `logLevel` not works

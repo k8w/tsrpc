@@ -251,7 +251,7 @@ describe('WS JSON Server & Client basic', function () {
             port: 3000,
             logger: serverLogger,
             json: true,
-            // debugBuf: true
+            debugBuf: true
         });
 
         await server.autoImplementApi(path.resolve(__dirname, '../api'))
@@ -261,17 +261,16 @@ describe('WS JSON Server & Client basic', function () {
             server: 'ws://127.0.0.1:3000',
             logger: clientLogger,
             json: true,
-            // debugBuf: true
+            debugBuf: true
         });
         await client.connect();
 
         let ret = await client.callApi('Test', { name: 'xxx' });
         assert.ok(ret.isSucc);
 
-        return new Promise(rs => {
+        await new Promise<void>(rs => {
             server.listenMsg('Test', async v => {
                 assert.deepStrictEqual(v.msg, { content: 'abc' });
-                await server.stop();
                 rs();
             });
 
@@ -279,6 +278,19 @@ describe('WS JSON Server & Client basic', function () {
                 content: 'abc'
             });
         })
+
+        await new Promise<void>(rs => {
+            client.listenMsg('Test', async msg => {
+                assert.deepStrictEqual(msg, { content: 'abc' });
+                rs();
+            });
+
+            server.connections[0].sendMsg('Test', {
+                content: 'abc'
+            });
+        })
+
+        await server.stop();
     });
 
     it('server send msg', async function () {
