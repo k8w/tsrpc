@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.8] - 2022-10-19
+### Fixed
+- Update to `tsrpc-base-client@2.1.10`
+
 ## [3.4.7] - 2022-10-15
 ### Fixed
 - Issue that `ws.onClose` is not called when `wsClient.disconnect()` manually at CocosCreator Android platform.
