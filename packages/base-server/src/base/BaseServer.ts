@@ -1,6 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiHandler, ApiServiceDef, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, Flow, getCustomObjectIdTypes, Logger, LogLevel, OpResult, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
-import { PathUtil } from "../models/PathUtil";
+import { ApiHandler, ApiHandlerUtil, ApiServiceDef, AutoImplementApiReturn, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, Flow, getCustomObjectIdTypes, Logger, LogLevel, MsgHandler, MsgHandlerUtil, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
 import { BaseServerConnection } from "./BaseServerConnection";
 import { BaseServerFlows } from "./BaseServerFlows";
 
@@ -9,12 +8,12 @@ import { BaseServerFlows } from "./BaseServerFlows";
  * Implement on a transportation protocol (like HTTP WebSocket) by extend it.
  * @typeParam ServiceType - `ServiceType` from generated `proto.ts`
  */
-export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
+export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn extends BaseServerConnection<ServiceType> = BaseServerConnection<ServiceType>>{
 
     declare ServiceType: ServiceType;
-    declare abstract Conn: BaseServerConnection<ServiceType>;
+    declare Conn: Conn;
 
-    flows: BaseServerFlows<BaseServerConnection<ServiceType>, ServiceType> = {
+    flows: BaseServerFlows<Conn, ServiceType> = {
         postConnectFlow: new Flow(),
         postDisconnectFlow: new Flow(),
         preCallApiFlow: new Flow(),
@@ -30,7 +29,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
     };
 
     /** { [id: number]: Conn } */
-    readonly connections = new Set<this['Conn']>;
+    readonly connections = new Set<Conn>;
 
     // Options
     readonly logger: Logger;
@@ -96,7 +95,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
     protected abstract _start(): Promise<void>;
 
     protected _connId = new Counter();
-    addConnection(conn: this['Conn']) {
+    addConnection(conn: Conn) {
         this.connections.add(conn);
         conn['_setStatus'](ConnectionStatus.Connected);
 
@@ -143,146 +142,70 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
     protected abstract _stop(): void;
 
     // #region API Host
+    
     /** Shared with connections */
     protected _apiHandlers: BaseConnection<ServiceType>['_apiHandlers'] = {};
 
-    implementApi: BaseConnection<ServiceType>['implementApi'] = BaseConnection.prototype.implementApi;
-
-    protected _implementApiDelay<Api extends string & keyof ServiceType['api']>(apiName: Api, loadHandler: () => Promise<OpResult<ApiHandler>>, maxDelayTime?: number): void {
-        // Delay get handler
-        let promiseHandler: Promise<OpResult<ApiHandler>> | undefined;
-        const doGetHandler = () => {
-            if (promiseHandler) {
-                return promiseHandler;
-            }
-
-            promiseHandler = loadHandler();
-            // 获取成功后重新 implement 为真实 API
-            promiseHandler.then(op => {
-                this._apiHandlers[apiName] = undefined;
-                if (op.isSucc) {
-                    this.implementApi(apiName, op.res);
-                }
-            })
-
-            return promiseHandler;
-        }
-
-        if (maxDelayTime) {
-            setTimeout(() => { doGetHandler() }, maxDelayTime);
-        }
-
-        // Implement as a delay wrapper
-        const delayHandler: ApiHandler = call => {
-            return doGetHandler().then(op => {
-                if (!op.isSucc) {
-                    call['_errorNotImplemented']();
-                    return;
-                }
-                op.res(call)
-            })
-        }
-        this._apiHandlers[apiName as string] = delayHandler;
-    }
+    /**
+     * Associate a `ApiHandler` to a specific `apiName`.
+     * So that when `ApiCall` is receiving, it can be handled correctly.
+     * @param apiName
+     * @param handler
+     */
+    implementApi<Api extends string & keyof ServiceType['api']>(apiName: Api, handler: ApiHandler<any>): void {
+        return ApiHandlerUtil.implementApi(this, this._apiHandlers, apiName, handler);
+    };
 
     /**
-     * 
+     * Implement all apis from `apiDir` automatically
      * @param apiDir The same structure with protocols folder, each `PtlXXX.ts` has a corresponding `ApiXXX.ts`
      * @param delay Delay or maxDelayTime(ms), `true` means no maxDelayTime (delay to when the api is called).
-     * @returns 
      */
-    async autoImplementApi(apiDir: string, delay?: boolean | number): Promise<{ succ: string[], fail: { apiName: string, errMsg: string }[], delay: string[] }> {
-        this.logger.log('Start autoImplementApi...' + (delay ? ' (delay)' : ''));
-
-        const apiServices = Object.values(this.serviceMap.apiName2Service) as ApiServiceDef[];
-        const output = { succ: [], fail: [], delay: [] } as Awaited<ReturnType<this['autoImplementApi']>>;
-
-        let index = 0;
-        for (let service of apiServices) {
-            ++index;
-            const apiName = service.name;
-            const loadHandler = () => {
-                let promise = this._loadApiHandler(apiName, apiDir, this.logger);
-                promise.then(v => {
-                    if (!v.isSucc) {
-                        this.logger.error(this.chalk(`Implement API failed: ${this.chalk(apiName, ['debug', 'underline'])}.`, ['error']), v.errMsg);
-                    }
-                })
-                return promise;
-            }
-
-            // Delay
-            if (delay) {
-                this._implementApiDelay(apiName, loadHandler, typeof delay === 'number' ? delay : undefined);
-                output.delay.push(apiName);
-                this.logger.log(`[${index}/${apiServices.length}] ${this.chalk(apiName, ['debug', 'underline'])} ${this.chalk('delayed', ['gray'])}`)
-                continue;
-            }
-
-            // Immediately
-            const op = await loadHandler();
-            if (op.isSucc) {
-                this._apiHandlers[apiName] = op.res;
-                output.succ.push(apiName);
-            }
-            else {
-                output.fail.push({ apiName, errMsg: op.errMsg });
-            }
-            this.logger.log(`[${index}/${apiServices.length}] ${this.chalk(apiName, ['debug', 'underline'])} ${op.isSucc ? this.chalk('succ', ['info']) : this.chalk('failed', ['error'])}`)
-        }
-
-        // Final result log
-        this.logger.log('Finished autoImplementApi: ' + (delay ?
-            `delay ${output.delay.length}/${apiServices.length}.` :
-            `succ ${this.chalk(`${output.succ}/${apiServices.length}`, [output.fail.length ? 'warn' : 'info'])}, failed ${this.chalk('' + output.fail.length, output.fail.length ? ['error', 'bold'] : ['normal'])}.`
-        ));
-
-        return output;
+    async autoImplementApi(apiDir: string, delay?: boolean | number): Promise<AutoImplementApiReturn>;
+    /**
+     * Implement single api or a group of api from `apiDir` automatically
+     * You can end with a wildchard `*` to match a group of APIs, like `autoImplementApi('user/*', 'src/api/user')`.
+     * @param apiName The name of API to implement. 
+     * @param apiDir The same structure with protocols folder, each `PtlXXX.ts` has a corresponding `ApiXXX.ts`
+     * @param delay Delay or maxDelayTime(ms), `true` means no maxDelayTime (delay to when the api is called).
+     */
+    async autoImplementApi(apiName: string, apiDir: string, delay?: boolean | number): Promise<AutoImplementApiReturn>;
+    async autoImplementApi(dirOrName: string, dirOrDelay?: string | boolean | number, delay?: boolean | number): Promise<AutoImplementApiReturn> {
+        return ApiHandlerUtil.autoImplementApi(this, this._apiHandlers, dirOrName, dirOrDelay, delay)
     }
 
-    protected async _loadApiHandler(apiName: string & keyof ServiceType['api'], apiDir: string, logger: Logger): Promise<OpResult<ApiHandler>> {
-        // get api last name
-        const match = apiName.match(/^\/?(.+\/)*(.+)$/);
-        if (!match) {
-            return { isSucc: false, errMsg: `Invalid api name: ${apiName}` };
-        }
-        const handlerPath = match[1] ?? '';
-        const handlerName = match[2];
-
-        // try import
-        apiDir = apiDir.replace(/\\/g, '/');
-        const modulePath = PathUtil.join(apiDir, handlerPath, 'Api' + handlerName);
-        try {
-            var module = await import(modulePath);
-        }
-        catch (e: unknown) {
-            return { isSucc: false, errMsg: this.chalk(`Import module failed: ${this.chalk(modulePath, ['underline'])}. `, ['error']) + (e as Error).stack ?? (e as Error).message };
-        }
-
-        // 优先 default，其次 ApiName 同名
-        let handler = module.default ?? module['Api' + handlerName];
-        if (handler) {
-            return { isSucc: true, res: handler };
-        }
-        else {
-            let similarMember = Object.keys(module).find(v => /Api\w+/.test(v));
-            return {
-                isSucc: false,
-                errMsg: `Missing 'export Api${handlerName}' or 'export default' in: ${modulePath}` +
-                    (similarMember ? this.chalk(`\n\tYou may rename '${similarMember}' to 'Api${handlerName}'`, ['debug']) : '')
-            }
-        }
-    }
     // #endregion
 
     // #region Msg Host
+
     /** NOT shared with connections.
      * Connection-level listeners would trigger firstly, then the server-level.
      */
-    protected _msgListeners: BaseConnection<ServiceType>['_msgListeners'] = new EventEmitter();
-    onMsg: BaseConnection<ServiceType>['onMsg'] = BaseConnection.prototype.onMsg;
-    onceMsg: BaseConnection<ServiceType>['onceMsg'] = BaseConnection.prototype.onceMsg;
-    offMsg: BaseConnection<ServiceType>['offMsg'] = BaseConnection.prototype.offMsg;
+    protected _msgHandlers: BaseConnection<ServiceType>['_msgHandlers'] = new EventEmitter();
+
+    /**
+     * Add a message handler,
+     * duplicate handlers to the same `msgName` would be ignored.
+     * @param msgName
+     * @param handler
+     * @returns
+     */
+    onMsg<T extends string & keyof ServiceType['msg'], U extends MsgHandler<Conn, T>>(msgName: T | RegExp, handler: U, context?: any): U {
+        return MsgHandlerUtil.onMsg(this, this._msgHandlers, msgName, handler, context);
+    }
+
+    onceMsg<T extends string & keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<Conn, T>, context?: any): MsgHandler<Conn, T> {
+        return MsgHandlerUtil.onceMsg(this._msgHandlers, msgName, handler, context);
+    };
+
+    /**
+     * Remove a message handler
+     */
+    offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp): void;
+    offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp, handler: Function, context?: any): void;
+    offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp, handler?: Function, context?: any) {
+        return MsgHandlerUtil.offMsg(this, this._msgHandlers, msgName, handler, context);
+    }
 
     /**
      * Send the same message to many connections.
@@ -292,7 +215,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
      * @param connIds - `id` of target connections, `undefined` means broadcast to every connections.
      * @returns Send result, `isSucc: true` means the message buffer is sent to kernel, not represents the clients received.
      */
-    async broadcastMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], conns?: this['Conn'][]): Promise<OpResultVoid> {
+    async broadcastMsg<T extends string & keyof ServiceType['msg']>(msgName: T, msg: ServiceType['msg'][T], conns?: Conn[]): Promise<OpResultVoid> {
         let isAllConn = false;
         if (!conns) {
             conns = Array.from(this.connections);
@@ -338,7 +261,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any>{
         }
 
         // Group conns by dataType (different encode method)
-        let connGroups: { conns: BaseServerConnection[], dataType: BaseConnectionDataType, data: any }[] = conns.groupBy(v => v.dataType).map(v => ({
+        let connGroups: { conns: Conn[], dataType: BaseConnectionDataType, data: any }[] = conns.groupBy(v => v.dataType).map(v => ({
             conns: v,
             dataType: v.key,
             data: null

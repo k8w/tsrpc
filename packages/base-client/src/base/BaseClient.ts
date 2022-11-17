@@ -57,6 +57,9 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
         })
     }
 
+    // TODO base connect
+    // Some 不需要连接（如 HTTP IPC），也可以视为自动连接（屏蔽 connect 方法）
+
     // #region Deprecated 3.x API
     /** @deprecated Use `this.options.dataType` instead. */
     declare dataType: never;

@@ -70,14 +70,17 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
     }
 
     protected _emitMsg: BaseConnection<ServiceType>['_emitMsg'] = (msgName, msg, msgName2, conn: any) => {
-        // Conn listeners
-        this._msgListeners.emit(msgName, msg, msgName2, conn);
+        // Conn listeners first
+        this._msgHandlers.emit(msgName, msg, msgName2, conn);
         // Server listeners
-        this.server['_msgListeners'].emit(msgName, msg, msgName2, conn);
+        this.server['_msgHandlers'].emit(msgName, msg, msgName2, conn);
     }
 
-    /** Please use `server.implementApi` instead. */
+    /** @deprecated Please use `server.implementApi` instead */
     declare implementApi: never;
+    /** @deprecated Please use `server.autoImplementApi` instead */
+    declare autoImplementApi: never;
+
 
 }
 

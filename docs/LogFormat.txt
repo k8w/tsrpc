@@ -30,3 +30,12 @@
 [221.15.24.68] [Conn#1] [SendMsgErr] [Order/MsgOrder] Property 's' should be string {...}
 [221.15.24.68] [Conn#2] [RecvMsg] [Order/MsgOrder] {...}
 [221.15.24.68] [Conn#1] [RecvMsgErr] Property 's' should be string {...}
+
+DELAY
+Start autoImplementApi 'xxx' to 'src/api' (delay)...
+[1/17] user/Login delayed
+[2/17] user/Register delayed
+...
+[17/17] user/Register delayed
+Finished autoImplementApi: succ 8, failed 0.
+Finished autoImplementApi: delayed 19.

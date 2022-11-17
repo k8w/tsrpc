@@ -1,9 +1,11 @@
 import { TSBuffer } from "tsbuffer";
+import { ApiHandlerUtil } from "../models/ApiHandlerUtil";
 import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { EventEmitter } from "../models/EventEmitter";
 import { Flow } from "../models/Flow";
 import { Logger } from "../models/Logger";
+import { MsgHandlerUtil } from "../models/MsgHandlerUtil";
 import { OpResultVoid } from "../models/OpResult";
 import { ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
@@ -338,12 +340,26 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param handler
      */
     implementApi<Api extends string & keyof ServiceType['api']>(apiName: Api, handler: ApiHandler<any>): void {
-        if (this._apiHandlers[apiName as string]) {
-            throw new Error('Implement API duplicately: ' + apiName);
-        }
-        this._apiHandlers[apiName as string] = handler;
-        this.logger.log(`Implement API successfully: ${this.chalk(apiName, ['underline'])}`);
+        return ApiHandlerUtil.implementApi(this, this._apiHandlers, apiName, handler);
     };
+
+    /**
+     * Implement all apis from `apiDir` automatically
+     * @param apiDir The same structure with protocols folder, each `PtlXXX.ts` has a corresponding `ApiXXX.ts`
+     * @param delay Delay or maxDelayTime(ms), `true` means no maxDelayTime (delay to when the api is called).
+     */
+    async autoImplementApi(apiDir: string, delay?: boolean | number): Promise<AutoImplementApiReturn>;
+    /**
+     * Implement single api or a group of api from `apiDir` automatically
+     * You can end with a wildchard `*` to match a group of APIs, like `autoImplementApi('user/*', 'src/api/user')`.
+     * @param apiName The name of API to implement. 
+     * @param apiDir The same structure with protocols folder, each `PtlXXX.ts` has a corresponding `ApiXXX.ts`
+     * @param delay Delay or maxDelayTime(ms), `true` means no maxDelayTime (delay to when the api is called).
+     */
+    async autoImplementApi(apiName: string, apiDir: string, delay?: boolean | number): Promise<AutoImplementApiReturn>;
+    async autoImplementApi(dirOrName: string, dirOrDelay?: string | boolean | number, delay?: boolean | number): Promise<AutoImplementApiReturn> {
+        return ApiHandlerUtil.autoImplementApi(this, this._apiHandlers, dirOrName, dirOrDelay, delay)
+    }
 
     protected _recvApiReq(transportData: TransportData & { type: 'req' }): Promise<ApiReturn<any>> {
         // Make ApiCall
@@ -370,7 +386,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // #region Message
 
-    protected _msgListeners: EventEmitter<{ [K in keyof ServiceType['msg']]: [ServiceType['msg'][K], K, this] }> = new EventEmitter();
+    protected _msgHandlers: EventEmitter<{ [K in keyof ServiceType['msg']]: [ServiceType['msg'][K], K, this] }> = new EventEmitter();
 
     /**
      * Send message, without response, not ensuring the server is received and processed correctly.
@@ -412,10 +428,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     }
 
     /**
-     * Custom alternative to `this._msgListeners.emit`
+     * Custom alternative to `this._msgHandlers.emit`
      * For example, do something before or after `emit`
      */
-    protected _emitMsg?: BaseConnection<ServiceType>['_msgListeners']['emit'];
+    protected _emitMsg?: BaseConnection<ServiceType>['_msgHandlers']['emit'];
     protected async _recvMsg(transportData: TransportData & { type: 'msg' }): Promise<OpResultVoid> {
         this.options.logMsg && this.logger.log(`[RecvMsg]`, transportData.serviceName, transportData.body);
 
@@ -434,7 +450,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             this._emitMsg(transportData.serviceName, transportData.body as ServiceType['msg'][string & keyof ServiceType['msg']], transportData.serviceName, this);
         }
         else {
-            this._msgListeners.emit(transportData.serviceName, transportData.body as ServiceType['msg'][string & keyof ServiceType['msg']], transportData.serviceName, this);
+            this._msgHandlers.emit(transportData.serviceName, transportData.body as ServiceType['msg'][string & keyof ServiceType['msg']], transportData.serviceName, this);
         }
         return { isSucc: true }
     }
@@ -447,19 +463,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @returns
      */
     onMsg<T extends string & keyof ServiceType['msg'], U extends MsgHandler<this, T>>(msgName: T | RegExp, handler: U, context?: any): U {
-        if (msgName instanceof RegExp) {
-            Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
-                this._msgListeners.on(k as T, handler, context)
-            })
-            return handler;
-        }
-        else {
-            return this._msgListeners.on(msgName, handler, context)
-        }
+        return MsgHandlerUtil.onMsg(this, this._msgHandlers, msgName, handler, context);
     }
 
     onceMsg<T extends string & keyof ServiceType['msg']>(msgName: T, handler: MsgHandler<this, T>, context?: any): MsgHandler<this, T> {
-        return this._msgListeners.once(msgName, handler, context);
+        return MsgHandlerUtil.onceMsg(this._msgHandlers, msgName, handler, context);
     };
 
     /**
@@ -468,14 +476,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp): void;
     offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp, handler: Function, context?: any): void;
     offMsg<T extends string & keyof ServiceType['msg']>(msgName: T | RegExp, handler?: Function, context?: any) {
-        if (msgName instanceof RegExp) {
-            Object.keys(this.serviceMap.msgName2Service).filter(k => msgName.test(k)).forEach(k => {
-                handler ? this._msgListeners.off(k, handler, context) : this._msgListeners.off(k)
-            })
-        }
-        else {
-            handler ? this._msgListeners.off(msgName, handler, context) : this._msgListeners.off(msgName)
-        }
+        return MsgHandlerUtil.offMsg(this, this._msgHandlers, msgName, handler, context);
     }
 
     // #endregion
@@ -909,3 +910,5 @@ export interface PrivateBaseConnectionOptions {
     tsbuffer: TSBuffer,
     localProtoInfo: ProtoInfo
 }
+
+export type AutoImplementApiReturn = { succ: string[], fail: { apiName: string, errMsg: string }[], delay: string[] };
