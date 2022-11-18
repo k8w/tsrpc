@@ -4,6 +4,7 @@ import { TSBuffer } from 'tsbuffer';
 import { Counter, Flow, getCustomObjectIdTypes, MsgHandlerManager, MsgService, ParsedServerInput, ServiceMap, ServiceMapUtil, TransportDataUtil } from 'tsrpc-base-client';
 import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, LogLevel, ServerInputData, ServiceProto, setLogLevel, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { getClassObjectId } from "../../models/getClassObjectId";
+import { HttpConnection } from "../http/HttpConnection";
 import { ApiCallInner } from "../inner/ApiCallInner";
 import { InnerConnection } from "../inner/InnerConnection";
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
@@ -286,6 +287,11 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                 return;
             }
             data = preBuf.buf;
+        }
+
+        if (serviceId === undefined && conn instanceof HttpConnection && typeof data === 'string') {
+            this.onInputDataError(`Invalid URL path: ${conn.httpReq.url}`, conn, data)
+            return;
         }
 
         // Parse Call

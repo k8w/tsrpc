@@ -596,7 +596,7 @@ describe('WS Server & Client basic', function () {
             server: 'ws://127.0.0.1:3001',
             logger: clientLogger,
             heartbeat: {
-                interval: 1000,
+                interval: 500,
                 timeout: 1000
             },
             debugBuf: true
@@ -606,7 +606,7 @@ describe('WS Server & Client basic', function () {
         await new Promise(rs => { setTimeout(rs, 2000) });
         client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
         assert.strictEqual(client.status, WsClientStatus.Opened)
-        assert.ok(client.lastHeartbeatLatency > 0);
+        assert.ok(client.lastHeartbeatLatency > 0, `client.lastHeartbeatLatency = ${client.lastHeartbeatLatency}`);
 
         await client.disconnect();
         await server.stop();

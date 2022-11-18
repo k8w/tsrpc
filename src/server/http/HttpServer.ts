@@ -106,10 +106,6 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                         }
 
                         const data = buf.toString();
-                        if (serviceId === undefined) {
-                            this.onInputDataError(`Invalid ${isMsg ? 'msg' : 'api'} path: ${serviceName}`, conn, data)
-                            return;
-                        }
                         this._onRecvData(conn, data, serviceId);
                     }
                     else {

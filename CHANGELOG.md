@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.9] - 2022-11-18
+### Fixed
+- Fixed that `preRecvDataFlow` is not enter if URL is not standard when using JSON mode
+
 ## [3.4.8] - 2022-10-19
 ### Fixed
 - Update to `tsrpc-base-client@2.1.10`

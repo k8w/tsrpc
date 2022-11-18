@@ -629,7 +629,7 @@ describe('WS Server & Client basic', function () {
         await new Promise(rs => { setTimeout(rs, 2000) });
         client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
         assert.strictEqual(client.status, WsClientStatus.Opened)
-        assert.ok(client.lastHeartbeatLatency > 0);
+        assert.ok(client.lastHeartbeatLatency > 0, `client.lastHeartbeatLatency is ${client.lastHeartbeatLatency}`);
 
         await client.disconnect();
         await server.stop();
