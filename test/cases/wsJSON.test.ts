@@ -810,7 +810,7 @@ describe('WS JSON Server & Client basic', function () {
             server: 'ws://127.0.0.1:3001',
             logger: clientLogger,
             heartbeat: {
-                interval: 1000,
+                interval: 500,
                 timeout: 1000
             },
             debugBuf: true,
@@ -819,6 +819,11 @@ describe('WS JSON Server & Client basic', function () {
         await client.connect();
 
         await new Promise(rs => { setTimeout(rs, 2000) });
+        // 人为制造一个延迟
+        for (let i = 0; i < 100000; ++i) {
+            let a = {};
+        }
+
         client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
         assert.strictEqual(client.status, WsClientStatus.Opened)
         assert.ok(client.lastHeartbeatLatency > 0, `client.lastHeartbeatLatency is ${client.lastHeartbeatLatency}`);

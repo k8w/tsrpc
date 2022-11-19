@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.4.10] - 2022-11-19
+### Changed
+- Add `httpReq.rawBody` for `HttpConnection`
+- `postConnectFlow` now would execute when http connection is established instead of request end
+
 ## [3.4.9] - 2022-11-18
 ### Fixed
 - Fixed that `preRecvDataFlow` is not enter if URL is not standard when using JSON mode

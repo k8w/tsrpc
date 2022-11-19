@@ -21,7 +21,7 @@ export class HttpConnection<ServiceType extends BaseServiceType = any> extends B
     protected readonly ApiCallClass = ApiCallHttp;
     protected readonly MsgCallClass = MsgCallHttp;
 
-    readonly httpReq: http.IncomingMessage;
+    readonly httpReq: http.IncomingMessage & { rawBody?: Buffer };
     readonly httpRes: http.ServerResponse;
     readonly server!: HttpServer<ServiceType>;
     /**

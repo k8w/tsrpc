@@ -48,6 +48,17 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 }
 
                 let ip = HttpUtil.getClientIp(httpReq);
+                let isJSON = this.options.jsonEnabled && httpReq.headers["content-type"]?.toLowerCase().includes('application/json')
+                    && httpReq.method === 'POST' && httpReq.url?.startsWith(this.options.jsonHostPath);
+                let conn: HttpConnection<ServiceType> = new HttpConnection({
+                    server: this,
+                    id: '' + this._connIdCounter.getNext(),
+                    ip: ip,
+                    httpReq: httpReq,
+                    httpRes: httpRes,
+                    dataType: isJSON ? 'text' : 'buffer'
+                });
+                this.flows.postConnectFlow.exec(conn, conn.logger);
 
                 httpRes.statusCode = 200;
                 httpRes.setHeader('X-Powered-By', `TSRPC ${TSRPC_VERSION}`);
@@ -69,21 +80,9 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     chunks.push(data);
                 });
 
-                let conn: HttpConnection<ServiceType> | undefined;
                 httpReq.on('end', async () => {
-                    let isJSON = this.options.jsonEnabled && httpReq.headers["content-type"]?.toLowerCase().includes('application/json')
-                        && httpReq.method === 'POST' && httpReq.url?.startsWith(this.options.jsonHostPath);
-                    conn = new HttpConnection({
-                        server: this,
-                        id: '' + this._connIdCounter.getNext(),
-                        ip: ip,
-                        httpReq: httpReq,
-                        httpRes: httpRes,
-                        dataType: isJSON ? 'text' : 'buffer'
-                    });
-                    await this.flows.postConnectFlow.exec(conn, conn.logger);
-
                     let buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
+                    conn.httpReq.rawBody = buf;
 
                     if (conn.dataType === 'text') {
                         let url = conn.httpReq.url!;
@@ -92,7 +91,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                         let isMsg: boolean = false;
                         if (urlEndPos > -1) {
                             isMsg = url.slice(urlEndPos + 1).split('&').some(v => v === 'type=msg');
-                            url = url.slice(0, urlEndPos);                            
+                            url = url.slice(0, urlEndPos);
                         }
 
                         // Parse serviceId
@@ -117,29 +116,11 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 httpRes.on('close', async () => {
                     // 客户端Abort
                     if (httpReq.aborted) {
-                        if (conn) {
-                            if (conn.call) {
-                                conn.call.logger.log('[ReqAborted]');
-                            }
-                            else {
-                                conn.logger.log('[ReqAborted]');
-                            }
-                        }
-                        else {
-                            this.logger.log('[ReqAborted]', {
-                                url: httpReq.url,
-                                method: httpReq.method,
-                                ip: ip,
-                                chunksLength: chunks.length,
-                                chunksSize: chunks.sum(v => v.byteLength),
-                                reqComplete: httpReq.complete,
-                                headers: httpReq.rawHeaders
-                            });
-                        }
+                        (conn.call?.logger ?? conn.logger).log('[ReqAborted]');
                     }
-                    // 非Abort，异常中断：直到连接关闭，Client也未end（Conn未生成）
-                    else if (!conn) {
-                        this.logger.warn('Socket closed before request end', {
+                    // 非Abort，异常中断：直到连接关闭，Client也未end
+                    else if (!conn.httpReq.rawBody) {
+                        conn.logger.warn('Socket closed before request end', {
                             url: httpReq.url,
                             method: httpReq.method,
                             ip: ip,
@@ -155,9 +136,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                     }
 
                     // Post Flow
-                    if (conn) {
-                        await this.flows.postDisconnectFlow.exec({ conn: conn }, conn.logger)
-                    }
+                    await this.flows.postDisconnectFlow.exec({ conn: conn }, conn.logger)
                 });
             });
 

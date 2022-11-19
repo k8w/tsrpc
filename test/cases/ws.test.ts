@@ -596,14 +596,20 @@ describe('WS Server & Client basic', function () {
             server: 'ws://127.0.0.1:3001',
             logger: clientLogger,
             heartbeat: {
-                interval: 500,
-                timeout: 1000
+                interval: 200,
+                timeout: 500
             },
             debugBuf: true
         });
         await client.connect();
 
         await new Promise(rs => { setTimeout(rs, 2000) });
+
+        // 人为制造一个延迟
+        for (let i = 0; i < 100000; ++i) {
+            let a = {};
+        }
+
         client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
         assert.strictEqual(client.status, WsClientStatus.Opened)
         assert.ok(client.lastHeartbeatLatency > 0, `client.lastHeartbeatLatency = ${client.lastHeartbeatLatency}`);

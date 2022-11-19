@@ -590,6 +590,12 @@ describe('HTTP Flows', function () {
             call.succ({ reply: 'Enc&Dec' });
         });
 
+        let rawBody: any;
+        server.flows.preRecvDataFlow.push(v => {
+            rawBody = (v.conn as HttpConnection).httpReq.rawBody;
+            return v;
+        });
+
         server.flows.preRecvBufferFlow.push(v => {
             flowExecResult.preRecvBufferFlow = true;
             for (let i = 0; i < v.buf.length; ++i) {
@@ -633,7 +639,9 @@ describe('HTTP Flows', function () {
             res: {
                 reply: 'Enc&Dec'
             }
-        })
+        });
+        assert.ok(rawBody);
+        assert.ok(rawBody instanceof Buffer);
 
         await server.stop();
     });
