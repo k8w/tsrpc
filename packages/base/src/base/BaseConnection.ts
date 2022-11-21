@@ -340,35 +340,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // #region API Server
 
-    protected _apiHandlers: Record<string, ApiHandler<this> | undefined>;
-
-    /**
-     * Register an implementation function for a client-side API.
-     * So that when `ApiCall` is receiving, it can be handled correctly.
-     * @param apiName
-     * @param handler
-     */
-    implementApi<T extends LocalApiName<this>>(apiName: T, handler: ApiHandler<this, T>): void {
-        return ApiHandlerUtil.implementApi(this, this._apiHandlers, apiName, handler);
-    };
-
-    /**
-     * Implement all apis from `apiDir` automatically
-     * @param apiDir The same structure with protocols folder, each `PtlXXX.ts` has a corresponding `ApiXXX.ts`
-     * @param delay Delay or maxDelayTime(ms), `true` means no maxDelayTime (delay to when the api is called).
-     */
-    async autoImplementApi(apiDir: string, delay?: boolean | number): Promise<AutoImplementApiReturn>;
-    /**
-     * Implement single api or a group of api from `apiDir` automatically
-     * You can end with a wildchard `*` to match a group of APIs, like `autoImplementApi('user/*', 'src/api/user')`.
-     * @param apiName The name of API to implement. 
-     * @param apiDir The same structure with protocols folder, each `PtlXXX.ts` has a corresponding `ApiXXX.ts`
-     * @param delay Delay or maxDelayTime(ms), `true` means no maxDelayTime (delay to when the api is called).
-     */
-    async autoImplementApi(apiName: string, apiDir: string, delay?: boolean | number): Promise<AutoImplementApiReturn>;
-    async autoImplementApi(dirOrName: string, dirOrDelay?: string | boolean | number, delay?: boolean | number): Promise<AutoImplementApiReturn> {
-        return ApiHandlerUtil.autoImplementApi(this, this._apiHandlers, dirOrName, dirOrDelay, delay)
-    }
+    protected _apiHandlers: Record<string, ApiHandler | undefined>;
 
     protected _recvApiReq(transportData: TransportData & { type: 'req' }): Promise<ApiReturn<any>> {
         // Make ApiCall

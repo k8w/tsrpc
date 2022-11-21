@@ -60,7 +60,7 @@ export type BaseConnectionFlows<Conn extends BaseConnection> = {
     preSendDataFlow: Flow<SendDataFlow<Conn>>,
     postSendDataFlow: Flow<SendDataFlow<Conn>>,
     preRecvDataFlow: Flow<RecvDataFlow<Conn>>,
-};
+} & unknown;
 
 export type CallApiFlow<Conn extends BaseConnection> = {
     [K in RemoteApiName<Conn>]: {
@@ -105,7 +105,7 @@ export type SendDataFlow<Conn extends BaseConnection> = {
     readonly transportData: TransportData,
     /** If the data is an ApiReturn, this would be its original ApiCall. */
     readonly call?: ApiCallReturnFlow<Conn>,
-};
+} & unknown;
 
 export type RecvDataFlow<Conn extends BaseConnection> = {
     data: string | Uint8Array,
