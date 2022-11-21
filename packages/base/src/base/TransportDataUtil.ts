@@ -33,15 +33,15 @@ export class TransportDataUtil {
             let service: ApiService | MsgService | undefined;
             // msg: {type:msg}
             if (type === 'msg') {
-                service = serviceMap.msg[serviceName]
+                service = serviceMap.name2Msg[serviceName]
             }
             // localApi: dec-req || enc-other
             else if (action === 'decode' && type === 'req' || action === 'encode' && type !== 'req') {
-                service = serviceMap.localApi[serviceName]
+                service = serviceMap.name2LocalApi[serviceName]
             }
             // remoteApi: enc-req || dec-other
             else if (action === 'encode' && type === 'req' || action === 'decode' && type !== 'req') {
-                service = serviceMap.remoteApi[serviceName]
+                service = serviceMap.name2RemoteApi[serviceName]
             }
             if (!service) {
                 return { isSucc: false, errMsg: `Undefined ${type === 'msg' ? 'Msg' : 'API'} name: ${serviceName}` }
@@ -166,7 +166,7 @@ export class TransportDataUtil {
             if (!item) {
                 return { isSucc: false, errMsg: `Invalid SN for callApi return: ${box.sn}` };
             }
-            box.serviceId = serviceMap.remoteApi[item.apiName]!.id;
+            box.serviceId = serviceMap.name2RemoteApi[item.apiName]!.id;
         }
 
         return { isSucc: true, res: box }

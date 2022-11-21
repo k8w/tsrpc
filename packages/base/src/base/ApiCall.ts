@@ -33,7 +33,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
     protected _rsExecute?: (ret: ApiReturn<Res>) => void;;
     async execute(): Promise<ApiReturn<Res>> {
         // Get Service
-        const service = this.conn.serviceMap.localApi[this.apiName];
+        const service = this.conn.serviceMap.name2LocalApi[this.apiName];
         if (!service) {
             return this.error(`Undefined API name: ${this.apiName}`, {
                 type: TsrpcErrorType.RemoteError

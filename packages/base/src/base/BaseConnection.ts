@@ -33,13 +33,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     /** Which side this connection is belong to */
     abstract $Side: 'server' | 'client';
 
-    get localApi(): ApiMap<LocalApiName<this>> {
-        return this.serviceMap.localApi;
-    }
-    get remoteApi(): ApiMap<RemoteApiName<this>> {
-        return this.serviceMap.remoteApi;
-    }
-
     // Options
     logger: Logger;
     chalk: Chalk;

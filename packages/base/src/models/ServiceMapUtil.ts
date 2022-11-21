@@ -5,9 +5,9 @@ export class ServiceMapUtil {
     static getServiceMap(proto: ServiceProto, side: 'server' | 'client'): ServiceMap {
         let map: ServiceMap = {
             id2Service: {},
-            localApi: {},
-            remoteApi: {},
-            msg: {}
+            name2LocalApi: {},
+            name2RemoteApi: {},
+            name2Msg: {}
         }
 
         for (let v of proto.services) {
@@ -21,10 +21,10 @@ export class ServiceMapUtil {
                     resSchemaId: `${path}Ptl${name}/Res${name}`,
                 }
                 if (svc.side === 'both' || svc.side === side) {
-                    map.localApi[v.name] = svc;
+                    map.name2LocalApi[v.name] = svc;
                 }
                 if (svc.side === 'both' || svc.side !== side) {
-                    map.remoteApi[v.name] = svc;
+                    map.name2RemoteApi[v.name] = svc;
                 }
                 map.id2Service[v.id] = svc;
             }
@@ -33,7 +33,7 @@ export class ServiceMapUtil {
                     ...v,
                     msgSchemaId: `${path}Msg${name}/Msg${name}`,
                 };
-                map.msg[v.name] = svc;
+                map.name2Msg[v.name] = svc;
                 map.id2Service[v.id] = svc;
             }
         }
@@ -45,10 +45,10 @@ export class ServiceMapUtil {
 export interface ServiceMap {
     id2Service: { [serviceId: number]: ApiService | MsgService },
     /** API which implemented at local, and called by the remote */
-    localApi: ApiMap,
+    name2LocalApi: ApiMap,
     /** API which implemented at remote, and called by the local */
-    remoteApi: ApiMap,
-    msg: { [msgName: string]: MsgService | undefined }
+    name2RemoteApi: ApiMap,
+    name2Msg: { [msgName: string]: MsgService | undefined }
 }
 
 export type ApiMap<T extends string = string> = { [apiName in T]: ApiService | undefined };

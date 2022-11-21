@@ -12,7 +12,7 @@ export class MsgHandlerUtil {
      */
     static onMsg<T extends MsgHandler>(host: MsgHandlerHost, msgHandlers: BaseConnection['_msgHandlers'], msgName: string | RegExp, handler: T, context?: any): T {
         if (msgName instanceof RegExp) {
-            Object.keys(host.serviceMap.msg).filter(k => msgName.test(k)).forEach(k => {
+            Object.keys(host.serviceMap.name2Msg).filter(k => msgName.test(k)).forEach(k => {
                 msgHandlers.on(k, handler, context)
             })
             return handler;
@@ -31,7 +31,7 @@ export class MsgHandlerUtil {
      */
     static offMsg(host: MsgHandlerHost, msgHandlers: BaseConnection['_msgHandlers'], msgName: string | RegExp, handler?: Function, context?: any) {
         if (msgName instanceof RegExp) {
-            Object.keys(host.serviceMap.msg).filter(k => msgName.test(k)).forEach(k => {
+            Object.keys(host.serviceMap.name2Msg).filter(k => msgName.test(k)).forEach(k => {
                 handler ? msgHandlers.off(k, handler, context) : msgHandlers.off(k)
             })
         }

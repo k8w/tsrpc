@@ -26,7 +26,7 @@ export class ApiHandlerUtil {
 
         host.logger.debug(`Start autoImplementApi '${apiName}' to '${apiDir}'${(delay ? ' (delay)' : '')}...`);
 
-        const apiServices = Object.values(host.serviceMap.localApi) as ApiServiceDef[];
+        const apiServices = Object.values(host.serviceMap.name2LocalApi) as ApiServiceDef[];
         const output = { succ: [], fail: [], delay: [] } as Awaited<ReturnType<typeof ApiHandlerUtil['autoImplementApi']>>;
 
         let index = 0;
