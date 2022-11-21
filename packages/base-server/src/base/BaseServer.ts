@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiHandler, ApiHandlerUtil, ApiServiceDef, AutoImplementApiReturn, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, Flow, getCustomObjectIdTypes, Logger, LogLevel, MsgHandler, MsgHandlerUtil, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
+import { ApiHandler, ApiHandlerUtil, AutoImplementApiReturn, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, Flow, getCustomObjectIdTypes, Logger, LogLevel, MsgHandler, MsgHandlerUtil, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
 import { BaseServerConnection } from "./BaseServerConnection";
 import { BaseServerFlows } from "./BaseServerFlows";
 
@@ -55,7 +55,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
             skipEncodeValidate: options.skipEncodeValidate,
             skipDecodeValidate: options.skipDecodeValidate,
         });
-        this.serviceMap = ServiceMapUtil.getServiceMap(serviceProto);
+        this.serviceMap = ServiceMapUtil.getServiceMap(serviceProto, 'server');
         this.localProtoInfo = {
             lastModified: serviceProto.lastModified,
             md5: serviceProto.md5,
@@ -142,12 +142,12 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
     protected abstract _stop(): void;
 
     // #region API Host
-    
+
     /** Shared with connections */
     protected _apiHandlers: BaseConnection<ServiceType>['_apiHandlers'] = {};
 
     /**
-     * Associate a `ApiHandler` to a specific `apiName`.
+     * Register an implementation function for a server-side API.
      * So that when `ApiCall` is receiving, it can be handled correctly.
      * @param apiName
      * @param handler
@@ -248,7 +248,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
         conns = pre.conns;
 
         // GetService
-        let service = this.serviceMap.msgName2Service[msgName as string];
+        let service = this.serviceMap.name2Msg[msgName as string];
         if (!service) {
             this.logger.error('[BroadcastMsgErr]', `[${msgName}]`, `[To:${getConnStr()}]`, 'Invalid msg name: ' + msgName);
             return { isSucc: false, errMsg: 'Invalid msg name: ' + msgName };

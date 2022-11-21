@@ -4,6 +4,7 @@ import { BaseServerFlows } from "./BaseServerFlows";
 
 export abstract class BaseServerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
+    declare $Side: 'server';
     declare options: this['server']['options'];
 
     readonly id: number;
@@ -75,12 +76,6 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
         // Server listeners
         this.server['_msgHandlers'].emit(msgName, msg, msgName2, conn);
     }
-
-    /** @deprecated Please use `server.implementApi` instead */
-    declare implementApi: never;
-    /** @deprecated Please use `server.autoImplementApi` instead */
-    declare autoImplementApi: never;
-
 
 }
 
