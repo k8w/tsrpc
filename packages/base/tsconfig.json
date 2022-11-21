@@ -5,7 +5,7 @@
       "es6",
       "dom"
     ],
-    "module": "esnext",
+    "module": "ES2020",
     "outDir": "./dist",
     "importHelpers": true,
     "strict": true,
