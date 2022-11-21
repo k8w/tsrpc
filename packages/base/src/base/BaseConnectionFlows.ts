@@ -60,13 +60,13 @@ export type BaseConnectionFlows<Conn extends BaseConnection> = {
     preSendDataFlow: Flow<SendDataFlow<Conn>>,
     postSendDataFlow: Flow<SendDataFlow<Conn>>,
     preRecvDataFlow: Flow<RecvDataFlow<Conn>>,
-} & unknown;
+};
 
 export type CallApiFlow<Conn extends BaseConnection> = {
     [K in RemoteApiName<Conn>]: {
         apiName: K,
         req: RemoteApi<Conn>[K]['req'],
-        ret?: ApiReturn<RemoteApi<Conn>[K]['res']>,
+        return?: ApiReturn<RemoteApi<Conn>[K]['res']>,
         readonly conn: Conn
     }
 }[RemoteApiName<Conn>];

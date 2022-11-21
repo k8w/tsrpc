@@ -162,7 +162,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
 
         // Get Return
-        let ret = preCall.ret ?? await this._doCallApi(preCall.apiName, preCall.req, pendingItem, options);
+        let ret = preCall.return ?? await this._doCallApi(preCall.apiName, preCall.req, pendingItem, options);
 
         // Aborted, skip return.
         if (pendingItem.isAborted) {
