@@ -29,9 +29,9 @@ export const PROMISE_ABORTED = new Promise<any>(rs => { });
  */
 export abstract class BaseConnection<ServiceType extends BaseServiceType = any> {
 
-    declare ServiceType: ServiceType;
+    declare $ServiceType: ServiceType;
     /** Which side this connection is belong to */
-    abstract side: 'server' | 'client';
+    abstract $Side: 'server' | 'client';
 
     get localApi(): ApiMap<LocalApiName<this>> {
         return this.serviceMap.localApi;
@@ -873,8 +873,8 @@ export interface PendingCallApiItem {
 }
 
 export type ApiHandler<Conn extends BaseConnection = any, ApiName extends LocalApiName<Conn> = any> = <T extends Conn>(call: ApiCall<LocalApi<Conn>[ApiName]['req'], LocalApi<Conn>[ApiName]['res'], T>) => (void | Promise<void>);
-export type MsgHandler<Conn extends BaseConnection = any, MsgName extends keyof Conn['ServiceType']['msg'] = any>
-    = <T extends Conn>(msg: T['ServiceType']['msg'][MsgName], msgName: MsgName, conn: T) => void | Promise<void>;
+export type MsgHandler<Conn extends BaseConnection = any, MsgName extends keyof Conn['$ServiceType']['msg'] = any>
+    = <T extends Conn>(msg: T['$ServiceType']['msg'][MsgName], msgName: MsgName, conn: T) => void | Promise<void>;
 
 export enum ConnectionStatus {
     Connecting = 'Connecting',
@@ -894,10 +894,10 @@ export interface PrivateBaseConnectionOptions {
 
 export type AutoImplementApiReturn = { succ: string[], fail: { apiName: string, errMsg: string }[], delay: string[] };
 
-export type LocalApi<T extends BaseConnection> = T['side'] extends 'client' ? T['ServiceType']['clientApi'] : T['ServiceType']['api'];
-export type RemoteApi<T extends BaseConnection> = T['side'] extends 'server' ? T['ServiceType']['clientApi'] : T['ServiceType']['api'];
+export type LocalApi<T extends BaseConnection> = T['$Side'] extends 'client' ? T['$ServiceType']['clientApi'] : T['$ServiceType']['api'];
+export type RemoteApi<T extends BaseConnection> = T['$Side'] extends 'server' ? T['$ServiceType']['clientApi'] : T['$ServiceType']['api'];
 export type LocalApiName<T extends BaseConnection> = keyof LocalApi<T> & string;
 export type RemoteApiName<T extends BaseConnection> = keyof RemoteApi<T> & string;
-export type MsgName<T extends BaseConnection> = keyof T['ServiceType']['msg'] & string;
+export type MsgName<T extends BaseConnection> = keyof T['$ServiceType']['msg'] & string;
 export type BaseConnectionApiHandlers = Record<string, ApiHandler | undefined>;
-export type MsgEmitter<Conn extends BaseConnection> = EventEmitter<{ [K in keyof Conn['ServiceType']['msg']]: [Conn['ServiceType']['msg'][K], K, Conn] }>;
+export type MsgEmitter<Conn extends BaseConnection> = EventEmitter<{ [K in keyof Conn['$ServiceType']['msg']]: [Conn['$ServiceType']['msg'][K], K, Conn] }>;

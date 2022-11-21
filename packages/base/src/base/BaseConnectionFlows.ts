@@ -93,7 +93,7 @@ export type ApiCallReturnFlow<Conn extends BaseConnection> = {
 export type MsgFlow<Conn extends BaseConnection> = {
     [K in MsgName<Conn>]: {
         msgName: K,
-        msg: Conn['ServiceType']['msg'][K],
+        msg: Conn['$ServiceType']['msg'][K],
         readonly conn: Conn,
     }
 }[MsgName<Conn>];

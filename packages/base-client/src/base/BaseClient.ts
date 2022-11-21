@@ -18,7 +18,7 @@ import { BaseClientFlows } from "./BaseClientFlows";
  */
 export abstract class BaseClient<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
-    declare side: 'client';
+    declare $Side: 'client';
 
     declare readonly options: BaseClientOptions;
 
