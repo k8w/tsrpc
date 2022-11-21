@@ -1,12 +1,13 @@
-import { ServiceProto, ApiServiceDef, MsgServiceDef } from "../proto/ServiceProto";
+import { ApiServiceDef, MsgServiceDef, ServiceProto } from "../proto/ServiceProto";
 
 /** A utility for generate `ServiceMap` */
 export class ServiceMapUtil {
-    static getServiceMap(proto: ServiceProto): ServiceMap {
+    static getServiceMap(proto: ServiceProto, side: 'server' | 'client'): ServiceMap {
         let map: ServiceMap = {
             id2Service: {},
-            apiName2Service: {},
-            msgName2Service: {}
+            localApi: {},
+            remoteApi: {},
+            msg: {}
         }
 
         for (let v of proto.services) {
@@ -19,7 +20,12 @@ export class ServiceMapUtil {
                     reqSchemaId: `${path}Ptl${name}/Req${name}`,
                     resSchemaId: `${path}Ptl${name}/Res${name}`,
                 }
-                map.apiName2Service[v.name] = svc;
+                if (svc.side === 'both' || svc.side === side) {
+                    map.localApi[v.name] = svc;
+                }
+                if (svc.side === 'both' || svc.side !== side) {
+                    map.remoteApi[v.name] = svc;
+                }
                 map.id2Service[v.id] = svc;
             }
             else {
@@ -27,7 +33,7 @@ export class ServiceMapUtil {
                     ...v,
                     msgSchemaId: `${path}Msg${name}/Msg${name}`,
                 };
-                map.msgName2Service[v.name] = svc;
+                map.msg[v.name] = svc;
                 map.id2Service[v.id] = svc;
             }
         }
@@ -38,9 +44,14 @@ export class ServiceMapUtil {
 
 export interface ServiceMap {
     id2Service: { [serviceId: number]: ApiService | MsgService },
-    apiName2Service: { [apiName: string]: ApiService | undefined },
-    msgName2Service: { [msgName: string]: MsgService | undefined }
+    /** API which implemented at local, and called by the remote */
+    localApi: ApiMap,
+    /** API which implemented at remote, and called by the local */
+    remoteApi: ApiMap,
+    msg: { [msgName: string]: MsgService | undefined }
 }
+
+export type ApiMap<T extends string = string> = { [apiName in T]: ApiService | undefined };
 
 export interface ApiService extends ApiServiceDef {
     reqSchemaId: string,

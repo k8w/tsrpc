@@ -1,4 +1,4 @@
-import { ApiHandler, AutoImplementApiReturn, BaseConnection } from "../base/BaseConnection";
+import { ApiHandler, AutoImplementApiReturn, BaseConnection, BaseConnectionApiHandlers } from "../base/BaseConnection";
 import { ApiServiceDef } from "../proto/ServiceProto";
 import { OpResult } from "./OpResult";
 
@@ -10,7 +10,7 @@ export class ApiHandlerUtil {
      * @param apiName
      * @param handler
      */
-    static implementApi(host: ApiHandlerHost, apiHandlers: BaseConnection['_apiHandlers'], apiName: string, handler: ApiHandler<any>): void {
+    static implementApi(host: ApiHandlerHost, apiHandlers: BaseConnectionApiHandlers, apiName: string, handler: ApiHandler): void {
         if (apiHandlers[apiName as string]) {
             throw new Error(`Cannot implement API '${apiName}' duplicately.`);
         }
@@ -18,7 +18,7 @@ export class ApiHandlerUtil {
         host.logger.log(`Implemented API ${host.chalk(apiName, ['underline'])} successfully.`);
     };
 
-    static async autoImplementApi(host: ApiHandlerHost, apiHandlers: BaseConnection['_apiHandlers'], dirOrName: string, dirOrDelay?: string | boolean | number, delay?: boolean | number): Promise<AutoImplementApiReturn> {
+    static async autoImplementApi(host: ApiHandlerHost, apiHandlers: BaseConnectionApiHandlers, dirOrName: string, dirOrDelay?: string | boolean | number, delay?: boolean | number): Promise<AutoImplementApiReturn> {
         // Currying arguments
         const apiDir = typeof dirOrDelay === 'string' ? dirOrDelay : dirOrName;
         const apiName = typeof dirOrDelay === 'string' ? dirOrName : '*';
@@ -26,7 +26,7 @@ export class ApiHandlerUtil {
 
         host.logger.debug(`Start autoImplementApi '${apiName}' to '${apiDir}'${(delay ? ' (delay)' : '')}...`);
 
-        const apiServices = Object.values(host.serviceMap.apiName2Service) as ApiServiceDef[];
+        const apiServices = Object.values(host.serviceMap.localApi) as ApiServiceDef[];
         const output = { succ: [], fail: [], delay: [] } as Awaited<ReturnType<typeof ApiHandlerUtil['autoImplementApi']>>;
 
         let index = 0;
@@ -72,7 +72,7 @@ export class ApiHandlerUtil {
         return output;
     }
 
-    protected static _implementApiDelay(host: ApiHandlerHost, apiHandlers: BaseConnection['_apiHandlers'], apiName: string, loadHandler: () => Promise<OpResult<ApiHandler>>, maxDelayTime?: number): void {
+    protected static _implementApiDelay(host: ApiHandlerHost, apiHandlers: BaseConnectionApiHandlers, apiName: string, loadHandler: () => Promise<OpResult<ApiHandler>>, maxDelayTime?: number): void {
         // Delay get handler
         let promiseHandler: Promise<OpResult<ApiHandler>> | undefined;
         const doGetHandler = () => {

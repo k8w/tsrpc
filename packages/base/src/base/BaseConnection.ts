@@ -7,7 +7,7 @@ import { Flow } from "../models/Flow";
 import { Logger } from "../models/Logger";
 import { MsgHandlerUtil } from "../models/MsgHandlerUtil";
 import { OpResultVoid } from "../models/OpResult";
-import { ServiceMap } from "../models/ServiceMapUtil";
+import { ApiMap, ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturn } from "../proto/ApiReturn";
 import { BaseServiceType } from "../proto/BaseServiceType";
@@ -30,6 +30,15 @@ export const PROMISE_ABORTED = new Promise<any>(rs => { });
 export abstract class BaseConnection<ServiceType extends BaseServiceType = any> {
 
     declare ServiceType: ServiceType;
+    /** Which side this connection is belong to */
+    abstract side: 'server' | 'client';
+
+    get localApi(): ApiMap<LocalApiName<this>> {
+        return this.serviceMap.localApi;
+    }
+    get remoteApi(): ApiMap<RemoteApiName<this>> {
+        return this.serviceMap.remoteApi;
+    }
 
     // Options
     logger: Logger;
@@ -83,7 +92,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Server: all shared server flows
      * Client: independent flows
      */
-    abstract flows: BaseConnectionFlows<this, ServiceType>;
+    abstract flows: BaseConnectionFlows<this>;
 
     protected _remoteProtoInfo?: ProtoInfo;
 
@@ -123,7 +132,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @returns return a `ApiReturn`, all error (network error, business error, code exception...) is unified as `TsrpcError`.
      * The promise is never rejected, so you just need to process all error in one place.
      */
-    async callApi<T extends string & keyof ServiceType['api']>(apiName: T, req: ServiceType['api'][T]['req'], options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
+    async callApi<T extends RemoteApiName<this>>(apiName: T, req: RemoteApi<this>[T]['req'], options?: TransportOptions): Promise<ApiReturn<RemoteApi<this>[T]['res']>> {
         // SN & Log
         let sn = this._callApiSn.getNext();
         this.options.logApi && this.logger.log(`[callApi] [#${sn}] ${this.chalk('[Req]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logReqBody ? req : '');
@@ -185,7 +194,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         return ret;
     }
 
-    protected async _doCallApi<T extends string & keyof ServiceType['api']>(serviceName: T, req: ServiceType['api'][T]['req'], pendingItem: PendingCallApiItem, options?: TransportOptions): Promise<ApiReturn<ServiceType['api'][T]['res']>> {
+    protected async _doCallApi<T extends string & keyof RemoteApi<this>>(serviceName: T, req: RemoteApi<this>[T]['req'], pendingItem: PendingCallApiItem, options?: TransportOptions): Promise<ApiReturn<RemoteApi<this>[T]['res']>> {
         // Make TransportData
         let transportData: TransportData = {
             type: 'req',
@@ -334,12 +343,12 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     protected _apiHandlers: Record<string, ApiHandler<this> | undefined>;
 
     /**
-     * Associate a `ApiHandler` to a specific `apiName`.
+     * Register an implementation function for a client-side API.
      * So that when `ApiCall` is receiving, it can be handled correctly.
      * @param apiName
      * @param handler
      */
-    implementApi<Api extends string & keyof ServiceType['api']>(apiName: Api, handler: ApiHandler<any>): void {
+    implementApi<T extends LocalApiName<this>>(apiName: T, handler: ApiHandler<this, T>): void {
         return ApiHandlerUtil.implementApi(this, this._apiHandlers, apiName, handler);
     };
 
@@ -386,7 +395,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // #region Message
 
-    protected _msgHandlers: EventEmitter<{ [K in keyof ServiceType['msg']]: [ServiceType['msg'][K], K, this] }> = new EventEmitter();
+    protected _msgHandlers: MsgEmitter<this> = new EventEmitter();
 
     /**
      * Send message, without response, not ensuring the server is received and processed correctly.
@@ -431,7 +440,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Custom alternative to `this._msgHandlers.emit`
      * For example, do something before or after `emit`
      */
-    protected _emitMsg?: BaseConnection<ServiceType>['_msgHandlers']['emit'];
+    protected _emitMsg?: MsgEmitter<this>['emit'];
     protected async _recvMsg(transportData: TransportData & { type: 'msg' }): Promise<OpResultVoid> {
         this.options.logMsg && this.logger.log(`[RecvMsg]`, transportData.serviceName, transportData.body);
 
@@ -439,7 +448,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         let pre = await this.flows.preRecvMsgFlow.exec({
             conn: this,
             msgName: transportData.serviceName,
-            msg: transportData.body as ServiceType['msg'][keyof ServiceType['msg']]
+            msg: transportData.body as ServiceType['msg'][MsgName<this>]
         }, this.logger);
         if (!pre) {
             return PROMISE_ABORTED;
@@ -891,8 +900,8 @@ export interface PendingCallApiItem {
     onReturn?: (ret: ApiReturn<any>) => void
 }
 
-export type ApiHandler<Conn extends BaseConnection = BaseConnection> = <T extends Conn>(call: ApiCall<any, any, T>) => (void | Promise<void>);
-export type MsgHandler<Conn extends BaseConnection = BaseConnection, MsgName extends keyof Conn['ServiceType']['msg'] = any>
+export type ApiHandler<Conn extends BaseConnection = any, ApiName extends LocalApiName<Conn> = any> = <T extends Conn>(call: ApiCall<LocalApi<Conn>[ApiName]['req'], LocalApi<Conn>[ApiName]['res'], T>) => (void | Promise<void>);
+export type MsgHandler<Conn extends BaseConnection = any, MsgName extends keyof Conn['ServiceType']['msg'] = any>
     = <T extends Conn>(msg: T['ServiceType']['msg'][MsgName], msgName: MsgName, conn: T) => void | Promise<void>;
 
 export enum ConnectionStatus {
@@ -905,10 +914,18 @@ export enum ConnectionStatus {
 export type BaseConnectionDataType = 'text' | 'buffer';
 
 export interface PrivateBaseConnectionOptions {
-    apiHandlers?: BaseConnection['_apiHandlers'],
+    apiHandlers?: BaseConnectionApiHandlers,
     serviceMap: ServiceMap,
     tsbuffer: TSBuffer,
     localProtoInfo: ProtoInfo
 }
 
 export type AutoImplementApiReturn = { succ: string[], fail: { apiName: string, errMsg: string }[], delay: string[] };
+
+export type LocalApi<T extends BaseConnection> = T['side'] extends 'client' ? T['ServiceType']['clientApi'] : T['ServiceType']['api'];
+export type RemoteApi<T extends BaseConnection> = T['side'] extends 'server' ? T['ServiceType']['clientApi'] : T['ServiceType']['api'];
+export type LocalApiName<T extends BaseConnection> = keyof LocalApi<T> & string;
+export type RemoteApiName<T extends BaseConnection> = keyof RemoteApi<T> & string;
+export type MsgName<T extends BaseConnection> = keyof T['ServiceType']['msg'] & string;
+export type BaseConnectionApiHandlers = Record<string, ApiHandler | undefined>;
+export type MsgEmitter<Conn extends BaseConnection> = EventEmitter<{ [K in keyof Conn['ServiceType']['msg']]: [Conn['ServiceType']['msg'][K], K, Conn] }>;
