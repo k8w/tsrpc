@@ -29,11 +29,23 @@ export const PROMISE_ABORTED = new Promise<any>(rs => { });
 export abstract class BaseConnection<ServiceType extends BaseServiceType = any> {
 
     declare $ServiceType: ServiceType;
-    /** Which side this connection is belong to */
-    abstract $Side: 'server' | 'client';
 
-    abstract readonly localName: 'server' | 'client';
-    abstract readonly remoteName: 'server' | 'client';
+    /** Which side this connection is belong to */
+    abstract side: 'server' | 'client';
+
+    sideName(key: 'local' | 'remote' | 'Local' | 'Remote') {
+        const SIDE_NAME = {
+            'client-local': 'client',
+            'client-remote': 'server',
+            'server-local': 'server',
+            'server-remote': 'client',
+            'client-Local': 'Client',
+            'client-Remote': 'Server',
+            'server-Local': 'Server',
+            'server-Remote': 'Client',
+        } as const;
+        return SIDE_NAME[`${this.side}-${key}`];
+    }
 
     // Options
     logger: Logger;
@@ -616,7 +628,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             }
             else {
                 this.logger.error(`[RecvDataErr] Unknown buffer encoding, please check:
-  1. Are you using TSRPC ${this.remoteName} 3.x? (3.x can not communiate with 4.x) Try to upgrade and retry.
+  1. Are you using TSRPC ${this.sideName('Remote')} 3.x? (3.x can not communiate with 4.x) Try to upgrade and retry.
   2. Are you modified the buffer by Flow? Try to disable data flows and retry.`);
             }
 
@@ -909,8 +921,8 @@ export interface PrivateBaseConnectionOptions {
 
 export type AutoImplementApiReturn = { succ: string[], fail: { apiName: string, errMsg: string }[], delay: string[] };
 
-export type LocalApi<T extends BaseConnection> = T['$Side'] extends 'client' ? T['$ServiceType']['clientApi'] : T['$ServiceType']['api'];
-export type RemoteApi<T extends BaseConnection> = T['$Side'] extends 'server' ? T['$ServiceType']['clientApi'] : T['$ServiceType']['api'];
+export type LocalApi<T extends BaseConnection> = T['side'] extends 'client' ? T['$ServiceType']['clientApi'] : T['$ServiceType']['api'];
+export type RemoteApi<T extends BaseConnection> = T['side'] extends 'server' ? T['$ServiceType']['clientApi'] : T['$ServiceType']['api'];
 export type LocalApiName<T extends BaseConnection> = keyof LocalApi<T> & string;
 export type RemoteApiName<T extends BaseConnection> = keyof RemoteApi<T> & string;
 export type MsgName<T extends BaseConnection> = keyof T['$ServiceType']['msg'] & string;
