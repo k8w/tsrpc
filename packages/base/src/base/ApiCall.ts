@@ -3,7 +3,7 @@ import { ApiService } from "../models/ServiceMapUtil";
 import { ApiReturn } from "../proto/ApiReturn";
 import { ProtoInfo, TsrpcErrorData, TsrpcErrorType } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
-import { BaseConnection, PROMISE_ABORTED } from "./BaseConnection";
+import { BaseConnection, ConnectionStatus, PROMISE_ABORTED } from "./BaseConnection";
 
 // 每一次 Api 调用都会生成一个 ApiCall（Server & Client）
 // call.succ & call.error 可用于返回
@@ -122,24 +122,29 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
         }
         ret = this.return = pre.return;
 
-        // Send
-        let op = await this.conn['_sendTransportData']({
-            ...(ret.isSucc ? {
-                type: 'res',
-                body: ret.res,
-                serviceName: this.service.name
-            } : {
-                type: 'err',
-                err: ret.err,
-            }),
-            sn: this.sn,
-            protoInfo: this.protoInfo ? this.conn['_localProtoInfo'] : undefined,
-        }, undefined, this);
-        if (!op.isSucc) {
-            this.logger.error(`[SendReturnErr] ret:`, ret);
-            this.logger.error(`[SendReturnErr]`, op.errMsg);
-            this.return = undefined;
-            return await this._internalError({ message: op.errMsg });
+        // Send (if connected still)
+        if (this.conn.status === ConnectionStatus.Connected) {
+            let op = await this.conn['_sendTransportData']({
+                ...(ret.isSucc ? {
+                    type: 'res',
+                    body: ret.res,
+                    serviceName: this.service.name
+                } : {
+                    type: 'err',
+                    err: ret.err,
+                }),
+                sn: this.sn,
+                protoInfo: this.protoInfo ? this.conn['_localProtoInfo'] : undefined,
+            }, undefined, this);
+            if (!op.isSucc) {
+                this.logger.error(`[SendReturnErr] op.errMsg\n  ret:`, ret);
+
+                // Connection is still alive, resend a internal error
+                if (this.conn.status === ConnectionStatus.Connected && ret.err?.code !== 'INTERNAL_ERR') {
+                    this.return = undefined;
+                    return await this._internalError({ message: op.errMsg });
+                }
+            }
         }
 
         if (ret.isSucc) {
