@@ -6,7 +6,7 @@ import { HttpServer } from './HttpServer';
 import { HttpUtil } from './models/HttpUtil';
 
 export class HttpServerConnection<ServiceType extends BaseServiceType = any> extends BaseServerConnection<ServiceType> {
-    readonly httpReq: IncomingMessage;
+    readonly httpReq: IncomingMessage & { rawBody?: Buffer };
     readonly httpRes: ServerResponse;
     call?: ApiCall;
     transportData?: TransportData;
@@ -55,6 +55,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
         });
         req.on('end', async () => {
             const buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
+            this.httpReq.rawBody = buf;
             const data = this.dataType === 'buffer' ? buf : buf.toString();
             this._recvData(data);
         });

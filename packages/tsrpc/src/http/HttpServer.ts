@@ -2,7 +2,7 @@ import http, { IncomingMessage, ServerResponse } from "http";
 import https from "https";
 import { ApiReturn, BaseConnectionDataType, BaseServiceType, ServiceProto } from "tsrpc-base";
 import { BaseServer, BaseServerOptions } from "tsrpc-base-server";
-import { getClassObjectId } from "../../models/getClassObjectId";
+import { getClassObjectId } from "../models/getClassObjectId";
 import { processUncaughtException } from "../models/processUncaughtException";
 import { TSRPC_VERSION } from "../models/version";
 import { HttpServerConnection } from "./HttpServerConnection";
