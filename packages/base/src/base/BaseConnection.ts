@@ -1,13 +1,12 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiHandlerUtil } from "../models/ApiHandlerUtil";
 import { Chalk } from "../models/Chalk";
 import { Counter } from "../models/Counter";
 import { EventEmitter } from "../models/EventEmitter";
 import { Flow } from "../models/Flow";
 import { Logger } from "../models/Logger";
 import { MsgHandlerUtil } from "../models/MsgHandlerUtil";
-import { OpResultVoid } from "../models/OpResult";
-import { ApiMap, ServiceMap } from "../models/ServiceMapUtil";
+import { OpResult, OpResultVoid } from "../models/OpResult";
+import { ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturn } from "../proto/ApiReturn";
 import { BaseServiceType } from "../proto/BaseServiceType";
@@ -32,6 +31,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     declare $ServiceType: ServiceType;
     /** Which side this connection is belong to */
     abstract $Side: 'server' | 'client';
+
+    abstract readonly localName: 'server' | 'client';
+    abstract readonly remoteName: 'server' | 'client';
 
     // Options
     logger: Logger;
@@ -531,11 +533,13 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      */
     protected abstract _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid>;
 
+    protected async _recvTransportData(transportData: TransportData & { type: 'req' }): Promise<ApiReturn<any>>;
+    protected async _recvTransportData(transportData: TransportData): Promise<OpResultVoid>;
     /**
      * Called by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
-    protected async _recvTransportData(transportData: TransportData): Promise<OpResultVoid> {
+    protected async _recvTransportData(transportData: TransportData): Promise<ApiReturn<any> | OpResultVoid> {
         this.options.debugBuf && this.logger.debug('[debugBuf] [RecvTransportData]', transportData);
 
         // Sync remote protoInfo
@@ -545,7 +549,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         switch (transportData.type) {
             case 'req': {
-                return this._recvApiReq(transportData).then(v => v.isSucc ? v : { isSucc: v.isSucc, errMsg: v.err.message });
+                return this._recvApiReq(transportData);
             }
             case 'res':
             case 'err': {
@@ -569,12 +573,12 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     protected _recvCustom?: (transportData: TransportData & { type: 'custom' }) => void;
 
     /**
-     * 
+     * Decode raw data to `Box`, and then decode box to `TransparentData`, and call `_recvTransparentData`
      * @param data 
      * @param decodeBoxTextOptions Will pass through to TransportUtil.decodeBoxText()
-     * @returns 
+     * @returns If decoded a valid `TransparentData` successfully, return `isSucc: true`, otherwise return `isSucc: false` with a `code: RecvDataErrCode`
      */
-    protected async _recvData(data: string | Uint8Array, ...decodeBoxTextOptions: any[]): Promise<OpResultVoid> {
+    protected async _recvData(data: string | Uint8Array, ...decodeBoxTextOptions: any[]): Promise<OpResult<TransportData>> {
         // Ignore all data if connection is not opened
         if (this.status !== ConnectionStatus.Connected) {
             return PROMISE_ABORTED;
@@ -593,7 +597,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         }
         // Decode by preFlow
         if (pre.decodedData) {
-            return this._recvTransportData(pre.decodedData);
+            this._recvTransportData(pre.decodedData)
+            return { isSucc: true, res: pre.decodedData };
         }
         data = pre.data;
         const dataType = typeof data === 'string' ? 'text' : 'buffer';
@@ -603,35 +608,45 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             ? (this._decodeBoxText ?? TransportDataUtil.decodeBoxText)(data, this._pendingCallApis, this.options.skipDecodeValidate, ...decodeBoxTextOptions)
             : TransportDataUtil.decodeBoxBuffer(data, this._pendingCallApis, this.serviceMap, this.options.skipDecodeValidate);
         if (!opDecodeBox.isSucc) {
-            this.logger.debug(`[DecodeBoxErr] data:`, data, `\nerrMsg=${opDecodeBox.errMsg} dataType=${dataType} dataLength=${data.length}`);
-            this.logger.error(`[DecodeBoxErr] Cannot unbox the received data, you may check below:
-  1. Is the local and remote both TSRPC 4.x? (3.x can not communiate with 4.x)
-  2. Is the data transformed by Flow properly? Try to disable data flows and retry.`);
-            return { isSucc: false, errMsg: `Invalid ${typeof data === 'string' ? 'text' : 'buffer'} data` };
+            this.logger.debug(`[RecvDataErr] dataType=${dataType}, length=${data.length}), data:`, data);
+
+            // Log
+            if (dataType === 'text' || opDecodeBox.errPhase === 'validate') {
+                this.logger.error(`[RecvDataErr] Invalid data format. ${opDecodeBox.errMsg}`);
+            }
+            else {
+                this.logger.error(`[RecvDataErr] Unknown buffer encoding, please check:
+  1. Are you using TSRPC ${this.remoteName} 3.x? (3.x can not communiate with 4.x) Try to upgrade and retry.
+  2. Are you modified the buffer by Flow? Try to disable data flows and retry.`);
+            }
+
+            return { isSucc: false, errMsg: opDecodeBox.errMsg, code: RecvDataErrCode.DecodeBoxErr };
         }
 
         return this._recvBox(opDecodeBox.res, dataType);
     };
 
-    protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResultVoid> {
+    /**
+     * Decode box to `TransparentData`, and call `_recvTransparentData`
+     * @param box 
+     * @param dataType 
+     * @returns If decoded a valid `TransparentData` successfully, return `isSucc: true`, otherwise return `isSucc: false` with a `code: RecvDataErrCode`
+     */
+    protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResult<TransportData>> {
         // Decode body
         const opDecodeBody = dataType === 'text'
             ? TransportDataUtil.decodeBodyText(box as BoxTextDecoding, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)
             : TransportDataUtil.decodeBodyBuffer(box as BoxBuffer, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)
         if (!opDecodeBody.isSucc) {
             // Only req res msg would fail
-            const flag = box.type === 'req' ? '[DecodeReqErr]' : box.type === 'res' ? '[DecodeResErr]' : box.type === 'msg' ? '[DecodeMsgErr]' : '[DecodeBodyErr]';
-            this.options.debugBuf && this.logger.debug(`${flag} box:`, box, 'errMsg:', opDecodeBody.errMsg);
+            this.options.debugBuf && this.logger.debug(`[DecodeBodyErr] box:`, box, 'errMsg:', opDecodeBody.errMsg);
 
             // If serviceProto not match, logger.error it
-            let isProtoNotSynced = false;
+            let protoNotSyncedInfo: string | undefined;
             if ('protoInfo' in box && box.protoInfo) {
                 const remoteProtoInfo = box.protoInfo as ProtoInfo;
                 if (remoteProtoInfo.md5 !== this._localProtoInfo.md5) {
-                    isProtoNotSynced = true;
-
                     const isLocalNewer = this._localProtoInfo.lastModified > remoteProtoInfo.lastModified;
-
                     // Align log content by tail space
                     const local = `Local${isLocalNewer ? this.chalk(' (newer)', ['info']) : this.chalk(' (outdated)', ['warn'])}`;
                     const remote = `Remote${isLocalNewer ? this.chalk(' (outdated)', ['warn']) : this.chalk(' (newer)', ['info'])}`;
@@ -639,29 +654,35 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                     const localTailSpace = ' '.repeat(maxLength - local.length);
                     const remoteTailSpace = ' '.repeat(maxLength - remote.length);
 
-                    this.logger.error(`${flag} The serviceProto is not synced between the local and remote, please resync it.
-  - ${local}${localTailSpace}  lastModified=${this.chalk(new Date(this._localProtoInfo.lastModified).format(), ['debug'])}  md5=${this._localProtoInfo.md5}
-  - ${remote}${remoteTailSpace}  lastModified=${this.chalk(new Date(remoteProtoInfo.lastModified).format(), ['debug'])}  md5=${remoteProtoInfo.md5}`)
+                    protoNotSyncedInfo = `  - ${local}${localTailSpace}  lastModified=${this.chalk(new Date(this._localProtoInfo.lastModified).format(), ['debug'])}  md5=${this._localProtoInfo.md5}
+  - ${remote}${remoteTailSpace}  lastModified=${this.chalk(new Date(remoteProtoInfo.lastModified).format(), ['debug'])}  md5=${remoteProtoInfo.md5}`;
                 }
             }
 
             // Log and return error reason
-            let errReason: string, logReason: string | undefined;
+            let errReason: string, logReason: string, errCode: RecvDataErrCode = RecvDataErrCode.DecodeBodyErr;
             // Text (JSON) or errPhase==validate, errMsg is useful, log it.
-            if (dataType === 'text' || opDecodeBody.errPhase === 'validate') {
+            if (opDecodeBody.errPhase === 'validate') {
                 errReason = opDecodeBody.errMsg;
+                logReason = `[RecvTypeErr] ${errReason}`;
+                errCode = RecvDataErrCode.ValidateBodyErr;
             }
-            else if (isProtoNotSynced) {
-                errReason = 'The serviceProto is not synced, decode buffer failed.'
+            else if (dataType === 'text') {
+                errReason = opDecodeBody.errMsg;
+                logReason = `[RecvDataErr] ${errReason}`;
+            }
+            else if (protoNotSyncedInfo) {
+                errReason = 'Cannot decode body from the data, because the serviceProto is different between the local and remote.'
+                logReason = `[RecvDataErr] ${errReason}\n${protoNotSyncedInfo}`
             }
             // Buffer && errPhase==decode, log a human readable message
             else {
-                errReason = 'Decode buffer failed, please check the serviceProto and Flow.'
-                logReason = `Decode buffer failed, you may check below:
+                errReason = 'Cannot decode body from the data, the box encoding is valid, but the body encoding is unknown.'
+                logReason = `[RecvDataErr] ${errReason} please check:
   1. Is the serviceProto the same between the local and remote? (Check field 'md5')
-  2. Is the buffer changed by Flow? Try to disable data flows and retry.`;
+  2. Is the buffer modified by Flow? Try to disable data flows and retry.`;
             }
-            this.logger.error(`${flag} ${logReason || errReason}`);
+            this.logger.error(logReason);
 
             // req: send err
             if (box.type === 'req') {
@@ -686,10 +707,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 })
             }
 
-            return { isSucc: false, errMsg: errReason };
+            return { isSucc: false, errMsg: errReason, code: errCode };
         }
 
-        return this._recvTransportData(opDecodeBody.res);
+        this._recvTransportData(opDecodeBody.res)
+        return { isSucc: true, res: opDecodeBody.res };
     }
     // #endregion
 
@@ -894,3 +916,9 @@ export type RemoteApiName<T extends BaseConnection> = keyof RemoteApi<T> & strin
 export type MsgName<T extends BaseConnection> = keyof T['$ServiceType']['msg'] & string;
 export type BaseConnectionApiHandlers = Record<string, ApiHandler | undefined>;
 export type MsgEmitter<Conn extends BaseConnection> = EventEmitter<{ [K in keyof Conn['$ServiceType']['msg']]: [Conn['$ServiceType']['msg'][K], K, Conn] }>;
+
+export enum RecvDataErrCode {
+    DecodeBoxErr = 'DecodeBoxErr',
+    DecodeBodyErr = 'DecodeBodyErr',
+    ValidateBodyErr = 'ValidateBodyErr',
+}

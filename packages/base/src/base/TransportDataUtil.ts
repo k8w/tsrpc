@@ -158,7 +158,12 @@ export class TransportDataUtil {
 
     static decodeBoxBuffer(data: Uint8Array, pendingCallApis: Map<number, { apiName: string }>, serviceMap: ServiceMap, skipValidate: boolean | undefined): OpResult<BoxBuffer> {
         let op = this.tsbuffer.decode(data, 'BoxBuffer', { skipValidate });
-        if (!op.isSucc) { return op }
+        if (!op.isSucc) {
+            if (op.errPhase !== 'validate') {
+                op.errMsg = 'Unknown buffer encoding'
+            }
+            return op
+        }
 
         let box = op.value as BoxBuffer;
         if (box.type === 'res') {
@@ -183,7 +188,10 @@ export class TransportDataUtil {
         if (!skipValidate) {
             let vRes = this.tsbuffer.validate(box, 'BoxJsonObject');
             if (!vRes.isSucc) {
-                return vRes;
+                return {
+                    ...vRes,
+                    errPhase: 'validate'
+                };
             }
         }
 
