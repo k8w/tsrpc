@@ -1,4 +1,4 @@
-import { ApiReturn, BaseServiceType, BoxTextEncoding, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceProto, TransportData, TransportDataUtil, TransportOptions, TsrpcError, TsrpcErrorType } from "tsrpc-base";
+import { ApiReturn, BaseServiceType, BoxTextEncoding, OpResult, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceProto, TransportData, TransportDataUtil, TransportOptions, TsrpcError, TsrpcErrorType } from "tsrpc-base";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../base/BaseClient";
 import { BaseHttpClientTransport } from "./BaseHttpClientTransport";
 
@@ -70,7 +70,7 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
     }
 
     // #region Override text encode options
-    declare protected _recvData: (data: string | Uint8Array, reqSn: number, resHeaders: Record<string, string> | undefined) => Promise<OpResultVoid>;
+    declare protected _recvData: (data: string | Uint8Array, reqSn: number, resHeaders: Record<string, string> | undefined) => Promise<OpResult<TransportData>>;
 
     protected override _encodeSkipSN = true;
 

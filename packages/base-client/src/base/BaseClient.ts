@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiHandler, ApiHandlerUtil, AutoImplementApiReturn, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, defaultBaseConnectionOptions, Flow, getCustomObjectIdTypes, LocalApiName, LogLevel, ProtoInfo, SendDataFlow, ServiceMapUtil, ServiceProto, setLogLevel } from "tsrpc-base";
+import { ApiHandler, ApiHandlerUtil, AutoImplementApiReturn, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, defaultBaseConnectionOptions, Flow, getCustomObjectIdTypes, LocalApiName, LogLevel, ProtoInfo, ServiceMapUtil, ServiceProto, setLogLevel } from "tsrpc-base";
 import { BaseClientFlows } from "./BaseClientFlows";
 
 /**
@@ -18,7 +18,7 @@ import { BaseClientFlows } from "./BaseClientFlows";
  */
 export abstract class BaseClient<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
-    declare $Side: 'client';
+    side: 'client' = 'client';
 
     declare readonly options: BaseClientOptions;
 

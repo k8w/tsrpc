@@ -1,10 +1,10 @@
 import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
-import { BaseServer } from "./BaseServer";
+import { BaseServer, ServerStatus } from "./BaseServer";
 import { BaseServerFlows } from "./BaseServerFlows";
 
 export abstract class BaseServerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
 
-    declare $Side: 'server';
+    side: 'server' = 'server';
     declare options: this['server']['options'];
 
     readonly id: number;
