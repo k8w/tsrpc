@@ -27,18 +27,18 @@
   },
   "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base#readme",
   "dependencies": {
-    "tsbuffer": "2.2.5",
-    "tsrpc-proto": "^4.0.0-dev.0"
+    "tsbuffer": "2.2.7",
+    "tsrpc-proto": "workspace:^4.0.0-dev.0"
   },
   "devDependencies": {
     "k8w-extend-native": "^1.4.6",
-    "rollup": "^2.75.6",
-    "rollup-plugin-dts": "^4.2.2",
-    "rollup-plugin-typescript2": "^0.32.1",
+    "rollup": "^2.79.1",
+    "rollup-plugin-dts": "^4.2.3",
+    "rollup-plugin-typescript2": "^0.34.1",
     "tsbuffer-schema": "^2.2.0",
-    "tsbuffer-validator": "^2.1.0",
-    "tslib": "^2.4.0",
-    "typescript": "^4.7.3"
+    "tsbuffer-validator": "^2.1.1",
+    "tslib": "^2.4.1",
+    "typescript": "^4.9.3"
   },
   "peerDependencies": {
     "k8w-extend-native": "^1.4.6",
