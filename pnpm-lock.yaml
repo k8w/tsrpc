@@ -11,27 +11,27 @@ importers:
   packages/base:
     specifiers:
       k8w-extend-native: ^1.4.6
-      rollup: ^2.75.6
-      rollup-plugin-dts: ^4.2.2
-      rollup-plugin-typescript2: ^0.32.1
-      tsbuffer: 2.2.5
+      rollup: ^2.79.1
+      rollup-plugin-dts: ^4.2.3
+      rollup-plugin-typescript2: ^0.34.1
+      tsbuffer: 2.2.7
       tsbuffer-schema: ^2.2.0
-      tsbuffer-validator: ^2.1.0
-      tslib: ^2.4.0
-      tsrpc-proto: ^4.0.0-dev.0
-      typescript: ^4.7.3
+      tsbuffer-validator: ^2.1.1
+      tslib: ^2.4.1
+      tsrpc-proto: workspace:^4.0.0-dev.0
+      typescript: ^4.9.3
     dependencies:
-      tsbuffer: 2.2.5
+      tsbuffer: 2.2.7
       tsrpc-proto: link:../proto
     devDependencies:
       k8w-extend-native: 1.4.6
-      rollup: 2.79.0
-      rollup-plugin-dts: 4.2.2_ihkqvyh37tzxtjmovjyy2yrv7m
-      rollup-plugin-typescript2: 0.32.1_ihkqvyh37tzxtjmovjyy2yrv7m
+      rollup: 2.79.1
+      rollup-plugin-dts: 4.2.3_k35zwyycrckt5xfsejji7kbwn4
+      rollup-plugin-typescript2: 0.34.1_k35zwyycrckt5xfsejji7kbwn4
       tsbuffer-schema: 2.2.0
-      tsbuffer-validator: 2.1.0
-      tslib: 2.4.0
-      typescript: 4.8.3
+      tsbuffer-validator: 2.1.1
+      tslib: 2.4.1
+      typescript: 4.9.3
 
   packages/base-client:
     specifiers:
@@ -132,6 +132,7 @@ packages:
   /@babel/code-frame/7.18.6:
     resolution: {integrity: sha512-TDCmlK5eOvH+eH7cdAFlNXeVJqWIQ7gW9tY1GJIpUtFb6CmjVyq2VM3u71bOyR8CRihcCgMUYoDNyLXao3+70Q==}
     engines: {node: '>=6.9.0'}
+    requiresBuild: true
     dependencies:
       '@babel/highlight': 7.18.6
     dev: true
@@ -2560,6 +2561,12 @@ packages:
       has: 1.0.3
     dev: true
 
+  /is-core-module/2.11.0:
+    resolution: {integrity: sha512-RRjxlvLDkD1YJwDbroBHMb+cukurkDWNyHx7D3oNB5x9rb5ogcksMC5wHCadcXoo67gVr/+3GFySh3134zi6rw==}
+    dependencies:
+      has: 1.0.3
+    dev: true
+
   /is-docker/2.2.1:
     resolution: {integrity: sha512-F+i2BKsFrH66iaUFc0woD8sLy8getkwTwtOBjvs56Cx4CgJDeKQeqfz8wAYiSb8JOprWhHH5p77PbmYCvvUuXQ==}
     engines: {node: '>=8'}
@@ -2878,15 +2885,15 @@ packages:
     engines: {node: '>=12'}
     dev: true
 
-  /magic-string/0.26.3:
-    resolution: {integrity: sha512-u1Po0NDyFcwdg2nzHT88wSK0+Rih0N1M+Ph1Sp08k8yvFFU3KR72wryS7e1qMPJypt99WB7fIFVCA92mQrMjrg==}
+  /magic-string/0.26.6:
+    resolution: {integrity: sha512-6d+3bFybzyQFJYSoRsl9ZC0wheze8M1LrQC7tNMRqXR4izUTDOLMd9BtSuExK9iAukFh+s5K0WAhc/dlQ+HKYA==}
     engines: {node: '>=12'}
     dependencies:
       sourcemap-codec: 1.4.8
     dev: true
 
-  /magic-string/0.26.6:
-    resolution: {integrity: sha512-6d+3bFybzyQFJYSoRsl9ZC0wheze8M1LrQC7tNMRqXR4izUTDOLMd9BtSuExK9iAukFh+s5K0WAhc/dlQ+HKYA==}
+  /magic-string/0.26.7:
+    resolution: {integrity: sha512-hX9XH3ziStPoPhJxLq1syWuZMxbDvGNbVchfrdCtanC7D13888bMFow61x8axrx+GfHLtVeAx2kxL7tTGRl+Ow==}
     engines: {node: '>=12'}
     dependencies:
       sourcemap-codec: 1.4.8
@@ -3846,7 +3853,7 @@ packages:
     resolution: {integrity: sha512-nBpuuYuY5jFsli/JIs1oldw6fOQCBioohqWZg/2hiaOybXOft4lonv85uDOKXdf8rhyK159cxU5cDcK/NKk8zw==}
     hasBin: true
     dependencies:
-      is-core-module: 2.10.0
+      is-core-module: 2.11.0
       path-parse: 1.0.7
       supports-preserve-symlinks-flag: 1.0.0
     dev: true
@@ -3890,16 +3897,16 @@ packages:
       '@babel/code-frame': 7.18.6
     dev: true
 
-  /rollup-plugin-dts/4.2.2_ihkqvyh37tzxtjmovjyy2yrv7m:
-    resolution: {integrity: sha512-A3g6Rogyko/PXeKoUlkjxkP++8UDVpgA7C+Tdl77Xj4fgEaIjPSnxRmR53EzvoYy97VMVwLAOcWJudaVAuxneQ==}
-    engines: {node: '>=v12.22.11'}
+  /rollup-plugin-dts/4.2.3_k35zwyycrckt5xfsejji7kbwn4:
+    resolution: {integrity: sha512-jlcpItqM2efqfIiKzDB/IKOS9E9fDvbkJSGw5GtK/PqPGS9eC3R3JKyw2VvpTktZA+TNgJRMu1NTv244aTUzzQ==}
+    engines: {node: '>=v12.22.12'}
     peerDependencies:
       rollup: ^2.55
       typescript: ^4.1
     dependencies:
-      magic-string: 0.26.3
-      rollup: 2.79.0
-      typescript: 4.8.3
+      magic-string: 0.26.7
+      rollup: 2.79.1
+      typescript: 4.9.3
     optionalDependencies:
       '@babel/code-frame': 7.18.6
     dev: true
@@ -3919,8 +3926,8 @@ packages:
       typescript: 4.8.4
     dev: true
 
-  /rollup-plugin-typescript2/0.32.1_ihkqvyh37tzxtjmovjyy2yrv7m:
-    resolution: {integrity: sha512-RanO8bp1WbeMv0bVlgcbsFNCn+Y3rX7wF97SQLDxf0fMLsg0B/QFF005t4AsGUcDgF3aKJHoqt4JF2xVaABeKw==}
+  /rollup-plugin-typescript2/0.34.1_k35zwyycrckt5xfsejji7kbwn4:
+    resolution: {integrity: sha512-P4cHLtGikESmqi1CA+tdMDUv8WbQV48mzPYt77TSTOPJpERyZ9TXdDgjSDix8Fkqce6soYz3+fa4lrC93IEkcw==}
     peerDependencies:
       rollup: '>=1.26.3'
       typescript: '>=2.4.0'
@@ -3928,18 +3935,10 @@ packages:
       '@rollup/pluginutils': 4.2.1
       find-cache-dir: 3.3.2
       fs-extra: 10.1.0
-      resolve: 1.22.1
-      rollup: 2.79.0
-      tslib: 2.4.0
-      typescript: 4.8.3
-    dev: true
-
-  /rollup/2.79.0:
-    resolution: {integrity: sha512-x4KsrCgwQ7ZJPcFA/SUu6QVcYlO7uRLfLAy0DSA4NS2eG8japdbpM50ToH7z4iObodRYOJ0soneF0iaQRJ6zhA==}
-    engines: {node: '>=10.0.0'}
-    hasBin: true
-    optionalDependencies:
-      fsevents: 2.3.2
+      rollup: 2.79.1
+      semver: 7.3.8
+      tslib: 2.4.1
+      typescript: 4.9.3
     dev: true
 
   /rollup/2.79.1:
@@ -3999,6 +3998,14 @@ packages:
 
   /semver/7.3.7:
     resolution: {integrity: sha512-QlYTucUYOews+WeEujDoEGziz4K6c47V/Bd+LjSSYcA94p+DmINdf7ncaUinThfvZyu13lN9OY1XDxt8C0Tw0g==}
+    engines: {node: '>=10'}
+    hasBin: true
+    dependencies:
+      lru-cache: 6.0.0
+    dev: true
+
+  /semver/7.3.8:
+    resolution: {integrity: sha512-NB1ctGL5rlHrPJtFDVIVzTyQylMLu9N9VICA6HSFJo8MCGVTMW6gfpicwKmmK/dAjTOrqu5l63JJOpDSrAis3A==}
     engines: {node: '>=10'}
     hasBin: true
     dependencies:
@@ -4323,27 +4330,28 @@ packages:
   /tsbuffer-schema/2.2.0:
     resolution: {integrity: sha512-I4+5Xfk7G+D++kXdNnYTeY26WQTaf14C84XQwPKteNmrwxRY3CQCkMqASRiCUqtpOuDn43qmoxuXpT+Vo8Wltg==}
 
-  /tsbuffer-validator/2.1.0:
-    resolution: {integrity: sha512-pI4qqKVVFWOF8nF7wGGT+WzNnOMOb1skhSjigtKiWOzkpVhoiOvyPJamFQvc0MVbhoGTySuVUzp3KFclo4lVxw==}
-    dependencies:
-      k8w-extend-native: 1.4.6
-      tsbuffer-schema: 2.2.0
-      tslib: 2.4.0
-    dev: true
-
   /tsbuffer-validator/2.1.1:
     resolution: {integrity: sha512-12JVltPQjv2hZqfd9TZhTjCyQ0bvtRlTXyczOAaH+CnryWI9Twt0i9ZGaM5fb2QMxW5BOhToOIbwO8opDqpCEg==}
     dependencies:
       k8w-extend-native: 1.4.6
       tsbuffer-schema: 2.2.0
-      tslib: 2.4.0
+      tslib: 2.4.1
 
   /tsbuffer/2.2.5:
     resolution: {integrity: sha512-QqSpiL4eq0EJq6yXL8F7oHBXE5Mu7BjtlXIwtqYRrMy7k+nPLnnV8vOSDwJOQ/kmei9B2846cD9xw+A1QLPk4Q==}
     dependencies:
       k8w-extend-native: 1.4.6
       tsbuffer-validator: 2.1.1
-      tslib: 2.4.0
+      tslib: 2.4.1
+    dev: true
+
+  /tsbuffer/2.2.7:
+    resolution: {integrity: sha512-WkP6NU14W14Kxa+OtccJ4m9+nY8UZs/DlM3FQzxstBkNGzmNvggN3+2mfIzYO8YDKu6mqYUXgpNg1aqIYcUACw==}
+    dependencies:
+      k8w-extend-native: 1.4.6
+      tsbuffer-validator: 2.1.1
+      tslib: 2.4.1
+    dev: false
 
   /tsconfig-paths/3.14.1:
     resolution: {integrity: sha512-fxDhWnFSLt3VuTwtvJt5fpwxBHg5AdKWMsgcPOOIilyjymcYVZoCQF8fvFRezCNfblEXmi+PcM1eYHeOAgXCOQ==}
@@ -4356,6 +4364,10 @@ packages:
 
   /tslib/2.4.0:
     resolution: {integrity: sha512-d6xOpEDfsi2CZVlPQzGeux8XMwLT9hssAsaPYExaQMuYskwb+x1x7J371tWlbBdWHroy99KnVB6qIkUbs5X3UQ==}
+    dev: true
+
+  /tslib/2.4.1:
+    resolution: {integrity: sha512-tGyy4dAjRIEwI7BzsB0lynWgOpfqjUdq91XXAlIWD2OwKBH7oCl/GZG/HT4BOHrTlPMOASlMQ7veyTqpmRcrNA==}
 
   /type-fest/0.18.1:
     resolution: {integrity: sha512-OIAYXk8+ISY+qTOwkHtKqzAuxchoMiD9Udx+FSGQDuiRR+PJKJHc2NJAXlbhkGwTt/4/nKZxELY1w3ReWOL8mw==}
@@ -4400,6 +4412,12 @@ packages:
 
   /typescript/4.8.4:
     resolution: {integrity: sha512-QCh+85mCy+h0IGff8r5XWzOVSbBO+KfeYrMQh7NJ58QujwcE22u+NUSmUxqF+un70P9GXKxa2HCNiTTMJknyjQ==}
+    engines: {node: '>=4.2.0'}
+    hasBin: true
+    dev: true
+
+  /typescript/4.9.3:
+    resolution: {integrity: sha512-CIfGzTelbKNEnLpLdGFgdyKhG23CKdKgQPOBc+OUNrkJ2vr+KSzsSV5kq5iWhEQbok+quxgGzrAtGWCyU7tHnA==}
     engines: {node: '>=4.2.0'}
     hasBin: true
     dev: true
