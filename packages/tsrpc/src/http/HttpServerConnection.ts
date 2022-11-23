@@ -134,7 +134,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
 
     protected override async _recvTransportData(transportData: TransportData): Promise<void> {
         this.transportData = transportData;
-        if (transportData.type !== 'req') {
+        if (transportData.type !== 'req' && transportData.type !== 'custom') {
             this.httpRes.end();
         }
         return super._recvTransportData(transportData);
@@ -148,8 +148,8 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
     }
 
     /**
-     * HttpServerConnection would transport serviceName in URL, and transport protoInfo in headers.
-     * So it isn't that every info is stored in the body, so it need to customized the decode box text method.
+     * HttpServerConnection would transport serviceName by URL, and transport protoInfo by headers.
+     * So it isn't that every field of Box is stored in the HTTP body, so it need to customized the decode box text method.
      */
     protected override _decodeBoxText: (typeof TransportDataUtil)['decodeBoxText'] = (data, pendingCallApis, skipValidate) => {
         let op = this._doDecodeBoxText(data);
@@ -208,9 +208,12 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
             body = JSON.parse(data);
         }
         catch (e) {
+            if (this.flows.preRecvDataFlow.nodes.length) {
+                this.logger.warn('Cannot parse the request data to JSON. You are using "preRecvDataFlow", please check whether it transformed the data properly.', e)
+            }
             return {
                 isSucc: false,
-                errMsg: `Request body is not a valid JSON.${this.flows.preRecvDataFlow.nodes.length ? ' You are using "preRecvDataFlow", please check whether it transformed the data properly.' : ''}\n  |- ${e}`
+                errMsg: `Request body is not a valid JSON.`
             };
         }
 
