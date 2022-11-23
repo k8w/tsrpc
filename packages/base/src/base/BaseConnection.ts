@@ -5,7 +5,7 @@ import { EventEmitter } from "../models/EventEmitter";
 import { Flow } from "../models/Flow";
 import { Logger } from "../models/Logger";
 import { MsgHandlerUtil } from "../models/MsgHandlerUtil";
-import { OpResult, OpResultVoid } from "../models/OpResult";
+import { OpResultVoid } from "../models/OpResult";
 import { ServiceMap } from "../models/ServiceMapUtil";
 import { TransportOptions } from "../models/TransportOptions";
 import { ApiReturn } from "../proto/ApiReturn";
@@ -269,6 +269,12 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     }
 
     protected async _recvApiReturn(transportData: TransportData & { type: 'res' | 'err' }): Promise<void> {
+        // err.sn===0 means this is a error that remote cannot decode the data
+        if (transportData.type === 'err' && !transportData.sn) {
+            this.logger.error(this.chalk(`[${this.sideName('Remote')}Err]`, ['error']), transportData.err, transportData.protoInfo);
+            return;
+        }
+
         // Parse PendingCallApiItem
         const item = this._pendingCallApis.get(transportData.sn);
         if (!item) {
@@ -581,12 +587,12 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     protected _recvCustom?: (transportData: TransportData & { type: 'custom' }) => void;
 
     /**
-     * Decode raw data to `Box`, and then decode box to `TransparentData`, and call `_recvTransparentData`
+     * Decode raw data to `Box`, and then call `_recvBox`
      * @param data 
      * @param decodeBoxTextOptions Will pass through to TransportUtil.decodeBoxText()
-     * @returns If decoded a valid `TransparentData` successfully, return `isSucc: true`, otherwise return `isSucc: false` with a `code: RecvDataErrCode`
+     * @returns If a valid Box is decoded, return `isSucc: true`, otherwise return `isSucc: false`
      */
-    protected async _recvData(data: string | Uint8Array, ...decodeBoxTextOptions: any[]): Promise<OpResult<TransportData>> {
+    protected async _recvData(data: string | Uint8Array, ...decodeBoxTextOptions: any[]): Promise<OpResultVoid> {
         // Ignore all data if connection is not opened
         if (this.status !== ConnectionStatus.Connected) {
             return PROMISE_ABORTED;
@@ -606,7 +612,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Decode by preFlow
         if (pre.decodedData) {
             this._recvTransportData(pre.decodedData)
-            return { isSucc: true, res: pre.decodedData };
+            return { isSucc: true };
         }
         data = pre.data;
         const dataType = typeof data === 'string' ? 'text' : 'buffer';
@@ -628,31 +634,30 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
   2. Are you modified the buffer by Flow? Try to disable data flows and retry.`);
             }
 
-            // TODO
             // Send error with SN=0
-            // this._sendTransportData({
-            //     type: 'err',
-            //     sn: 0,
-            //     err: new TsrpcError(opDecodeBox.errMsg, {
-            //         // TODO RemoteError 根据 side 决定
-            //         type: TsrpcErrorType.RemoteError
-            //     }),
-            //     protoInfo: this._localProtoInfo
-            // });
+            this._sendTransportData({
+                type: 'err',
+                sn: 0,
+                err: new TsrpcError(opDecodeBox.errMsg, {
+                    type: TsrpcErrorType.RemoteError
+                }),
+                protoInfo: this._localProtoInfo
+            });
 
-            return { isSucc: false, errMsg: opDecodeBox.errMsg, code: RecvDataErrCode.DecodeBoxErr };
+            return { isSucc: false, errMsg: opDecodeBox.errMsg };
         }
 
-        return this._recvBox(opDecodeBox.res, dataType);
+        this._recvBox(opDecodeBox.res, dataType);
+        return { isSucc: true }
     };
 
     /**
      * Decode box to `TransparentData`, and call `_recvTransparentData`
      * @param box 
      * @param dataType 
-     * @returns If decoded a valid `TransparentData` successfully, return `isSucc: true`, otherwise return `isSucc: false` with a `code: RecvDataErrCode`
+     * @returns If a valid `TransparentData` is decoded, return `isSucc: true`, otherwise return `isSucc: false`
      */
-    protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResult<TransportData>> {
+    protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResultVoid> {
         // Decode body
         const opDecodeBody = dataType === 'text'
             ? TransportDataUtil.decodeBodyText(box as BoxTextDecoding, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)
@@ -680,12 +685,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             }
 
             // Log and return error reason
-            let errReason: string, logReason: string, errCode: RecvDataErrCode = RecvDataErrCode.DecodeBodyErr;
+            let errReason: string, logReason: string;
             // Text (JSON) or errPhase==validate, errMsg is useful, log it.
             if (opDecodeBody.errPhase === 'validate') {
                 errReason = opDecodeBody.errMsg;
                 logReason = `[RecvTypeErr] ${errReason}`;
-                errCode = RecvDataErrCode.ValidateBodyErr;
             }
             else if (dataType === 'text') {
                 errReason = opDecodeBody.errMsg;
@@ -728,11 +732,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 })
             }
 
-            return { isSucc: false, errMsg: errReason, code: errCode };
+            return { isSucc: false, errMsg: errReason };
         }
 
         this._recvTransportData(opDecodeBody.res)
-        return { isSucc: true, res: opDecodeBody.res };
+        return { isSucc: true };
     }
     // #endregion
 
@@ -939,9 +943,3 @@ export type RemoteApiName<T extends BaseConnection> = keyof RemoteApi<T> & strin
 export type MsgName<T extends BaseConnection> = keyof T['$ServiceType']['msg'] & string;
 export type BaseConnectionApiHandlers = Record<string, ApiHandler | undefined>;
 export type MsgEmitter<Conn extends BaseConnection> = EventEmitter<{ [K in keyof Conn['$ServiceType']['msg']]: [Conn['$ServiceType']['msg'][K], K, Conn] }>;
-
-export enum RecvDataErrCode {
-    DecodeBoxErr = 'DecodeBoxErr',
-    DecodeBodyErr = 'DecodeBodyErr',
-    ValidateBodyErr = 'ValidateBodyErr',
-}

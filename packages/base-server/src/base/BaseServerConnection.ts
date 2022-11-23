@@ -1,4 +1,4 @@
-import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, OpResult, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
+import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, OpResult, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
 import { BaseServer } from "./BaseServer";
 import { BaseServerFlows } from "./BaseServerFlows";
 
@@ -38,7 +38,7 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
     }
 
     // Server may disable JSON transport
-    protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResult<TransportData>> {
+    protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResultVoid> {
         if (dataType === 'text' && !this.server.options.json) {
             if (box.type === 'req') {
                 this._sendTransportData({

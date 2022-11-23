@@ -22,6 +22,7 @@ export type TransportDataSchema = {
     /** API Return */
     type: 'err',
     err: TsrpcErrorData,
+    /** sn=0 means this is a universal error (e.g. Unknown buffer encoding) */
     sn: uint,
     /** Exchange proto info if get a 'protoInfo' request header */
     protoInfo?: ProtoInfo,

@@ -159,7 +159,10 @@ export class TransportDataUtil {
     static decodeBoxBuffer(data: Uint8Array, pendingCallApis: Map<number, { apiName: string }>, serviceMap: ServiceMap, skipValidate: boolean | undefined): OpResult<BoxBuffer> {
         let op = this.tsbuffer.decode(data, 'BoxBuffer', { skipValidate });
         if (!op.isSucc) {
-            if (op.errPhase !== 'validate') {
+            if (op.errPhase === 'validate') {
+                op.errMsg = 'Invalid box format. ' + op.errMsg;
+            }
+            else {
                 op.errMsg = 'Unknown buffer encoding'
             }
             return op

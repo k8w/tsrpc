@@ -10,7 +10,7 @@ import { HttpServerConnection } from "./HttpServerConnection";
 export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<ServiceType>{
 
     declare options: HttpServerOptions;
-    declare Conn: HttpServerConnection<ServiceType>;
+    declare $Conn: HttpServerConnection<ServiceType>;
 
     constructor(serviceProto: ServiceProto, options: HttpServerOptions) {
         super(serviceProto, options, {

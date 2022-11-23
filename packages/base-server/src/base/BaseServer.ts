@@ -11,7 +11,7 @@ import { BaseServerFlows } from "./BaseServerFlows";
 export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn extends BaseServerConnection<ServiceType> = BaseServerConnection<ServiceType>>{
 
     declare ServiceType: ServiceType;
-    declare Conn: Conn;
+    declare $Conn: Conn;
 
     flows: BaseServerFlows<Conn> = {
         postConnectFlow: new Flow(),

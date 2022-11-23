@@ -1,6 +1,6 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { ApiCall, ApiReturn, ApiService, BaseConnection, BaseServiceType, BoxTextDecoding, BoxTextEncoding, MsgService, OpResult, OpResultVoid, ProtoInfo, TransportData, TransportDataUtil, TransportOptions, TsrpcError, TsrpcErrorType } from "tsrpc-base";
-import { BaseServerConnection } from "tsrpc-base-server";
+import { BaseServerConnection, ServerStatus } from "tsrpc-base-server";
 import { TSRPC_VERSION } from '../models/version';
 import { HttpServer } from './HttpServer';
 import { HttpUtil } from './models/HttpUtil';
@@ -23,7 +23,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
         const res = this.httpRes = privateOptions.httpRes;
 
         // Header
-        res.statusCode = 200;
+        this.httpRes.statusCode = 200;
         res.setHeader('X-Powered-By', `TSRPC ${TSRPC_VERSION}`);
 
         // CORS
@@ -73,7 +73,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
             }
             // 异常断开：Client 未正常 end
             else if (!this.httpReq.readableEnded) {
-                this.logger.warn('Socket closed before request end', {
+                this.logger.warn('Socket closed before request end normally', {
                     url: this.httpReq.url,
                     method: this.httpReq.method,
                     ip: this.ip,
@@ -83,7 +83,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
                     headers: this.httpReq.headers
                 });
                 isManual = false;
-                reason = 'Socket closed before request end';
+                reason = 'Socket closed before request end normally';
             }
             // 异常断开：直到连接关闭，也未调用过 httpRes.end 方法
             else if (!this.httpRes.writableEnded) {
@@ -98,13 +98,23 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
 
             this._disconnect(isManual, reason);
         });
+
+        if (this.server.status !== ServerStatus.Started) {
+            this.httpRes.statusCode = 503;
+            this.httpRes.end();
+        }
     }
 
     protected async _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid> {
+        if (this.httpRes.writable) {
+            return { isSucc: false, errMsg: 'Response is not writable, you may sended response before.' };
+        }
+
         return new Promise<OpResultVoid>(rs => {
-            if (typeof data === 'string') {
-                this.httpRes.setHeader('Content-Type', 'application/json; charset=utf-8');
+            if (transportData.type === 'err' && transportData.err.type !== TsrpcErrorType.ApiError) {
+                this.httpRes.statusCode = 500;
             }
+            this.httpRes.setHeader('Content-Type', typeof data === 'string' ? 'application/json; charset=utf-8' : 'application/octet-stream');
             this.httpRes.end(data, () => {
                 rs({ isSucc: true })
             });
@@ -122,8 +132,11 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
         return call.execute();
     }
 
-    protected override async _recvTransportData(transportData: TransportData): Promise<OpResultVoid> {
+    protected override async _recvTransportData(transportData: TransportData): Promise<void> {
         this.transportData = transportData;
+        if (transportData.type !== 'req') {
+            this.httpRes.end();
+        }
         return super._recvTransportData(transportData);
     }
 
@@ -165,10 +178,10 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
         let serviceName = url.slice(this.server.options.jsonHostPath.length);
         let service: ApiService | MsgService | undefined;
         if (isMsg) {
-            service = this.serviceMap.msgName2Service[serviceName];
+            service = this.serviceMap.name2Msg[serviceName];
         }
         else {
-            service = this.serviceMap.apiName2Service[serviceName]
+            service = this.serviceMap.name2LocalApi[serviceName]
         }
         if (service === undefined) {
             return {
