@@ -66,7 +66,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
             let reason: string | undefined;
 
             // 异常断开：客户端 Abort
-            if (req.aborted) {
+            if (req.destroyed ?? req.aborted) {
                 (this.call?.logger ?? this.logger).log('[ReqAborted]');
                 isManual = false;
                 reason = 'Remote aborted';
@@ -100,7 +100,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
         });
 
         if (this.server.status !== ServerStatus.Started) {
-            this.httpRes.statusCode = 503;
+            this.httpRes.statusCode = 500;
             this.httpRes.end();
         }
     }
