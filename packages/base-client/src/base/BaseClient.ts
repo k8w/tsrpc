@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiHandler, ApiHandlerUtil, AutoImplementApiReturn, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, defaultBaseConnectionOptions, Flow, getCustomObjectIdTypes, LocalApiName, LogLevel, ProtoInfo, ServiceMapUtil, ServiceProto, setLogLevel } from "tsrpc-base";
+import { ApiHandler, ApiHandlerUtil, AutoImplementApiReturn, BaseConnection, BaseConnectionOptions, BaseServiceType, defaultBaseConnectionOptions, Flow, getCustomObjectIdTypes, LocalApiName, LogLevel, ProtoInfo, ServiceMapUtil, ServiceProto, setLogLevel } from "tsrpc-base";
 import { BaseClientFlows } from "./BaseClientFlows";
 
 /**
@@ -48,7 +48,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
             skipDecodeValidate: options.skipDecodeValidate,
         });
         options.logger = setLogLevel(options.logger, options.logLevel)
-        super(options.dataType, options, {
+        super(options.json ? 'text' : 'buffer', options, {
             serviceMap,
             tsbuffer,
             localProtoInfo: {
@@ -91,9 +91,6 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
     }
 
     // #region Deprecated 3.x API
-    /** @deprecated Use `this.options.dataType` instead. */
-    declare dataType: never;
-
     /** @deprecated Use `onMsg` instead. */
     listenMsg = this.onMsg;
     /** @deprecated Use `offMsg` instead. */
@@ -108,13 +105,21 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
 
 export const defaultBaseClientOptions: BaseClientOptions = {
     ...defaultBaseConnectionOptions,
-    dataType: 'text',
+    json: false,
     logLevel: 'warn',
     strictNullChecks: false
 }
 
 export interface BaseClientOptions extends BaseConnectionOptions {
-    dataType: BaseConnectionDataType,
+    /**
+     * Whether allow JSON transportation.
+     * If you want to use JSON, make sure to set `json: true` on both server and client.
+     * 
+     * For security and efficient reason, we recommend to you use binary transportation.
+     * 
+     * @defaultValue `false`
+     */
+    json: boolean,
 
     /** @defaultValue 'warn' */
     logLevel: LogLevel,
@@ -122,8 +127,6 @@ export interface BaseClientOptions extends BaseConnectionOptions {
     // TSBufferOptions
     strictNullChecks: boolean,
 
-    /** @deprecated Use `dataType` instead. */
-    json?: never;
     /** @deprecated Use `callApiTimeout` instead. */
     timeout?: never;
 }

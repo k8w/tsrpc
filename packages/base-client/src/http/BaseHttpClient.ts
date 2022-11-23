@@ -139,7 +139,7 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
 export const defaultBaseHttpClientOptions: BaseHttpClientOptions = {
     ...defaultBaseClientOptions,
     server: 'http://127.0.0.1:3000',
-    heartbeat: false,
+    heartbeat: false as never,
     apiCallTimeout: undefined as never
 }
 
@@ -147,13 +147,17 @@ export interface BaseHttpClientOptions extends BaseClientOptions {
     /** Server URL, starts with `http://` or `https://`. */
     server: string;
 
+    /**
+     * If you want to customize JSON return format, set this.
+     * You should set `encodeReturnText` on the server side too.
+     */
     decodeReturnText?: (data: string) => ApiReturn<any>,
 
     /** HTTP do not need heartbeat */
-    heartbeat: false,
+    heartbeat?: never,
 
     /** HTTP client do not support duplex callApi */
-    apiCallTimeout: never
+    apiCallTimeout?: never
 }
 
 export interface PrivateBaseHttpClientOptions extends PrivateBaseClientOptions {

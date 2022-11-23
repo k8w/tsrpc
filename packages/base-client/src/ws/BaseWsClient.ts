@@ -53,7 +53,7 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
 
         // Connect WS
         try {
-            this._ws.connect(this.options.server, [this.options.dataType]);
+            this._ws.connect(this.options.server, [this.dataType]);
         }
         catch (e) {
             this.logger?.error(e);

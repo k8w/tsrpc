@@ -104,7 +104,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     protected _remoteProtoInfo?: ProtoInfo;
 
     constructor(
-        public dataType: BaseConnectionDataType,
+        public readonly dataType: BaseConnectionDataType,
         // Server: all connections shared single options
         public readonly options: BaseConnectionOptions,
         privateOptions: PrivateBaseConnectionOptions
@@ -925,6 +925,10 @@ export enum ConnectionStatus {
     Disconnected = 'Disconnected',
 }
 
+/**
+ * text: Transport as JSON string.
+ * buffer: Transport as Buffer (serialized by tsbuffer).
+ */
 export type BaseConnectionDataType = 'text' | 'buffer';
 
 export interface PrivateBaseConnectionOptions {
