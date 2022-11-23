@@ -1,10 +1,9 @@
 import { Overwrite } from "tsbuffer-schema";
-import { BaseConnectionFlows, BaseServiceType, Flow, SendDataFlow } from "tsrpc-base";
-import { BaseServer } from "./BaseServer";
+import { BaseConnectionFlows, Flow, SendDataFlow } from "tsrpc-base";
 import { BaseServerConnection } from "./BaseServerConnection";
 
-export type BaseServerFlows<Conn extends BaseServerConnection<ServiceType>, ServiceType extends BaseServiceType> = Overwrite<BaseConnectionFlows<Conn>, {
-    preBroadcastMsgFlow: Flow<BroadcastMsgFlow<Conn, ServiceType>>,
+export type BaseServerFlows<Conn extends BaseServerConnection> = Overwrite<BaseConnectionFlows<Conn>, {
+    preBroadcastMsgFlow: Flow<BroadcastMsgFlow<Conn>>,
     preSendDataFlow: Flow<SendDataFlow<Conn> & {
         /** When `server.broadcastMsg()`, preSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
         readonly conns: Conn[]
@@ -32,10 +31,10 @@ export type BaseServerFlows<Conn extends BaseServerConnection<ServiceType>, Serv
     postSendMsgFlow?: never,
 }>;
 
-export type BroadcastMsgFlow<Conn extends BaseServerConnection<any>, ServiceType extends BaseServiceType> = {
-    [K in keyof ServiceType['msg']]: {
+export type BroadcastMsgFlow<Conn extends BaseServerConnection> = {
+    [K in keyof Conn['$ServiceType']['msg']]: {
         msgName: K & string,
-        msg: ServiceType['msg'][K],
+        msg: Conn['$ServiceType']['msg'][K],
         readonly conns: Conn[],
     }
-}[keyof ServiceType['msg']];
+}[keyof Conn['$ServiceType']['msg']];

@@ -268,15 +268,14 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         });
     }
 
-    protected async _recvApiReturn(transportData: TransportData & { type: 'res' | 'err' }): Promise<OpResultVoid> {
+    protected async _recvApiReturn(transportData: TransportData & { type: 'res' | 'err' }): Promise<void> {
         // Parse PendingCallApiItem
         const item = this._pendingCallApis.get(transportData.sn);
         if (!item) {
-            this.logger.error('Invalid SN for callApi return: ' + transportData.sn, transportData);
-            return { isSucc: false, errMsg: 'Invalid SN for callApi return: ' + transportData.sn };
+            throw new Error('Invalid SN for callApi return: ' + transportData.sn)
         }
         if (item.isAborted) {
-            return PROMISE_ABORTED;
+            return;
         }
 
         // Pre Flow
@@ -287,11 +286,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             conn: this
         }, this.logger);
         if (!pre || item.isAborted) {
-            return PROMISE_ABORTED;
+            return;
         }
 
         item.onReturn?.(pre.return);
-        return { isSucc: true }
+        return;
     }
 
     /**
@@ -420,7 +419,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * For example, do something before or after `emit`
      */
     protected _emitMsg?: MsgEmitter<this>['emit'];
-    protected async _recvMsg(transportData: TransportData & { type: 'msg' }): Promise<OpResultVoid> {
+    protected async _recvMsg(transportData: TransportData & { type: 'msg' }): Promise<void> {
         this.options.logMsg && this.logger.log(`[RecvMsg]`, transportData.serviceName, transportData.body);
 
         // PreRecv Flow
@@ -430,7 +429,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             msg: transportData.body as ServiceType['msg'][MsgName<this>]
         }, this.logger);
         if (!pre) {
-            return PROMISE_ABORTED;
+            return;
         }
 
         // MsgHandlers
@@ -440,7 +439,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         else {
             this._msgHandlers.emit(transportData.serviceName, transportData.body as ServiceType['msg'][string & keyof ServiceType['msg']], transportData.serviceName, this);
         }
-        return { isSucc: true }
+        return;
     }
 
     /**
@@ -545,13 +544,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      */
     protected abstract _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid>;
 
-    protected async _recvTransportData(transportData: TransportData & { type: 'req' }): Promise<ApiReturn<any>>;
-    protected async _recvTransportData(transportData: TransportData): Promise<OpResultVoid>;
     /**
      * Called by the implemented Connection.
      * @param transportData Type haven't been checked, need to be done inside.
      */
-    protected async _recvTransportData(transportData: TransportData): Promise<ApiReturn<any> | OpResultVoid> {
+    protected async _recvTransportData(transportData: TransportData): Promise<void> {
         this.options.debugBuf && this.logger.debug('[debugBuf] [RecvTransportData]', transportData);
 
         // Sync remote protoInfo
@@ -561,7 +558,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         switch (transportData.type) {
             case 'req': {
-                return this._recvApiReq(transportData);
+                this._recvApiReq(transportData);
+                return;
             }
             case 'res':
             case 'err': {
@@ -571,12 +569,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 return this._recvMsg(transportData)
             }
             case 'heartbeat': {
-                this._recvHeartbeat(transportData);
-                return { isSucc: true }
+                return this._recvHeartbeat(transportData);
             }
             case 'custom': {
-                this._recvCustom?.(transportData);
-                return { isSucc: true }
+                return this._recvCustom?.(transportData);
             }
         }
     };
@@ -631,6 +627,18 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
   1. Are you using TSRPC ${this.sideName('Remote')} 3.x? (3.x can not communiate with 4.x) Try to upgrade and retry.
   2. Are you modified the buffer by Flow? Try to disable data flows and retry.`);
             }
+
+            // TODO
+            // Send error with SN=0
+            // this._sendTransportData({
+            //     type: 'err',
+            //     sn: 0,
+            //     err: new TsrpcError(opDecodeBox.errMsg, {
+            //         // TODO RemoteError 根据 side 决定
+            //         type: TsrpcErrorType.RemoteError
+            //     }),
+            //     protoInfo: this._localProtoInfo
+            // });
 
             return { isSucc: false, errMsg: opDecodeBox.errMsg, code: RecvDataErrCode.DecodeBoxErr };
         }
@@ -702,6 +710,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                     type: 'err',
                     sn: box.sn,
                     err: new TsrpcError(errReason, {
+                        // TODO RemoteError 根据 side 决定
                         type: TsrpcErrorType.RemoteError
                     }),
                     protoInfo: this._localProtoInfo
@@ -786,6 +795,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 isReply: true
             })
         }
+
+        return;
     }
 
     private _resetHeartbeatTimeout() {

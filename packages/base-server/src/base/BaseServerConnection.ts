@@ -1,5 +1,5 @@
-import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
-import { BaseServer, ServerStatus } from "./BaseServer";
+import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, OpResult, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
+import { BaseServer } from "./BaseServer";
 import { BaseServerFlows } from "./BaseServerFlows";
 
 export abstract class BaseServerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
@@ -10,7 +10,7 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
     readonly id: number;
     readonly ip: string;
     // flows: this['server']['flows'];
-    flows: BaseServerFlows<this, ServiceType>;
+    flows: BaseServerFlows<this>;
     declare logger: PrefixLogger;
 
     constructor(public readonly server: BaseServer<ServiceType>, privateOptions: PrivateBaseServerConnectionOptions) {
@@ -26,7 +26,7 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
         });
         this.id = server['_connId'].getNext();
         this.ip = privateOptions.ip;
-        this.flows = server.flows as BaseServerFlows<this, ServiceType>;
+        this.flows = server.flows as BaseServerFlows<this>;
 
         // To be override...
         // Init connection (http req/res, ws conn, ...)
@@ -38,7 +38,7 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
     }
 
     // Server may disable JSON transport
-    protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResultVoid> {
+    protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResult<TransportData>> {
         if (dataType === 'text' && !this.server.options.json) {
             if (box.type === 'req') {
                 this._sendTransportData({

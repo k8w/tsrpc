@@ -13,7 +13,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
     declare ServiceType: ServiceType;
     declare Conn: Conn;
 
-    flows: BaseServerFlows<Conn, ServiceType> = {
+    flows: BaseServerFlows<Conn> = {
         postConnectFlow: new Flow(),
         postDisconnectFlow: new Flow(),
         preCallApiFlow: new Flow(),
