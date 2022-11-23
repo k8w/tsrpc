@@ -9,7 +9,7 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseHttpClientOptions, privateOptions: PrivateBaseHttpClientOptions) {
         super(serviceProto, options, privateOptions);
-        this._request = privateOptions.transport['request'];
+        this._request = privateOptions.transport.request.bind(privateOptions.transport);
         this.logger.log(`TSRPC HTTP Client: ${this.options.server}`);
     }
 
@@ -29,10 +29,10 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
             headers: {
                 'Content-Type': typeof data === 'string' ? 'application/json' : 'application/octet-stream',
                 ...(transportData.type === 'msg' || transportData.type === 'custom' ? {
-                    'X-TSRPC-DATA-TYPE': transportData.type,
+                    'x-tsrpc-data-type': transportData.type,
                 } : undefined),
                 ...('protoInfo' in transportData && transportData.protoInfo ? {
-                    'X-TSRPC-PROTO-INFO': JSON.stringify(transportData.protoInfo)
+                    'x-tsrpc-proto-info': JSON.stringify(transportData.protoInfo)
                 } : undefined)
             },
             responseType: typeof data === 'string' ? 'text' : 'arraybuffer',
@@ -55,13 +55,27 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
                 if (!ret.isSucc) {
                     this._recvApiReturn({
                         type: 'err',
-                        sn: (transportData as TransportData & { type: 'req' }).sn,
+                        sn: pendingCallApiItem.sn,
                         err: ret.err
                     });
                     return;
                 }
 
-                this._recvData(ret.body, (transportData as TransportData & { type: 'req' }).sn, ret.headers);
+                // Only 200 or 500 is valid
+                if (ret.statusCode !== 200 && ret.statusCode !== 500) {
+                    this._recvApiReturn({
+                        type: 'err',
+                        sn: pendingCallApiItem.sn,
+                        err: new TsrpcError({
+                            message: 'HTTP Error ' + ret.statusCode,
+                            type: TsrpcError.Type.ServerError,
+                            httpCode: ret.statusCode
+                        })
+                    });
+                    return;
+                }
+
+                this._recvData(ret.body, pendingCallApiItem.sn, ret.headers);
             })
         }
 
@@ -97,12 +111,12 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
 
         // Parse remote proto info from header
         let protoInfo: ProtoInfo | undefined;
-        if (resHeaders?.['X-TSRPC-PROTO-INFO']) {
+        if (resHeaders?.['x-tsrpc-proto-info']) {
             try {
-                protoInfo = JSON.parse(resHeaders['X-TSRPC-PROTO-INFO'])
+                protoInfo = JSON.parse(resHeaders['x-tsrpc-proto-info'])
             }
             catch (e) {
-                this.logger.warn('Invalid reponse header "X-TSRPC-PROTO-INFO":', resHeaders['X-TSRPC-PROTO-INFO'], e)
+                this.logger.warn('Invalid reponse header "x-tsrpc-proto-info":', resHeaders['x-tsrpc-proto-info'], e)
             }
         }
 
@@ -154,10 +168,10 @@ export interface BaseHttpClientOptions extends BaseClientOptions {
     decodeReturnText?: (data: string) => ApiReturn<any>,
 
     /** HTTP do not need heartbeat */
-    heartbeat?: never,
+    heartbeat: false,
 
     /** HTTP client do not support duplex callApi */
-    apiCallTimeout?: never
+    apiCallTimeout: never
 }
 
 export interface PrivateBaseHttpClientOptions extends PrivateBaseClientOptions {
