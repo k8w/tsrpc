@@ -104,7 +104,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     protected _remoteProtoInfo?: ProtoInfo;
 
     constructor(
-        public readonly dataType: BaseConnectionDataType,
+        public dataType: BaseConnectionDataType,
         // Server: all connections shared single options
         public readonly options: BaseConnectionOptions,
         privateOptions: PrivateBaseConnectionOptions
