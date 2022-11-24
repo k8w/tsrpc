@@ -881,11 +881,8 @@ export interface BaseConnectionOptions {
 
     // ApiCall
     /**
-     * When uncaught error throwed,
-     * whether to return the original error as a property `innerErr`. 
-     * (May include some sensitive information, suggests set to `false` in production environment.)
-     * @defaultValue It depends on environment variable `NODE_ENV`.
-     * If `NODE_ENV` equals to `production`, the default value is `false`, otherwise is `true`.
+     * When uncaught error throwed, whether to return the original error as a property `innerErr`.
+     * @defaultValue true
      */
     returnInnerError: boolean;
 
