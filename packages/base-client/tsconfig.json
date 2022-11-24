@@ -11,8 +11,7 @@
     "strict": true,
     "moduleResolution": "node",
     "types": [],
-    "esModuleInterop": true,
-    "removeComments": true
+    "esModuleInterop": true
   },
   "include": [
     "src"
