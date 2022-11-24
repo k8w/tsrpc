@@ -825,8 +825,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 }
 
 export const defaultBaseConnectionOptions: BaseConnectionOptions = {
-    apiReturnInnerError: true,
-
     // Log
     logger: console,
     chalk: v => v,
@@ -839,6 +837,9 @@ export const defaultBaseConnectionOptions: BaseConnectionOptions = {
     // Timeout
     callApiTimeout: 15000,
     apiCallTimeout: 15000,
+
+    // ApiCall
+    returnInnerError: true,
 
     // Runtime Type Check
     skipEncodeValidate: false,
@@ -859,8 +860,6 @@ export const defaultBaseConnectionOptions: BaseConnectionOptions = {
  * Client: each is independent options
  */
 export interface BaseConnectionOptions {
-    apiReturnInnerError: boolean,
-
     // Log
     logger: Logger,
     chalk: Chalk,
@@ -879,6 +878,16 @@ export interface BaseConnectionOptions {
     // TSBufferOptions
     skipEncodeValidate: boolean;
     skipDecodeValidate: boolean;
+
+    // ApiCall
+    /**
+     * When uncaught error throwed,
+     * whether to return the original error as a property `innerErr`. 
+     * (May include some sensitive information, suggests set to `false` in production environment.)
+     * @defaultValue It depends on environment variable `NODE_ENV`.
+     * If `NODE_ENV` equals to `production`, the default value is `false`, otherwise is `true`.
+     */
+    returnInnerError: boolean;
 
     // Heartbeat
     /** 

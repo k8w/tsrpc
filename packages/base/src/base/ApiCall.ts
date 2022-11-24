@@ -185,7 +185,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
     /**
      * Event when a uncaught error (except `TsrpcError`) is throwed.
      * By default, it will return a `TsrpcError` with message "Remote internal error".
-     * If `apiReturnInnerError` is `true`, the original error would be returned as `innerErr` property.
+     * If `returnInnerError` is `true`, the original error would be returned as `innerErr` property.
      */
     protected _internalError(err: { message: string }) {
         if (err instanceof TsrpcError) {
@@ -196,7 +196,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
         return this.error('Remote internal error', {
             code: 'INTERNAL_ERR',
             type: TsrpcErrorType.RemoteError,
-            ...(this.conn.options.apiReturnInnerError ? { innerErr: err.message } : undefined)
+            ...(this.conn.options.returnInnerError ? { innerErr: err.message } : undefined)
         });
     }
 
