@@ -1,19 +1,23 @@
 import http, { IncomingMessage, ServerResponse } from "http";
 import https from "https";
 import { ApiReturn, BaseConnectionDataType, BaseServiceType, ServiceProto } from "tsrpc-base";
-import { BaseServer, BaseServerOptions } from "tsrpc-base-server";
+import { BaseServer, BaseServerOptions, defaultBaseServerOptions } from "tsrpc-base-server";
 import { getClassObjectId } from "../models/getClassObjectId";
 import { processUncaughtException } from "../models/processUncaughtException";
+import { TerminalColorLogger } from "../models/TerminalColorLogger";
 import { TSRPC_VERSION } from "../models/version";
 import { HttpServerConnection } from "./HttpServerConnection";
 
-export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<ServiceType>{
+export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseServer<ServiceType>{
 
     declare options: HttpServerOptions;
     declare $Conn: HttpServerConnection<ServiceType>;
 
-    constructor(serviceProto: ServiceProto, options: HttpServerOptions) {
-        super(serviceProto, options, {
+    constructor(serviceProto: ServiceProto<ServiceType>, options?: Partial<HttpServerOptions>) {
+        super(serviceProto, {
+            ...defaultHttpServerOptions,
+            ...options
+        }, {
             classObjectId: getClassObjectId(),
             env: {
                 tsrpc: TSRPC_VERSION,
@@ -64,6 +68,13 @@ export class HttpServer<ServiceType extends BaseServiceType> extends BaseServer<
     }
 
 }
+
+// TODO
+export const defaultHttpServerOptions: HttpServerOptions = {
+    ...defaultBaseServerOptions,
+    logger: new TerminalColorLogger,
+    returnInnerError: process.env['NODE_ENV'] !== 'production'
+} as any;
 
 export interface HttpServerOptions extends BaseServerOptions {
     /** Which port the HTTP server listen to */
@@ -137,5 +148,16 @@ export interface HttpServerOptions extends BaseServerOptions {
 
     encodeReturnText?: (ret: ApiReturn<any>) => string,
 
+    /**
+     * When uncaught error throwed,
+     * whether to return the original error as a property `innerErr`. 
+     * (May include some sensitive information, suggests set to `false` in production environment.)
+     * @defaultValue It depends on environment variable `NODE_ENV`.
+     * If `NODE_ENV` equals to `production`, the default value is `false`, otherwise is `true`.
+     */
+    returnInnerError: boolean;
+
     // Deprecated
+    /** @deprecated Use `json` instead */
+    jsonEnabled?: never;
 }
