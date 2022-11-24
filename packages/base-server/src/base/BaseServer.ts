@@ -375,8 +375,6 @@ export interface BaseServerOptions extends BaseConnectionOptions {
     jsonEnabled?: never,
     /** @deprecated Use `apiCallTimeout` instead */
     apiTimeout?: never,
-    /** @deprecated Use `apiReturnInnerError` instead */
-    returnInnerError?: boolean;
     // #endregion
 }
 
