@@ -147,13 +147,16 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
             }
         }
 
-        if (ret.isSucc) {
-            this.logger.log(this.conn.chalk('[Res]', ['info']), this.conn.options.logResBody ? ret.res : '');
-        }
-        else {
-            this.logger[ret.err.type === TsrpcErrorType.LocalError || ret.err.type === TsrpcErrorType.NetworkError ? 'error' : 'log'](
-                this.conn.chalk('[Err]', [ret.err.type === TsrpcErrorType.ApiError ? 'info' : 'error']), ret.err
-            );
+        // Log Res
+        if (this.conn.options.logApi) {
+            if (ret.isSucc) {
+                this.logger.log(this.conn.chalk('[Res]', ['info']), this.conn.options.logResBody ? ret.res : '');
+            }
+            else {
+                this.logger[ret.err.type === TsrpcErrorType.LocalError || ret.err.type === TsrpcErrorType.NetworkError ? 'error' : 'log'](
+                    this.conn.chalk('[Err]', [ret.err.type === TsrpcErrorType.ApiError ? 'info' : 'error']), ret.err
+                );
+            }
         }
 
         return ret;
