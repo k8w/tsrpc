@@ -284,18 +284,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             return;
         }
 
-        // Pre Flow
-        let pre = await this.flows.preCallApiReturnFlow.exec({
-            apiName: item.apiName,
-            req: item.req,
-            return: transportData.type === 'res' ? { isSucc: true, res: transportData.body } : { isSucc: false, err: transportData.err },
-            conn: this
-        }, this.logger);
-        if (!pre || item.isAborted) {
-            return;
-        }
-
-        item.onReturn?.(pre.return);
+        const apiReturn: ApiReturn<unknown> = transportData.type === 'res' ? { isSucc: true, res: transportData.body } : { isSucc: false, err: transportData.err };
+        item.onReturn?.(apiReturn);
         return;
     }
 
