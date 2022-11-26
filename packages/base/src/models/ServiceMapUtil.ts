@@ -20,10 +20,11 @@ export class ServiceMapUtil {
                     reqSchemaId: `${path}Ptl${name}/Req${name}`,
                     resSchemaId: `${path}Ptl${name}/Res${name}`,
                 }
-                if (svc.side === 'both' || svc.side === side) {
+                const svcSide = svc.side ?? 'server';
+                if (svcSide === 'both' || svcSide === side) {
                     map.name2LocalApi[v.name] = svc;
                 }
-                if (svc.side === 'both' || svc.side !== side) {
+                if (svcSide === 'both' || svcSide !== side) {
                     map.name2RemoteApi[v.name] = svc;
                 }
                 map.id2Service[v.id] = svc;

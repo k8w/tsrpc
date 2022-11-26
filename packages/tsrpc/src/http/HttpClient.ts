@@ -2,6 +2,7 @@ import http from "http";
 import https from "https";
 import { BaseServiceType, ServiceProto } from "tsrpc-base";
 import { BaseHttpClient, BaseHttpClientOptions, defaultBaseHttpClientOptions } from "../../../base-client/dist";
+import { defaultBaseNodeClientOptions } from "../models/BaseNodeClientOptions";
 import { getClassObjectId } from "../models/getClassObjectId";
 import { TSRPC_VERSION } from "../models/version";
 import { HttpUtil } from "./models/HttpUtil";
@@ -29,7 +30,8 @@ export class HttpClient<ServiceType extends BaseServiceType = any> extends BaseH
 }
 
 export const defaultHttpClientOptions: BaseHttpClientOptions = {
-    ...defaultBaseHttpClientOptions
+    ...defaultBaseHttpClientOptions,
+    ...defaultBaseNodeClientOptions,
 }
 
 export interface HttpClientOptions extends BaseHttpClientOptions {

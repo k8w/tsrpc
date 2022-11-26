@@ -1,4 +1,4 @@
-import { ApiReturn, BaseServiceType, BoxTextEncoding, OpResult, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceProto, TransportData, TransportDataUtil, TransportOptions, TsrpcError, TsrpcErrorType } from "tsrpc-base";
+import { ApiReturn, BaseServiceType, BoxTextEncoding, ConnectionStatus, OpResult, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceProto, TransportData, TransportDataUtil, TransportOptions, TsrpcError, TsrpcErrorType } from "tsrpc-base";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../base/BaseClient";
 import { BaseHttpClientTransport } from "./BaseHttpClientTransport";
 
@@ -9,6 +9,7 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseHttpClientOptions, privateOptions: PrivateBaseHttpClientOptions) {
         super(serviceProto, options, privateOptions);
+        super._setStatus(ConnectionStatus.Connected);
         this._request = privateOptions.transport.request.bind(privateOptions.transport);
         this.logger.log(`TSRPC HTTP Client: ${this.options.server}`);
     }

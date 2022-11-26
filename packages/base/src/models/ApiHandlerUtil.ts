@@ -24,7 +24,7 @@ export class ApiHandlerUtil {
         const apiName = typeof dirOrDelay === 'string' ? dirOrName : '*';
         delay = typeof dirOrDelay === 'string' ? delay : dirOrDelay;
 
-        host.logger.debug(`Start autoImplementApi '${apiName}' to '${apiDir}'${(delay ? ' (delay)' : '')}...`);
+        host.logger.log(`Start autoImplementApi '${apiName}' to '${apiDir}'${(delay ? ' (delay)' : '')}...`);
 
         const apiServices = Object.values(host.serviceMap.name2LocalApi) as ApiServiceDef[];
         const output = { succ: [], fail: [], delay: [] } as Awaited<ReturnType<typeof ApiHandlerUtil['autoImplementApi']>>;
@@ -33,13 +33,15 @@ export class ApiHandlerUtil {
         for (let service of apiServices) {
             ++index;
             const apiName = service.name;
-            const loadHandler = () => {
+            const loadHandler = (isDelay: boolean) => {
                 let promise = this._loadApiHandler(host, apiName, apiDir);
-                promise.then(v => {
-                    if (!v.isSucc) {
-                        host.logger.error(`Failed to load handler of API '${apiName}'. ${v.errMsg}`);
-                    }
-                })
+                if (isDelay) {
+                    promise.then(v => {
+                        if (!v.isSucc) {
+                            host.logger.error(host.chalk(`Failed to load handler of API '${apiName}'. ${v.errMsg}`, ['error']));
+                        }
+                    })
+                }
                 return promise;
             }
 
@@ -47,12 +49,12 @@ export class ApiHandlerUtil {
             if (delay) {
                 ApiHandlerUtil._implementApiDelay(host, apiHandlers, apiName, loadHandler, typeof delay === 'number' ? delay : undefined);
                 output.delay.push(apiName);
-                host.logger.log(`[${index}/${apiServices.length}] ${host.chalk(apiName, ['debug', 'underline'])} ${host.chalk('delayed', ['gray'])}`)
+                host.logger.debug(`[${index}/${apiServices.length}] ${host.chalk(apiName, ['debug', 'underline'])} ${host.chalk('delayed', ['gray'])}`)
                 continue;
             }
 
             // Immediately
-            const op = await loadHandler();
+            const op = await loadHandler(false);
             if (op.isSucc) {
                 apiHandlers[apiName] = op.res;
                 output.succ.push(apiName);
@@ -60,19 +62,26 @@ export class ApiHandlerUtil {
             else {
                 output.fail.push({ apiName, errMsg: op.errMsg });
             }
-            host.logger.log(`[${index}/${apiServices.length}] ${host.chalk(apiName, ['debug', 'underline'])} ${op.isSucc ? host.chalk('succ', ['info']) : host.chalk('failed', ['error'])}`)
+
+            // Log
+            if (op.isSucc) {
+                host.logger.debug(host.chalk(`[${index}/${apiServices.length}] ${host.chalk(apiName, ['underline'])} succ`, ['info']))
+            }
+            else {
+                host.logger.error(host.chalk(`[${index}/${apiServices.length}] ${host.chalk(apiName, ['underline'])} failed.`, ['error']), op.errMsg)
+            }
         }
 
         // Final result log
         host.logger.log('Finished autoImplementApi: ' + (delay ?
             `delay ${output.delay.length}/${apiServices.length}.` :
-            `succ ${host.chalk(`${output.succ}/${apiServices.length}`, [output.fail.length ? 'warn' : 'info'])}, failed ${host.chalk('' + output.fail.length, output.fail.length ? ['error', 'bold'] : ['normal'])}.`
+            `${host.chalk(`succ ${output.succ.length}/${apiServices.length},`, [output.fail.length ? 'warn' : 'info'])} ${host.chalk('failed ' + output.fail.length, output.fail.length ? ['error', 'bold'] : ['normal'])}.`
         ));
 
         return output;
     }
 
-    protected static _implementApiDelay(host: ApiHandlerHost, apiHandlers: BaseConnectionApiHandlers, apiName: string, loadHandler: () => Promise<OpResult<ApiHandler>>, maxDelayTime?: number): void {
+    protected static _implementApiDelay(host: ApiHandlerHost, apiHandlers: BaseConnectionApiHandlers, apiName: string, loadHandler: (isDelay: boolean) => Promise<OpResult<ApiHandler>>, maxDelayTime?: number): void {
         // Delay get handler
         let promiseHandler: Promise<OpResult<ApiHandler>> | undefined;
         const doGetHandler = () => {
@@ -80,7 +89,7 @@ export class ApiHandlerUtil {
                 return promiseHandler;
             }
 
-            promiseHandler = loadHandler();
+            promiseHandler = loadHandler(true);
             // 获取成功后重新 implement 为真实 API
             promiseHandler.then(op => {
                 apiHandlers[apiName] = undefined;
@@ -120,7 +129,7 @@ export class ApiHandlerUtil {
 
         // try import
         apiDir = apiDir.replace(/\\/g, '/');
-        const modulePath = apiDir + (apiDir.endsWith('/') ? '' : '/') + handlerPath + '/Api' + handlerName;
+        const modulePath = apiDir + (apiDir.endsWith('/') ? '' : '/') + handlerPath + 'Api' + handlerName;
         try {
             var module = await import(modulePath);
         }

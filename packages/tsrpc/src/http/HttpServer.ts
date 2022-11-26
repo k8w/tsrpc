@@ -1,10 +1,10 @@
 import http, { IncomingMessage, ServerResponse } from "http";
 import https from "https";
 import { ApiReturn, BaseConnectionDataType, BaseServiceType, ServiceProto } from "tsrpc-base";
-import { BaseServer, BaseServerOptions, defaultBaseServerOptions } from "tsrpc-base-server";
+import { BaseServer } from "tsrpc-base-server";
+import { BaseNodeServerOptions, defaultBaseNodeServerOptions } from "../models/BaseNodeServerOptions";
 import { getClassObjectId } from "../models/getClassObjectId";
 import { processUncaughtException } from "../models/processUncaughtException";
-import { TerminalColorLogger } from "../models/TerminalColorLogger";
 import { TSRPC_VERSION } from "../models/version";
 import { HttpServerConnection } from "./HttpServerConnection";
 
@@ -31,7 +31,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     httpServer?: http.Server | https.Server;
 
     protected async _start(): Promise<void> {
-        this.logger.log(`Starting ${this.options.https ? 'HTTPS' : 'HTTP'} server at port ${this.options.port} ...`);
+        this.logger.log(`Starting ${this.options.https ? 'HTTPS' : 'HTTP'} server at port ${this.options.port}...`);
 
         const requestListener = (req: IncomingMessage, res: ServerResponse) => {
             // Create Connection
@@ -49,6 +49,12 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
         else {
             this.httpServer = http.createServer({}, requestListener)
         }
+
+        return new Promise(rs => {
+            this.httpServer!.listen(this.options.port, () => {
+                rs();
+            })
+        })
     }
 
     protected _stop(): void {
@@ -71,12 +77,15 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
 // TODO
 export const defaultHttpServerOptions: HttpServerOptions = {
-    ...defaultBaseServerOptions,
-    logger: new TerminalColorLogger,
-    returnInnerError: process.env['NODE_ENV'] !== 'production'
-} as any;
+    ...defaultBaseNodeServerOptions,
+    port: 3000,
+    jsonHostPath: '/',
+    defaultDataType: 'text',
+    cors: '*',
+    corsMaxAge: 3600,
+};
 
-export interface HttpServerOptions extends BaseServerOptions {
+export interface HttpServerOptions extends BaseNodeServerOptions {
     /** Which port the HTTP server listen to */
     port: number,
 
@@ -147,15 +156,6 @@ export interface HttpServerOptions extends BaseServerOptions {
     corsMaxAge?: number,
 
     encodeReturnText?: (ret: ApiReturn<any>) => string,
-
-    /**
-     * When uncaught error throwed,
-     * whether to return the original error as a property `innerErr`. 
-     * (May include some sensitive information, suggests set to `false` in production environment.)
-     * @defaultValue It depends on environment variable `NODE_ENV`.
-     * If `NODE_ENV` equals to `production`, the default value is `false`, otherwise is `true`.
-     */
-    returnInnerError: boolean;
 
     // Deprecated
     /** @deprecated Use `json` instead */
