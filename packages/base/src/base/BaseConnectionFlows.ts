@@ -43,23 +43,25 @@ export type BaseConnectionFlows<Conn extends BaseConnection> = {
      */
     preApiCallFlow: Flow<ApiCallFlow<Conn>>,
     preApiCallReturnFlow: Flow<ApiCallReturnFlow<Conn>>,
+    postApiCallReturnFlow: Flow<ApiCallReturnFlow<Conn>>,
 
     /**
      * Duplex Message Flows
      * sendMsg() -> 【preSendMsgFlow】 -> send data -> 【postSendMsgFlow】
      * recv MsgCall -> 【preRecvMsgFlow】 -> msg listeners
      */
-    preSendMsgFlow: Flow<MsgFlow<Conn>>,
     preRecvMsgFlow: Flow<MsgFlow<Conn>>,
+    preSendMsgFlow: Flow<MsgFlow<Conn>>,
+    postSendMsgFlow: Flow<MsgFlow<Conn>>,    
 
     /**
      * Duplex TransportData Flows
      * sendTransportData() -> 【preSendTransportDataFlow】 -> send data
      * recv TransportData -> 【preRecvTransportDataFlow】 -> ApiCall or MsgCall or commands ...
      */
+    preRecvDataFlow: Flow<RecvDataFlow<Conn>>,
     preSendDataFlow: Flow<SendDataFlow<Conn>>,
     postSendDataFlow: Flow<SendDataFlow<Conn>>,
-    preRecvDataFlow: Flow<RecvDataFlow<Conn>>,
 } & unknown;
 
 export type CallApiFlow<Conn extends BaseConnection> = {

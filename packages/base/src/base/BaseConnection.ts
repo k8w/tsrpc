@@ -407,6 +407,13 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             this.logger.error(`[SendMsgErr] ${msgName} ${opResult.errMsg}`, msg);
         }
 
+        // Post Flow
+        this.flows.postSendMsgFlow.exec({
+            msgName: msgName,
+            msg: msg,
+            conn: this
+        }, this.logger);
+
         return opResult;
     }
 
