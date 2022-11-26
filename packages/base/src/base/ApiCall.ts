@@ -137,7 +137,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
                 protoInfo: this.protoInfo ? this.conn['_localProtoInfo'] : undefined,
             }, undefined, this);
             if (!op.isSucc) {
-                this.logger.error(`[SendReturnErr] op.errMsg\n  ret:`, ret);
+                this.logger.error(`[SendReturnErr] ${op.errMsg}\n  ret:`, ret);
 
                 // Connection is still alive, resend a internal error
                 if (this.conn.status === ConnectionStatus.Connected && ret.err?.code !== 'INTERNAL_ERR') {

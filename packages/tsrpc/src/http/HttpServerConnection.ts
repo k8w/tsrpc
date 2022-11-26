@@ -106,7 +106,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
     }
 
     protected async _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid> {
-        if (this.httpRes.writable) {
+        if (!this.httpRes.writable) {
             return { isSucc: false, errMsg: 'Response is not writable, you may sended response before.' };
         }
 

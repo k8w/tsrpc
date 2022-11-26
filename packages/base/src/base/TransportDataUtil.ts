@@ -25,12 +25,18 @@ export class TransportDataUtil {
     /**
      * @returns null 代表无需编码 body
      */
-    private static _getBodyInfo(transportData: { type: string, serviceName?: string }, serviceMap: ServiceMap, action: 'encode' | 'decode'): OpResult<{ serviceId: number, schemaId: string } | null> {
-        // Get schemaId
-        const { type, serviceName } = transportData;
-        if (serviceName) {
+    private static _getBodyInfo(transportData: { type: string, serviceName?: string, serviceId?: number }, serviceMap: ServiceMap, action: 'encode' | 'decode'): OpResult<{ serviceId: number, schemaId: string } | null> {
+        const { type, serviceName, serviceId } = transportData;
 
-            let service: ApiService | MsgService | undefined;
+        // Get service & schemaId
+        let service: ApiService | MsgService | undefined;
+        if (serviceId !== undefined) {
+            service = serviceMap.id2Service[serviceId];
+            if (!service) {
+                return { isSucc: false, errMsg: `Invalid service ID: ${serviceId}` }
+            }
+        }
+        else if (serviceName) {
             // msg: {type:msg}
             if (type === 'msg') {
                 service = serviceMap.name2Msg[serviceName]
@@ -46,19 +52,17 @@ export class TransportDataUtil {
             if (!service) {
                 return { isSucc: false, errMsg: `Undefined ${type === 'msg' ? 'Msg' : 'API'} name: ${serviceName}` }
             }
-
-            return {
-                isSucc: true,
-                res: {
-                    serviceId: service.id,
-                    schemaId: type === 'req' ? (service as ApiService).reqSchemaId
-                        : type === 'res' ? (service as ApiService).resSchemaId
-                            : (service as MsgService).msgSchemaId
-                }
-            };
         }
 
-        return { isSucc: true, res: null };
+        return {
+            isSucc: true,
+            res: service ? {
+                serviceId: service.id,
+                schemaId: type === 'req' ? (service as ApiService).reqSchemaId
+                    : type === 'res' ? (service as ApiService).resSchemaId
+                        : (service as MsgService).msgSchemaId
+            } : null
+        };
     }
 
     static encodeBodyBuffer(transportData: TransportData, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<BoxBuffer> {
@@ -114,7 +118,7 @@ export class TransportDataUtil {
 
     static encodeBoxBuffer(box: BoxBuffer): OpResult<Uint8Array> {
         // Box 都是代码构造的，所以无需类型检查
-        let op = this.tsbuffer.encode(box, 'BoxBuffer', { skipValidate: true });
+        let op = this.tsbuffer.encode(box, 'TransportDataSchema', { skipValidate: true });
         if (!op.isSucc) {
             return op;
         }
@@ -157,7 +161,7 @@ export class TransportDataUtil {
     }
 
     static decodeBoxBuffer(data: Uint8Array, pendingCallApis: Map<number, { apiName: string }>, serviceMap: ServiceMap, skipValidate: boolean | undefined): OpResult<BoxBuffer> {
-        let op = this.tsbuffer.decode(data, 'BoxBuffer', { skipValidate });
+        let op = this.tsbuffer.decode(data, 'TransportDataSchema', { skipValidate });
         if (!op.isSucc) {
             if (op.errPhase === 'validate') {
                 op.errMsg = 'Invalid box format. ' + op.errMsg;

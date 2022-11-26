@@ -83,6 +83,7 @@ export const defaultHttpServerOptions: HttpServerOptions = {
     defaultDataType: 'text',
     cors: '*',
     corsMaxAge: 3600,
+    heartbeat: false,
 };
 
 export interface HttpServerOptions extends BaseNodeServerOptions {
@@ -156,6 +157,9 @@ export interface HttpServerOptions extends BaseNodeServerOptions {
     corsMaxAge?: number,
 
     encodeReturnText?: (ret: ApiReturn<any>) => string,
+
+    /** HTTP Server not support heartbeat */
+    heartbeat: false,
 
     // Deprecated
     /** @deprecated Use `json` instead */
