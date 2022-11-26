@@ -81,11 +81,11 @@ export type CallApiReturnFlow<Conn extends BaseConnection> = {
 }[RemoteApiName<Conn>];
 
 export type ApiCallFlow<Conn extends BaseConnection> = {
-    [K in LocalApiName<Conn>]: ApiCall<LocalApi<Conn>[K]['req'], LocalApi<Conn>[K]['res'], Conn>
+    [K in LocalApiName<Conn>]: ApiCall<LocalApi<Conn>[K]['req'], LocalApi<Conn>[K]['res'], Conn, K>
 }[LocalApiName<Conn>];
 
 export type ApiCallReturnFlow<Conn extends BaseConnection> = {
-    [K in LocalApiName<Conn>]: ApiCall<LocalApi<Conn>[K]['req'], LocalApi<Conn>[K]['res'], Conn> & {
+    [K in LocalApiName<Conn>]: ApiCall<LocalApi<Conn>[K]['req'], LocalApi<Conn>[K]['res'], Conn, K> & {
         return: ApiReturn<LocalApi<Conn>[K]['res']>
     }
 }[LocalApiName<Conn>];

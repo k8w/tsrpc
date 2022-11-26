@@ -3,7 +3,7 @@ import { ApiService } from "../models/ServiceMapUtil";
 import { ApiReturn } from "../proto/ApiReturn";
 import { ProtoInfo, TsrpcErrorData, TsrpcErrorType } from "../proto/TransportDataSchema";
 import { TsrpcError } from "../proto/TsrpcError";
-import { BaseConnection, ConnectionStatus, PROMISE_ABORTED } from "./BaseConnection";
+import { BaseConnection, ConnectionStatus, LocalApiName, PROMISE_ABORTED } from "./BaseConnection";
 
 // 每一次 Api 调用都会生成一个 ApiCall（Server & Client）
 // call.succ & call.error 可用于返回
@@ -11,7 +11,7 @@ import { BaseConnection, ConnectionStatus, PROMISE_ABORTED } from "./BaseConnect
 // Client 的 call.succ / call.error ：拦截请求，本地 mock
 // Call 分角色（Req or Ret）（Server or Client）
 
-export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseConnection> {
+export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseConnection, ApiName extends LocalApiName<Conn> = string> {
 
     logger: PrefixLogger;
     return?: ApiReturn<Res>;
@@ -19,7 +19,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
 
     constructor(
         public readonly conn: Conn,
-        public apiName: string,
+        public apiName: ApiName,
         public readonly sn: number,
         public req: Req,
         public readonly protoInfo: ProtoInfo | undefined,
