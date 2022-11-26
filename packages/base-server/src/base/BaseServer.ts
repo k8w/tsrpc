@@ -25,7 +25,6 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
         preSendDataFlow: new Flow(),
         postSendDataFlow: new Flow(),
         preRecvDataFlow: new Flow(),
-        preBroadcastMsgFlow: new Flow(),
     };
 
     /** { [id: number]: Conn } */
@@ -234,10 +233,11 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
             return { isSucc: false, errMsg: 'Server is not started' };
         }
 
-        // Pre Broadcast Flow
-        let pre = await this.flows.preBroadcastMsgFlow.exec({
+        // Pre Flow
+        let pre = await this.flows.preSendMsgFlow.exec({
             msgName: msgName,
             msg: msg,
+            conn: conns[0],
             conns: conns
         }, this.logger);
         if (!pre) {

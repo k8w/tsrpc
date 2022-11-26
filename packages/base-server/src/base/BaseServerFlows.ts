@@ -1,9 +1,12 @@
 import { Overwrite } from "tsbuffer-schema";
-import { BaseConnectionFlows, Flow, SendDataFlow } from "tsrpc-base";
+import { BaseConnectionFlows, Flow, MsgFlow, SendDataFlow } from "tsrpc-base";
 import { BaseServerConnection } from "./BaseServerConnection";
 
 export type BaseServerFlows<Conn extends BaseServerConnection> = Overwrite<BaseConnectionFlows<Conn>, {
-    preBroadcastMsgFlow: Flow<BroadcastMsgFlow<Conn>>,
+    preSendMsgFlow: Flow<MsgFlow<Conn> & {
+        /** When `server.broadcastMsg()`, preSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
+        readonly conns: Conn[]
+    }>,
     preSendDataFlow: Flow<SendDataFlow<Conn> & {
         /** When `server.broadcastMsg()`, preSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
         readonly conns: Conn[]
