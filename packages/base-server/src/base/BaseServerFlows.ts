@@ -5,15 +5,20 @@ import { BaseServerConnection } from "./BaseServerConnection";
 export type BaseServerFlows<Conn extends BaseServerConnection> = Overwrite<BaseConnectionFlows<Conn>, {
     preSendMsgFlow: Flow<MsgFlow<Conn> & {
         /** When `server.broadcastMsg()`, preSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
-        readonly conns: Conn[]
+        /** This property would be set if it is under `server.broadcastMsg()`. */
+        readonly conns?: Conn[]
+    }>,
+    postSendMsgFlow: Flow<MsgFlow<Conn> & {
+        /** When `server.broadcastMsg()`, preSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
+        readonly conns?: Conn[]
     }>,
     preSendDataFlow: Flow<SendDataFlow<Conn> & {
         /** When `server.broadcastMsg()`, preSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
-        readonly conns: Conn[]
+        readonly conns?: Conn[]
     }>,
     postSendDataFlow: Flow<SendDataFlow<Conn> & {
         /** When `server.broadcastMsg()`, postSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
-        readonly conns: Conn[]
+        readonly conns?: Conn[]
     }>,
 
     /** @deprecated Use `preRecvDataFlow` instead */
@@ -30,8 +35,6 @@ export type BaseServerFlows<Conn extends BaseServerConnection> = Overwrite<BaseC
     preMsgCallFlow?: never,
     /** @deprecated Use `onMsg` instead */
     postMsgCallFlow?: never,
-    /** @deprecated Use `postSendDataFlow` instead */
-    postSendMsgFlow?: never,
 }>;
 
 export type BroadcastMsgFlow<Conn extends BaseServerConnection> = {

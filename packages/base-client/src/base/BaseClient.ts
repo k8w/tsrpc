@@ -29,11 +29,13 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
         preCallApiReturnFlow: new Flow(),
         preApiCallFlow: new Flow(),
         preApiCallReturnFlow: new Flow(),
-        preSendMsgFlow: new Flow(),
+        postApiCallReturnFlow: new Flow(),
         preRecvMsgFlow: new Flow(),
+        preSendMsgFlow: new Flow(),
+        postSendMsgFlow: new Flow(),
+        preRecvDataFlow: new Flow(),
         preSendDataFlow: new Flow(),
         postSendDataFlow: new Flow(),
-        preRecvDataFlow: new Flow(),
         preConnectFlow: new Flow(),
     };
 
