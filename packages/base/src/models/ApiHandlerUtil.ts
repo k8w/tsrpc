@@ -124,8 +124,8 @@ export class ApiHandlerUtil {
         try {
             var module = await import(modulePath);
         }
-        catch (e: unknown) {
-            if ((e as any).code === 'ERR_MODULE_NOT_FOUND' || (e as any).code === 'MODULE_NOT_FOUND') {
+        catch (e: any) {
+            if (e.code === 'ERR_MODULE_NOT_FOUND' || e.code === 'MODULE_NOT_FOUND') {
                 return { isSucc: false, errMsg: (e as Error).message };
             }
             return { isSucc: false, errMsg: host.chalk(`Import module '${host.chalk(modulePath, ['underline'])}' failed. `, ['error']) + (e as Error).stack ?? (e as Error).message };

@@ -390,8 +390,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         if (!pre) {
             return PROMISE_ABORTED;
         }
-        msgName = pre.msgName as any;
-        msg = pre.msg as any;
+        msgName = pre.msgName as T;
+        msg = pre.msg as ServiceType['msg'][T];
 
         // Encode & Send
         let opResult = await this._sendTransportData({

@@ -77,7 +77,7 @@ export class Flow<T> {
      * @returns 
      */
     push<U extends T>(node: FlowNode<U>): FlowNode<U> {
-        this.nodes.push(node as any);
+        this.nodes.push(node);
         return node;
     }
 
@@ -87,7 +87,7 @@ export class Flow<T> {
      * @returns 
      */
     remove<U extends T>(node: FlowNode<U>) {
-        return this.nodes.remove(v => v === node as any);
+        return this.nodes.remove(v => v === node);
     }
 
     removeAll() {
