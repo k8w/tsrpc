@@ -99,7 +99,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * Server: all shared server flows
      * Client: independent flows
      */
-    abstract flows: BaseConnectionFlows<this>;
+    flows: BaseConnectionFlows<this>;
 
     protected _remoteProtoInfo?: ProtoInfo;
 
@@ -109,6 +109,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         public readonly options: BaseConnectionOptions,
         privateOptions: PrivateBaseConnectionOptions
     ) {
+        this.flows = privateOptions.flows;
         this._setDefaultFlowOnError();
         this.logger = options.logger;
         this.chalk = options.chalk;
@@ -935,6 +936,7 @@ export enum ConnectionStatus {
 export type BaseConnectionDataType = 'text' | 'buffer';
 
 export interface PrivateBaseConnectionOptions {
+    flows: BaseConnectionFlows<any>,
     apiHandlers?: BaseConnectionApiHandlers,
     serviceMap: ServiceMap,
     tsbuffer: TSBuffer,

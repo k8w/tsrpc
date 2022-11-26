@@ -22,22 +22,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
 
     declare readonly options: BaseClientOptions;
 
-    flows: BaseClientFlows<this> = {
-        postConnectFlow: new Flow(),
-        postDisconnectFlow: new Flow(),
-        preCallApiFlow: new Flow(),
-        preCallApiReturnFlow: new Flow(),
-        preApiCallFlow: new Flow(),
-        preApiCallReturnFlow: new Flow(),
-        postApiCallReturnFlow: new Flow(),
-        preRecvMsgFlow: new Flow(),
-        preSendMsgFlow: new Flow(),
-        postSendMsgFlow: new Flow(),
-        preRecvDataFlow: new Flow(),
-        preSendDataFlow: new Flow(),
-        postSendDataFlow: new Flow(),
-        preConnectFlow: new Flow(),
-    };
+    declare flows: BaseClientFlows<this>;
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseClientOptions, privateOptions: PrivateBaseClientOptions) {
         const serviceMap = ServiceMapUtil.getServiceMap(serviceProto, 'client');
@@ -50,7 +35,26 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
             skipDecodeValidate: options.skipDecodeValidate,
         });
         options.logger = setLogLevel(options.logger, options.logLevel)
+
+        const flows: BaseClientFlows<this> = {
+            postConnectFlow: new Flow(),
+            postDisconnectFlow: new Flow(),
+            preCallApiFlow: new Flow(),
+            preCallApiReturnFlow: new Flow(),
+            preApiCallFlow: new Flow(),
+            preApiCallReturnFlow: new Flow(),
+            postApiCallReturnFlow: new Flow(),
+            preRecvMsgFlow: new Flow(),
+            preSendMsgFlow: new Flow(),
+            postSendMsgFlow: new Flow(),
+            preRecvDataFlow: new Flow(),
+            preSendDataFlow: new Flow(),
+            postSendDataFlow: new Flow(),
+            preConnectFlow: new Flow(),
+        };
+
         super(options.json ? 'text' : 'buffer', options, {
+            flows: flows,
             serviceMap,
             tsbuffer,
             localProtoInfo: {

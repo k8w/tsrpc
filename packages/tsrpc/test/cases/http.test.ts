@@ -658,12 +658,14 @@ describe('HTTP Flows', function () {
         });
 
         server.flows.preApiCallFlow.push(call => {
-            assert.strictEqual(call.req.name, 'Changed')
-            call.error('You need login');
+            if (call.apiName === 'Test') {
+                assert.strictEqual(call.req.name, 'Changed')
+                call.error('You need login');
+            }
             return call;
         });
-        server.flows.postApiCallFlow.push(v => {
-            flowExecResult.postApiCallFlow = true;
+        server.flows.postApiCallReturnFlow.push(v => {
+            flowExecResult.postApiCallReturnFlow = true;
             return v;
         })
 
@@ -681,7 +683,7 @@ describe('HTTP Flows', function () {
         });
 
         let ret = await client.callApi('Test', { name: 'xxx' });
-        assert.strictEqual(flowExecResult.postApiCallFlow, true);
+        assert.strictEqual(flowExecResult.postApiCallReturnFlow, true);
         assert.deepStrictEqual(ret, {
             isSucc: false,
             err: new TsrpcError('You need login')
@@ -702,12 +704,14 @@ describe('HTTP Flows', function () {
         });
 
         server.flows.preApiCallFlow.push(call => {
-            assert.strictEqual(call.req.name, 'Changed')
-            call.error('You need login');
+            if (call.apiName === 'Test') {
+                assert.strictEqual(call.req.name, 'Changed')
+                call.error('You need login');
+            }
             return undefined;
         });
-        server.flows.postApiCallFlow.push(v => {
-            flowExecResult.postApiCallFlow = true;
+        server.flows.postApiCallReturnFlow.push(v => {
+            flowExecResult.postApiCallReturnFlow = true;
             return v;
         })
 
@@ -725,7 +729,7 @@ describe('HTTP Flows', function () {
         });
 
         let ret = await client.callApi('Test', { name: 'xxx' });
-        assert.strictEqual(flowExecResult.postApiCallFlow, undefined);
+        assert.strictEqual(flowExecResult.postApiCallReturnFlow, undefined);
         assert.deepStrictEqual(ret, {
             isSucc: false,
             err: new TsrpcError('You need login')
@@ -746,11 +750,14 @@ describe('HTTP Flows', function () {
         });
 
         server.flows.preApiCallFlow.push(call => {
-            assert.strictEqual(call.req.name, 'Changed')
-            throw new Error('ASDFASDF')
+            if (call.apiName === 'Test') {
+                assert.strictEqual(call.req.name, 'Changed')
+                throw new Error('ASDFASDF')
+            }
+            return call;
         });
-        server.flows.postApiCallFlow.push(v => {
-            flowExecResult.postApiCallFlow = true;
+        server.flows.postApiCallReturnFlow.push(v => {
+            flowExecResult.postApiCallReturnFlow = true;
             return v;
         })
 
@@ -768,7 +775,7 @@ describe('HTTP Flows', function () {
         });
 
         let ret = await client.callApi('Test', { name: 'xxx' });
-        assert.strictEqual(flowExecResult.postApiCallFlow, undefined);
+        assert.strictEqual(flowExecResult.postApiCallReturnFlow, undefined);
         assert.deepStrictEqual(ret, {
             isSucc: false,
             err: new TsrpcError('Internal Server Error', {
@@ -792,18 +799,18 @@ describe('HTTP Flows', function () {
             call.succ({ reply: 'xxxxxxxxxxxxxxxxxxxx' });
         });
 
-        server.flows.preApiReturnFlow.push(v => {
-            flowExecResult.preApiReturnFlow = true;
+        server.flows.preApiCallReturnFlow.push(v => {
+            flowExecResult.preApiCallReturnFlow = true;
             v.return = {
                 isSucc: false,
                 err: new TsrpcError('Ret changed')
             }
             return v;
         });
-        server.flows.postApiReturnFlow.push(v => {
-            flowExecResult.postApiReturnFlow = true;
-            v.call.logger.log('RETTT', v.return);
-            return v;
+        server.flows.postApiCallReturnFlow.push(call => {
+            flowExecResult.postApiCallReturnFlow = true;
+            call.logger.log('RETTT', call.return);
+            return call;
         })
 
         await server.start();
@@ -814,8 +821,8 @@ describe('HTTP Flows', function () {
 
 
         let ret = await client.callApi('Test', { name: 'xxx' });
-        assert.strictEqual(flowExecResult.preApiReturnFlow, true);
-        assert.strictEqual(flowExecResult.postApiReturnFlow, true);
+        assert.strictEqual(flowExecResult.preApiCallReturnFlow, true);
+        assert.strictEqual(flowExecResult.postApiCallReturnFlow, true);
         assert.deepStrictEqual(ret, {
             isSucc: false,
             err: new TsrpcError('Ret changed')
@@ -841,23 +848,17 @@ describe('HTTP Flows', function () {
             logger: clientLogger
         });
 
-        client.flows.preApiReturnFlow.push(v => {
-            flowExecResult.preApiReturnFlow = true;
+        client.flows.preCallApiReturnFlow.push(v => {
+            flowExecResult.preCallApiReturnFlow = true;
             v.return = {
                 isSucc: false,
                 err: new TsrpcError('Ret changed')
             }
             return v;
         });
-        client.flows.postApiReturnFlow.push(v => {
-            flowExecResult.postApiReturnFlow = true;
-            client.logger?.log('RETTT', v.return);
-            return v;
-        })
 
         let ret = await client.callApi('Test', { name: 'xxx' });
-        assert.strictEqual(flowExecResult.preApiReturnFlow, true);
-        assert.strictEqual(flowExecResult.postApiReturnFlow, true);
+        assert.strictEqual(flowExecResult.preCallApiReturnFlow, true);
         assert.deepStrictEqual(ret, {
             isSucc: false,
             err: new TsrpcError('Ret changed')
@@ -866,7 +867,7 @@ describe('HTTP Flows', function () {
         await server.stop();
     });
 
-    it('client SendBufferFlow prevent', async function () {
+    it('client SendDataFlow prevent', async function () {
         let server = new HttpServer(getProto(), {
             logger: serverLogger
         });
@@ -883,7 +884,7 @@ describe('HTTP Flows', function () {
             logger: clientLogger
         });
 
-        client.flows.preSendBufferFlow.push(v => {
+        client.flows.preSendDataFlow.push(v => {
             return undefined
         });
 
@@ -904,10 +905,13 @@ describe('HTTP Flows', function () {
         let client = new HttpClient(getProto(), {
             logger: clientLogger
         });
-        client.flows.preSendBufferFlow.push(v => {
-            for (let i = 0; i < v.buf.length; ++i) {
-                v.buf[i] += 1;
+        client.flows.preSendDataFlow.push(v => {
+            if (v.data instanceof Uint8Array) {
+                for (let i = 0; i < v.data.length; ++i) {
+                    v.data[i] += 1;
+                }
             }
+
             return v;
         });
 

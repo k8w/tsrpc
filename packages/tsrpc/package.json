@@ -12,6 +12,7 @@
     "dist"
   ],
   "scripts": {
+    "test": "npx mocha",
     "build": "rm -rf dist && rollup -c && node scripts/postBuild.js"
   },
   "repository": {
@@ -28,7 +29,7 @@
   "dependencies": {
     "@types/uuid": "^8.3.4",
     "@types/ws": "^8.5.3",
-    "chalk": "^5.1.0",
+    "chalk": "4",
     "tsrpc-base-client": "workspace:^4.0.0-dev.0",
     "tsrpc-base-server": "workspace:4.0.0-dev.0",
     "uuid": "^9.0.0",

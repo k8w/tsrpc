@@ -1,4 +1,4 @@
-import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, OpResult, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
+import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
 import { BaseServer } from "./BaseServer";
 import { BaseServerFlows } from "./BaseServerFlows";
 
@@ -10,11 +10,12 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
     readonly id: number;
     readonly ip: string;
     // flows: this['server']['flows'];
-    flows: BaseServerFlows<this>;
+    declare flows: BaseServerFlows<this>;
     declare logger: PrefixLogger;
 
     constructor(public readonly server: BaseServer<ServiceType>, privateOptions: PrivateBaseServerConnectionOptions) {
         super(privateOptions.dataType, server.options, {
+            flows: server.flows, // as BaseServerFlows<this>
             apiHandlers: server['_apiHandlers'],    // Share apiHandlers with server
             serviceMap: server.serviceMap,
             tsbuffer: server.tsbuffer,
@@ -26,7 +27,6 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
         });
         this.id = server['_connId'].getNext();
         this.ip = privateOptions.ip;
-        this.flows = server.flows as BaseServerFlows<this>;
 
         // To be override...
         // Init connection (http req/res, ws conn, ...)

@@ -20,7 +20,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
         preCallApiReturnFlow: new Flow(),
         preApiCallFlow: new Flow(),
         preApiCallReturnFlow: new Flow(),
+        postApiCallReturnFlow: new Flow(),
         preSendMsgFlow: new Flow(),
+        postSendMsgFlow: new Flow(),
         preRecvMsgFlow: new Flow(),
         preSendDataFlow: new Flow(),
         postSendDataFlow: new Flow(),
@@ -261,7 +263,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
         }
 
         // Group conns by dataType (different encode method)
-        let connGroups: { conns: Conn[], dataType: BaseConnectionDataType, data: any }[] = conns.groupBy(v => v.dataType).map(v => ({
+        let connGroups: { conns: Conn[], dataType: BaseConnectionDataType, data: any }[] = conns!.groupBy(v => v.dataType).map(v => ({
             conns: v,
             dataType: v.key,
             data: null

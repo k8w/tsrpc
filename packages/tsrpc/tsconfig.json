@@ -7,17 +7,20 @@
       "es2020.bigint",
       "es2020.string"
     ],
-    "module": "es6",
+    "module": "commonjs",
     "outDir": "./dist",
     "importHelpers": true,
     "strict": true,
     "moduleResolution": "node",
     "types": [
-      "node"
+      "node",
+      "mocha",
+      "chai"
     ],
     "esModuleInterop": true
   },
   "include": [
-    "src"
+    "src",
+    "test"
   ]
 }
