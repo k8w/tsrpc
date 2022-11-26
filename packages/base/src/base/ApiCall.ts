@@ -117,7 +117,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
 
         // PreReturn Flow
         let pre = await this.conn.flows.preApiCallReturnFlow.exec(this as this & { return: ApiReturn<Res> }, this.logger);
-        if (!pre) {
+        if (!pre || !pre.return) {
             return PROMISE_ABORTED;
         }
         ret = this.return = pre.return;
