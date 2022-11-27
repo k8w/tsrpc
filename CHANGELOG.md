@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.11] - 2022-11-26
+### Changed
+- Update deps
+
 ## [3.4.10] - 2022-11-19
 ### Changed
 - Add `httpReq.rawBody` for `HttpConnection`
