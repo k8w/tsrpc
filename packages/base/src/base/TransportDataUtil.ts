@@ -5,7 +5,7 @@ import { OpResult } from "../models/OpResult";
 import { ApiService, MsgService, ServiceMap } from "../models/ServiceMapUtil";
 import { TransportDataProto } from "../proto/TransportDataProto";
 import { TsrpcError } from "../proto/TsrpcError";
-import { BoxBuffer, BoxTextDecoding, BoxTextEncoding, TransportData } from "./TransportData";
+import { BoxBuffer, BoxDecoding, BoxTextDecoding, BoxTextEncoding, TransportData } from "./TransportData";
 
 // Send buffer: TransportData -> BoxBuffer -> Uint8Array
 // Send text: TransportData -> BoxText -> string
@@ -116,7 +116,11 @@ export class TransportDataUtil {
         }
     }
 
-    static encodeBoxBuffer(box: BoxBuffer): OpResult<Uint8Array> {
+    static encodeBoxBuffer(box: BoxBuffer, skipSN?: boolean): OpResult<Uint8Array> {
+        if (skipSN && 'sn' in box) {
+            box.sn = undefined;
+        }
+
         // Box 都是代码构造的，所以无需类型检查
         let op = this.tsbuffer.encode(box, 'TransportDataSchema', { skipValidate: true });
         if (!op.isSucc) {
@@ -160,7 +164,7 @@ export class TransportDataUtil {
         return output;
     }
 
-    static decodeBoxBuffer(data: Uint8Array, pendingCallApis: Map<number, { apiName: string }>, serviceMap: ServiceMap, skipValidate: boolean | undefined): OpResult<BoxBuffer> {
+    static decodeBoxBuffer(data: Uint8Array, pendingCallApis: Map<number, { apiName: string }>, serviceMap: ServiceMap, skipValidate: boolean | undefined, boxInfo: Partial<BoxDecoding> | undefined): OpResult<BoxBuffer> {
         let op = this.tsbuffer.decode(data, 'TransportDataSchema', { skipValidate });
         if (!op.isSucc) {
             if (op.errPhase === 'validate') {
@@ -173,6 +177,10 @@ export class TransportDataUtil {
         }
 
         let box = op.value as BoxBuffer;
+        if (boxInfo) {
+            Object.assign(box, boxInfo);
+        }
+
         if (box.type === 'res') {
             const item = pendingCallApis.get(box.sn);
             if (!item) {
@@ -184,12 +192,15 @@ export class TransportDataUtil {
         return { isSucc: true, res: box }
     }
 
-    static decodeBoxText(data: string, pendingCallApis: Map<number, { apiName: string }>, skipValidate: boolean | undefined, ...decodeBoxTextOptions: any[]): OpResult<BoxTextDecoding> {
+    static decodeBoxText(data: string, pendingCallApis: Map<number, { apiName: string }>, skipValidate: boolean | undefined, boxInfo: Partial<BoxDecoding> | undefined): OpResult<BoxTextDecoding> {
         try {
             var box = JSON.parse(data) as BoxTextDecoding;
         }
         catch (e: any) {
             return { isSucc: false, errMsg: 'Invalid JSON string: ' + e.message }
+        }
+        if (boxInfo) {
+            Object.assign(box, boxInfo);
         }
 
         if (!skipValidate) {

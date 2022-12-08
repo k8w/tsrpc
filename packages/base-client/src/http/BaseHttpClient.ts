@@ -76,7 +76,21 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
                     return;
                 }
 
-                this._recvData(ret.body, pendingCallApiItem.sn, ret.headers);
+                // Parse remote proto info from header
+                let protoInfo: ProtoInfo | undefined;
+                if (ret.headers?.['x-tsrpc-proto-info']) {
+                    try {
+                        protoInfo = JSON.parse(ret.headers['x-tsrpc-proto-info'])
+                    }
+                    catch (e) {
+                        this.logger.warn('Invalid reponse header "x-tsrpc-proto-info":', ret.headers['x-tsrpc-proto-info'], e)
+                    }
+                }
+
+                this._recvData(ret.body, {
+                    sn: pendingCallApiItem.sn,
+                    ...(protoInfo ? { protoInfo: protoInfo } : undefined)
+                });
             })
         }
 
@@ -85,7 +99,7 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
     }
 
     // #region Override text encode options
-    declare protected _recvData: (data: string | Uint8Array, reqSn: number, resHeaders: Record<string, string> | undefined) => Promise<OpResult<TransportData>>;
+    declare protected _recvData: (data: string | Uint8Array, boxInfo: { sn: number, protoInfo?: ProtoInfo }) => Promise<OpResult<TransportData>>;
 
     protected override _encodeSkipSN = true;
 
@@ -93,10 +107,10 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
         return { isSucc: true, res: box.body };
     }
 
-    protected override _decodeBoxText: (typeof TransportDataUtil)['decodeBoxText'] = (data, pendingCallApis, skipValidate, reqSn: number, resHeaders: Record<string, string> | undefined) => {
-        const pendingApi = pendingCallApis.get(reqSn);
+    protected override _decodeBoxText: (typeof TransportDataUtil)['decodeBoxText'] = (data, pendingCallApis, skipValidate, boxInfo: { sn: number, protoInfo: ProtoInfo }) => {
+        const pendingApi = pendingCallApis.get(boxInfo.sn);
         if (!pendingApi) {
-            return { isSucc: false, errMsg: `Invalid SN: ${reqSn}` };
+            return { isSucc: false, errMsg: `Invalid SN: ${boxInfo.sn}` };
         }
 
         // Parse body
@@ -110,25 +124,14 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
             return { isSucc: false, errMsg: `Response body is not a valid JSON.${this.flows.preRecvDataFlow.nodes.length ? ' You are using "preRecvDataFlow", please check whether it transformed the data properly.' : ''}\n  |- ${e}` }
         }
 
-        // Parse remote proto info from header
-        let protoInfo: ProtoInfo | undefined;
-        if (resHeaders?.['x-tsrpc-proto-info']) {
-            try {
-                protoInfo = JSON.parse(resHeaders['x-tsrpc-proto-info'])
-            }
-            catch (e) {
-                this.logger.warn('Invalid reponse header "x-tsrpc-proto-info":', resHeaders['x-tsrpc-proto-info'], e)
-            }
-        }
-
         return {
             isSucc: true,
             res: {
                 type: 'res',
                 body: body,
                 serviceName: pendingApi.apiName,
-                sn: reqSn,
-                protoInfo: protoInfo
+                sn: boxInfo.sn,
+                protoInfo: boxInfo.protoInfo
             }
         }
     }

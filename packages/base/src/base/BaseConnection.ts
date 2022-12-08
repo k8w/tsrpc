@@ -271,7 +271,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     protected async _recvApiReturn(transportData: TransportData & { type: 'res' | 'err' }): Promise<void> {
         // err.sn===0 means this is a error that remote cannot decode the data
-        if (transportData.type === 'err' && !transportData.sn) {
+        if (transportData.type === 'err' && transportData.sn === 0) {
             this.logger.error(this.chalk(`[${this.sideName('Remote')}Err]`, ['error']), transportData.err, transportData.protoInfo);
             return;
         }
@@ -511,7 +511,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Encode box
         const opEncodeBox = dataType === 'buffer'
-            ? TransportDataUtil.encodeBoxBuffer(box as BoxBuffer)
+            ? TransportDataUtil.encodeBoxBuffer(box as BoxBuffer, this._encodeSkipSN)
             : (this._encodeBoxText ?? TransportDataUtil.encodeBoxText)(box as BoxTextEncoding, this._encodeSkipSN)
         if (!opEncodeBox.isSucc) { return opEncodeBox }
 
@@ -593,10 +593,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     /**
      * Decode raw data to `Box`, and then call `_recvBox`
      * @param data 
-     * @param decodeBoxTextOptions Will pass through to TransportUtil.decodeBoxText()
+     * @param decodeBoxOptions Will pass through to TransportUtil.decodeBoxText() and TransportUtil.decodeBoxBuffer()
      * @returns If a valid Box is decoded, return `isSucc: true`, otherwise return `isSucc: false`
      */
-    protected async _recvData(data: string | Uint8Array, ...decodeBoxTextOptions: any[]): Promise<OpResultVoid> {
+    protected async _recvData(data: string | Uint8Array, boxInfo?: Partial<BoxDecoding>): Promise<OpResultVoid> {
         // Ignore all data if connection is not opened
         if (this.status !== ConnectionStatus.Connected) {
             return PROMISE_ABORTED;
@@ -623,8 +623,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Decode box
         const opDecodeBox = typeof data === 'string'
-            ? (this._decodeBoxText ?? TransportDataUtil.decodeBoxText)(data, this._pendingCallApis, this.options.skipDecodeValidate, ...decodeBoxTextOptions)
-            : TransportDataUtil.decodeBoxBuffer(data, this._pendingCallApis, this.serviceMap, this.options.skipDecodeValidate);
+            ? (this._decodeBoxText ?? TransportDataUtil.decodeBoxText)(data, this._pendingCallApis, this.options.skipDecodeValidate, boxInfo)
+            : TransportDataUtil.decodeBoxBuffer(data, this._pendingCallApis, this.serviceMap, this.options.skipDecodeValidate, boxInfo);
         if (!opDecodeBox.isSucc) {
             this.logger.debug(`[RecvDataErr] dataType=${dataType}, length=${data.length}), data:`, data, 'opDecodeBox:', opDecodeBox);
 

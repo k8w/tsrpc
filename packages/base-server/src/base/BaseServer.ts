@@ -114,9 +114,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
      * @throws Throw `Error` if stop failed
      */
     async stop(gracefulWaitTime?: number): Promise<void> {
-        this.logger.debug(`${this.chalk('[Stopping]', ['warn'])} ${gracefulWaitTime ? `graceful stop, gracefulWaitTime: ${gracefulWaitTime}` : `stop immediately`}`);
         // Graceful stop (wait all ApiCall finished)
         if (gracefulWaitTime) {
+            this.logger.debug('[GracefulStop] gracefulWaitTime=' + gracefulWaitTime)
             this._status = ServerStatus.Stopping;
             let timeout!: ReturnType<typeof setTimeout>;
             const op = await Promise.race([
@@ -138,7 +138,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
         // Do Stop (immediately)
         this._status = ServerStatus.Stopped;
         this.connections.forEach(conn => { conn['_disconnect'](true, 'Server stopped') });
-        this.logger.log(`${this.chalk('[Stopped]', ['error'])} Server stopped`);
+        this.logger.log(`${this.chalk('[ServerStop]', ['error'])} Server stopped`);
         return this._stop();
     }
 

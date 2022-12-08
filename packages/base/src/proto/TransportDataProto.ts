@@ -39,7 +39,8 @@ export const TransportDataProto: TSBufferProto = {
               "type": {
                 "type": "Number",
                 "scalarType": "uint"
-              }
+              },
+              "optional": true
             },
             {
               "id": 4,
@@ -80,7 +81,8 @@ export const TransportDataProto: TSBufferProto = {
               "type": {
                 "type": "Number",
                 "scalarType": "uint"
-              }
+              },
+              "optional": true
             },
             {
               "id": 3,
@@ -121,7 +123,8 @@ export const TransportDataProto: TSBufferProto = {
               "type": {
                 "type": "Number",
                 "scalarType": "uint"
-              }
+              },
+              "optional": true
             },
             {
               "id": 3,

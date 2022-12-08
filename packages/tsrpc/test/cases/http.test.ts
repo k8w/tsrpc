@@ -923,9 +923,8 @@ describe('HTTP Flows', function () {
         let ret = await client.callApi('Test', { name: 'XXX' });
         assert.deepStrictEqual(ret, {
             isSucc: false,
-            err: new TsrpcError('Invalid request buffer, please check the version of service proto.', {
-                type: TsrpcErrorType.RemoteError,
-                code: 'INPUT_DATA_ERR'
+            err: new TsrpcError('Unknown buffer encoding', {
+                type: TsrpcErrorType.RemoteError
             })
         })
 

@@ -8,22 +8,22 @@ export type TransportDataSchema = {
     type: 'req',
     body: Uint8Array,
     serviceId: uint,
-    sn: uint,
+    sn?: uint,
     /** Exchange proto info at first request */
     protoInfo?: ProtoInfo
 } | {
     /** API Return */
     type: 'res',
     body: Uint8Array,
-    sn: uint,
+    sn?: uint,
     /** Exchange proto info if get a 'protoInfo' request header */
     protoInfo?: ProtoInfo
 } | {
     /** API Return */
     type: 'err',
     err: TsrpcErrorData,
-    /** sn=0 means this is a universal error (e.g. Unknown buffer encoding) */
-    sn: uint,
+    /** sn===0 means this is a universal error (e.g. Unknown buffer encoding) */
+    sn?: uint,
     /** Exchange proto info if get a 'protoInfo' request header */
     protoInfo?: ProtoInfo,
 } | {
