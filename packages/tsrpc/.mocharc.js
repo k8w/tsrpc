@@ -6,7 +6,7 @@ module.exports = {
     exit: true,
     bail: true,
     timeout: 999999,
-    'preserve-symlinks': true,
+    // 'preserve-symlinks': true,
     spec: [
         './test/cases/http.test.ts',
         // './test/cases/httpJSON.test.ts',

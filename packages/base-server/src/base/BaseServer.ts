@@ -114,26 +114,31 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
      * @throws Throw `Error` if stop failed
      */
     async stop(gracefulWaitTime?: number): Promise<void> {
+        this.logger.debug(`${this.chalk('[Stopping]', ['warn'])} ${gracefulWaitTime ? `graceful stop, gracefulWaitTime: ${gracefulWaitTime}` : `stop immediately`}`);
         // Graceful stop (wait all ApiCall finished)
         if (gracefulWaitTime) {
             this._status = ServerStatus.Stopping;
             let timeout!: ReturnType<typeof setTimeout>;
-            await Promise.race([
-                new Promise<void>(rs => { timeout = setTimeout(rs, gracefulWaitTime) }),    // Max wait time
-                new Promise<void>(rs => {
-                    this._rsGracefulStop = rs;
-                    // Mark all conns as disconnecting
-                    this.connections.forEach(v => { v['_setStatus'](ConnectionStatus.Disconnecting) });
+            const op = await Promise.race([
+                new Promise<'timeout'>(rs => {
+                    timeout = setTimeout(() => {
+                        rs('timeout')
+                    }, gracefulWaitTime)
+                }),    // Max wait time
+                new Promise<'normal'>(rs => {
+                    this._rsGracefulStop = rs.bind(null, 'normal');
                 })
             ]);
             // Clear
             clearTimeout(timeout);
+            this.logger.debug(`${this.chalk('[GracefulStop]', ['warn'])} ${op === 'timeout' ? 'Max wait time reached, server would stop forcedly' : 'Graceful stopped successfully'}`)
             this._rsGracefulStop = undefined;
         }
 
         // Do Stop (immediately)
         this._status = ServerStatus.Stopped;
         this.connections.forEach(conn => { conn['_disconnect'](true, 'Server stopped') });
+        this.logger.log(`${this.chalk('[Stopped]', ['error'])} Server stopped`);
         return this._stop();
     }
 
@@ -351,7 +356,7 @@ export const defaultBaseServerOptions: BaseServerOptions = {
     ...defaultBaseConnectionOptions,
     json: false,
     strictNullChecks: false,
-    logLevel: 'debug'
+    logLevel: 'info'
 }
 
 export interface BaseServerOptions extends BaseConnectionOptions {

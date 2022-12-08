@@ -58,7 +58,8 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     }
 
     protected _stop(): void {
-        throw new Error("Method not implemented.");
+        this.httpServer?.close();
+        this.httpServer = undefined;
     }
 
     // TODO

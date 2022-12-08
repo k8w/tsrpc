@@ -143,7 +143,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     async callApi<T extends RemoteApiName<this>>(apiName: T, req: RemoteApi<this>[T]['req'], options?: TransportOptions): Promise<ApiReturn<RemoteApi<this>[T]['res']>> {
         // SN & Log
         let sn = this._callApiSn.getNext();
-        this.options.logApi && this.logger.log(`[callApi] [#${sn}] ${this.chalk('[Req]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logReqBody ? req : '');
+        this.options.logApi && this.logger.log(`${this.chalk(`[callApi] [#${sn}] [${apiName}]`, ['gray'])} ${this.chalk('[Req]', ['info'])}`, this.options.logReqBody ? req : '');
 
         // Create PendingCallApiItem
         let pendingItem: PendingCallApiItem = {
@@ -207,7 +207,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         let transportData: TransportData = {
             type: 'req',
             serviceName,
-            sn: this._nextSn,
+            sn: pendingItem.sn,
             body: req
         }
         // Exchange Proto Info
@@ -486,6 +486,9 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @param transportData Type haven't been checked, need to be done inside.
      */
     protected async _sendTransportData(transportData: TransportData, options?: TransportOptions, call?: ApiCall): Promise<OpResultVoid> {
+        if (this.options.debugBuf) {
+            this.logger.debug('[debugBuf] [SendTransportData]', transportData);
+        }
         if (this.status !== ConnectionStatus.Connected) {
             return { isSucc: false, errMsg: `The connection is not established, cannot send data.` }
         }
@@ -502,6 +505,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     }
 
     protected async _sendBox(box: BoxEncoding, dataType: BaseConnectionDataType, transportData: TransportData, options?: TransportOptions, call?: ApiCall): Promise<OpResultVoid> {
+        if (this.options.debugBuf) {
+            this.logger.debug('[debugBuf] [SendBox]', box);
+        }
+
         // Encode box
         const opEncodeBox = dataType === 'buffer'
             ? TransportDataUtil.encodeBoxBuffer(box as BoxBuffer)
@@ -524,7 +531,6 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             return { isSucc: false, errMsg: `The connection is not established, cannot send data.` }
         }
         if (this.options.debugBuf) {
-            this.logger.debug('[debugBuf] [SendTransportData]', pre.transportData);
             this.logger.debug('[debugBuf] [SendData]', pre.data);
         }
         const opSend = await this._sendData(pre.data, transportData, options);
@@ -620,7 +626,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             ? (this._decodeBoxText ?? TransportDataUtil.decodeBoxText)(data, this._pendingCallApis, this.options.skipDecodeValidate, ...decodeBoxTextOptions)
             : TransportDataUtil.decodeBoxBuffer(data, this._pendingCallApis, this.serviceMap, this.options.skipDecodeValidate);
         if (!opDecodeBox.isSucc) {
-            this.logger.debug(`[RecvDataErr] dataType=${dataType}, length=${data.length}), data:`, data);
+            this.logger.debug(`[RecvDataErr] dataType=${dataType}, length=${data.length}), data:`, data, 'opDecodeBox:', opDecodeBox);
 
             // Log
             if (dataType === 'text' || opDecodeBox.errPhase === 'validate') {
@@ -656,6 +662,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      * @returns If a valid `TransparentData` is decoded, return `isSucc: true`, otherwise return `isSucc: false`
      */
     protected async _recvBox(box: BoxDecoding, dataType: BaseConnectionDataType): Promise<OpResultVoid> {
+        this.options.debugBuf && this.logger.debug('[debugBuf] [RecvBox]', box);
+
         // Decode body
         const opDecodeBody = dataType === 'text'
             ? TransportDataUtil.decodeBodyText(box as BoxTextDecoding, this.serviceMap, this.tsbuffer, this.options.skipDecodeValidate)

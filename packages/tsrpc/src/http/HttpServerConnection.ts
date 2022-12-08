@@ -67,7 +67,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
 
             // 异常断开：客户端 Abort
             if (req.destroyed ?? req.aborted) {
-                (this.call?.logger ?? this.logger).log('[ReqAborted]');
+                (this.call?.logger ?? this.logger).debug(this.chalk('[ReqAborted]', ['debug']));
                 isManual = false;
                 reason = 'Remote aborted';
             }

@@ -55,7 +55,7 @@ export class EventEmitter<EventType extends Record<string, any[]> = any> {
 
             // Not throw error
             try {
-                item.listener.call(item.context, event);
+                item.listener.call(item.context, ...event);
             }
             catch (e) {
                 console.error(e);

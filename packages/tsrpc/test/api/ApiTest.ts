@@ -18,7 +18,7 @@ export async function ApiTest(call: ApiCall<ReqTest, ResTest>) {
         call.error('Got an error')
     }
     else {
-        await new Promise(rs => { setTimeout(rs, 50) })
+        await new Promise(rs => { setTimeout(rs, 100) })
         call.succ({
             reply: 'Test reply: ' + call.req.name
         })

@@ -112,7 +112,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
 export const defaultBaseClientOptions: BaseClientOptions = {
     ...defaultBaseConnectionOptions,
     json: false,
-    logLevel: 'warn',
+    logLevel: 'info',
     strictNullChecks: false
 }
 

@@ -1,7 +1,7 @@
 import http from "http";
 import https from "https";
 import { BaseServiceType, ServiceProto } from "tsrpc-base";
-import { BaseHttpClient, BaseHttpClientOptions, defaultBaseHttpClientOptions } from "../../../base-client/dist";
+import { BaseHttpClient, BaseHttpClientOptions, defaultBaseHttpClientOptions } from "tsrpc-base-client";
 import { defaultBaseNodeClientOptions } from "../models/BaseNodeClientOptions";
 import { getClassObjectId } from "../models/getClassObjectId";
 import { TSRPC_VERSION } from "../models/version";
