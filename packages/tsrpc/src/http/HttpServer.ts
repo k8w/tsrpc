@@ -30,8 +30,8 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     /** Native `http.Server` of NodeJS */
     httpServer?: http.Server | https.Server;
 
-    protected async _start(): Promise<void> {
-        this.logger.log(`Starting ${this.options.https ? 'HTTPS' : 'HTTP'} server at port ${this.options.port}...`);
+    protected async _start(): Promise<string> {
+        this.logger.log(`Starting ${this.options.https ? 'HTTPS' : 'HTTP'} server at port ${this.options.port}... (json=${!!this.options.json})`);
 
         const requestListener = (req: IncomingMessage, res: ServerResponse) => {
             // Create Connection
@@ -52,7 +52,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
 
         return new Promise(rs => {
             this.httpServer!.listen(this.options.port, () => {
-                rs();
+                rs(`Server started successfully at port ${this.options.port}`);
             })
         })
     }

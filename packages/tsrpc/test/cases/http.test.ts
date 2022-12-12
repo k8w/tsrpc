@@ -15,8 +15,8 @@ const serverLogger = {
         prefixs: [chalk.bgGreen.white(' Server ')],
         logger: new TerminalColorLogger({ pid: 'Server' })
     }),
-    logLevel: 'debug' as const,
-    debugBuf: true
+    // logLevel: 'debug' as const,
+    // debugBuf: true
 };
 const clientLogger = {
     logger: new PrefixLogger({

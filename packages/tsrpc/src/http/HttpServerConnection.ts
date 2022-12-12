@@ -57,7 +57,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
             const buf = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
             this.httpReq.rawBody = buf;
             const data = this.dataType === 'buffer' ? buf : buf.toString();
-            this._recvData(data);
+            this._recvData(data, { sn: this.id });
         });
 
         // 处理连接异常关闭的情况
@@ -151,7 +151,7 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
      * HttpServerConnection would transport serviceName by URL, and transport protoInfo by headers.
      * So it isn't that every field of Box is stored in the HTTP body, so it need to customized the decode box text method.
      */
-    protected override _decodeBoxText: (typeof TransportDataUtil)['decodeBoxText'] = (data, pendingCallApis, skipValidate) => {
+    protected override _decodeBoxText: (typeof TransportDataUtil)['decodeBoxText'] = (data) => {
         let op = this._doDecodeBoxText(data);
         if (!op.isSucc) {
             this._sendTransportData({

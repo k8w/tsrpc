@@ -143,7 +143,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     async callApi<T extends RemoteApiName<this>>(apiName: T, req: RemoteApi<this>[T]['req'], options?: TransportOptions): Promise<ApiReturn<RemoteApi<this>[T]['res']>> {
         // SN & Log
         let sn = this._callApiSn.getNext();
-        this.options.logApi && this.logger.log(`${this.chalk(`[callApi] [#${sn}] [${apiName}]`, ['gray'])} ${this.chalk('[Req]', ['info'])}`, this.options.logReqBody ? req : '');
+        this.options.logApi && this.logger.log(`${this.chalk(`${this.chalk('[callApi]', ['gray'])} [#${sn}] [${apiName}]`, ['gray'])} ${this.chalk('[Req]', ['info'])}`, this.options.logReqBody ? req : '');
 
         // Create PendingCallApiItem
         let pendingItem: PendingCallApiItem = {
@@ -191,10 +191,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Log Return
         if (this.options.logApi) {
             if (ret.isSucc) {
-                this.logger.log(`[callApi] [#${pendingItem.sn}] ${this.chalk('[Res]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logResBody ? ret.res : '');
+                this.logger.log(`${this.chalk(`[callApi] [#${pendingItem.sn}]`, ['gray'])} ${this.chalk('[Res]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logResBody ? ret.res : '');
             }
             else {
-                this.logger[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`[callApi] [#${pendingItem.sn}] ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, ret.err);
+                this.logger[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`${this.chalk(`[callApi] [#${pendingItem.sn}]`, ['gray'])} ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, ret.err);
             }
         }
 
@@ -303,7 +303,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         this._pendingCallApis.delete(sn);
 
         // Log
-        this.options.logApi && this.logger.log(`[callApi] [#${pendingItem.sn}] ${this.chalk('[Abort]', ['info'])} ${this.chalk(`[${pendingItem.apiName}]`, ['gray'])}`);
+        this.options.logApi && this.logger.log(`${this.chalk(`[callApi] [#${pendingItem.sn}]`, ['gray'])}  ${this.chalk('[Abort]', ['warn'])} ${this.chalk(`[${pendingItem.apiName}]`, ['gray'])}`);
 
         // onAbort
         pendingItem.onReturn = undefined;

@@ -77,8 +77,9 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
         }
 
         this._status = ServerStatus.Starting;
+        let succMsg: string;
         try {
-            await this._start();
+            succMsg = await this._start();
         }
         catch (e) {
             this._status = ServerStatus.Stopped;
@@ -86,14 +87,14 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
         }
         this._status = ServerStatus.Started;
 
-        this.logger.log('Server started successfully');
+        this.logger.log(this.chalk('[ServerStart]', ['info']) + ' ' + succMsg);
     }
 
     /**
      * Listen port, wait connection, and call this.addConnection()
      * @throws Throw `Error` if start failed
      */
-    protected abstract _start(): Promise<void>;
+    protected abstract _start(): Promise<string>;
 
     protected _connId = new Counter();
     addConnection(conn: Conn) {
@@ -138,7 +139,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
         // Do Stop (immediately)
         this._status = ServerStatus.Stopped;
         this.connections.forEach(conn => { conn['_disconnect'](true, 'Server stopped') });
-        this.logger.log(`${this.chalk('[ServerStop]', ['error'])} Server stopped`);
+        this.logger.log(`${this.chalk('[ServerStop]', ['info'])} Server stopped`);
         return this._stop();
     }
 
