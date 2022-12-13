@@ -194,7 +194,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
                 this.logger.log(`${this.chalk(`[callApi] [#${pendingItem.sn}]`, ['gray'])} ${this.chalk('[Res]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logResBody ? ret.res : '');
             }
             else {
-                this.logger[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`${this.chalk(`[callApi] [#${pendingItem.sn}]`, ['gray'])} ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, ret.err);
+                this.logger[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`${this.chalk(`[callApi] [#${pendingItem.sn}] [${apiName}]`, ['gray'])} ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])}`, ret.err);
             }
         }
 
