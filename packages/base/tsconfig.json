@@ -5,20 +5,14 @@
       "es6",
       "dom"
     ],
-    "module": "commonjs",
+    "module": "esnext",
     "outDir": "./dist",
     "importHelpers": true,
     "strict": true,
     "moduleResolution": "node",
-    "types": [
-      "node",
-      "mocha"
-    ],
+    "types": [],
     "esModuleInterop": true,
-    "sourceMap": true
-  },
-  "include": [
-    "src",
-    "test"
-  ]
+    "sourceMap": true,
+    "skipLibCheck": true
+  }
 }

@@ -1,5 +1,5 @@
-import typescript from 'rollup-plugin-typescript2';
 import dts from 'rollup-plugin-dts';
+import typescript from 'rollup-plugin-typescript2';
 import packageJSON from './package.json';
 
 const banner = `/*!
@@ -16,7 +16,8 @@ export default [
         output: [{
             format: 'cjs',
             file: './dist/index.js',
-            banner: banner
+            banner: banner,
+            sourcemap: true
         }],
         plugins: [
             typescript({
@@ -34,7 +35,8 @@ export default [
         output: [{
             format: 'es',
             file: './dist/index.mjs',
-            banner: banner
+            banner: banner,
+            sourcemap: true
         }],
         plugins: [
             typescript({

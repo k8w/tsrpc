@@ -7,17 +7,16 @@
       "es2020.bigint",
       "es2020.string"
     ],
-    "module": "commonjs",
+    "module": "esnext",
     "outDir": "./dist",
     "importHelpers": true,
     "strict": true,
     "moduleResolution": "node",
     "types": [
-      "node",
-      "mocha",
-      "chai"
+      "node"
     ],
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "sourceMap": true
   },
   "include": [
     "src",

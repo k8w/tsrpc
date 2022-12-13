@@ -1,5 +1,5 @@
 import assert from "assert";
-import { Logger, LogLevel, setLogLevel } from './Logger';
+import { Logger, LogLevel, setLogLevel } from 'tsrpc-base';
 
 function test(logLevel: LogLevel) {
     const result: [number, number, number, number] = [0, 0, 0, 0];
@@ -29,7 +29,7 @@ describe('Logger', function () {
     it('warn', function () {
         assert.deepStrictEqual(test('warn'), [0, 0, 1, 1])
     })
-    
+
     it('error', function () {
         assert.deepStrictEqual(test('error'), [0, 0, 0, 1])
     })

@@ -1,8 +1,9 @@
 module.exports = {
     require: [
         'ts-node/register',
-        'k8w-extend-native'
+        'src/index.ts'
     ],
+    recursive: true,
     exit: true,
     bail: true,
     timeout: 999999

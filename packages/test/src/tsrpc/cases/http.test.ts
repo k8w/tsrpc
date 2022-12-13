@@ -1,10 +1,11 @@
 import assert from 'assert';
 import { ObjectId } from 'bson';
 import chalk from 'chalk';
+import 'k8w-extend-native';
 import * as path from "path";
+import { HttpClient, HttpServer, TerminalColorLogger } from 'tsrpc';
 import { PrefixLogger, ServiceProto, TsrpcError, TsrpcErrorType } from 'tsrpc-base';
 import { BaseServer } from 'tsrpc-base-server';
-import { HttpClient, HttpServer, TerminalColorLogger } from '../../src';
 import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
 import { ApiTest } from '../api/ApiTest';
 import { MsgChat } from '../proto/MsgChat';
@@ -101,7 +102,7 @@ describe('HTTP Server & Client basic', function () {
         });
         await server.start();
 
-        server.implementApi('Test', ApiTest);
+        server.implementApi('Test', ApiTest as any);
         server.implementApi('a/b/c/Test', ApiAbcTest);
 
         let client = new HttpClient(getProto(), {

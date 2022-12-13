@@ -19,15 +19,27 @@
     "url": "git+https://github.com/k8w/tsrpc.git"
   },
   "scripts": {
-    "test": "node ./__tests__/test.test.js"
+    "test": "npx mocha src/**/*.test.ts",
+    "coverage": "nyc npm test && open coverage/index.html"
   },
   "bugs": {
     "url": "https://github.com/k8w/tsrpc/issues"
   },
   "devDependencies": {
-    "tsrpc-proto": "workspace:^4.0.0-dev.0"
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^18.8.3",
+    "k8w-extend-native": "^1.4.6",
+    "mocha": "9",
+    "nyc": "^15.1.0"
+  },
+  "dependencies": {
+    "bson": "^4.7.0",
+    "tsrpc": "workspace:^4.0.0-dev.0",
+    "tsrpc-base": "workspace:^4.0.0-dev.0",
+    "tsrpc-base-client": "workspace:^4.0.0-dev.0",
+    "tsrpc-base-server": "workspace:^4.0.0-dev.0"
   },
   "peerDependencies": {
-    "tsrpc-proto": "workspace:^4.0.0-dev.0"
+    "k8w-extend-native": "^1.4.6"
   }
 }

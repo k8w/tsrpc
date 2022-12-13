@@ -12,8 +12,6 @@
     "dist"
   ],
   "scripts": {
-    "test": "npx mocha",
-    "coverage": "nyc mocha && open ../../coverage/index.html",
     "build": "rm -rf dist && rollup -c && node scripts/postBuild.js"
   },
   "repository": {
@@ -37,14 +35,8 @@
     "ws": "^8.9.0"
   },
   "devDependencies": {
-    "@types/chai": "^4.3.4",
-    "@types/mocha": "^10.0.0",
     "@types/node": "^18.8.3",
-    "bson": "^4.7.0",
-    "chai": "^4.3.7",
     "k8w-extend-native": "^1.4.6",
-    "mocha": "9",
-    "nyc": "^15.1.0",
     "rollup": "^2.79.1",
     "rollup-plugin-dts": "^4.2.2",
     "rollup-plugin-typescript2": "^0.32.1",
@@ -58,25 +50,5 @@
     "tslib": "^2.4.0",
     "tsrpc-base": "workspace:^4.0.0-dev.0",
     "tsrpc-base-server": "workspace:^4.0.0-dev.0"
-  },
-  "nyc": {
-    "extension": [
-      ".ts",
-      ".js"
-    ],
-    "cwd": "..",
-    "include": [
-      "tsrpc/src/**",
-      "base/dist/**",
-      "base-client/dist/**",
-      "base-server/dist/**"
-    ],
-    "excludeAfterRemap": false,
-    "reporter": [
-      "html"
-    ],
-    "temp-dir": "tsrpc/.nyc_output",
-    "report-dir": "tsrpc/coverage",
-    "all": true
   }
 }

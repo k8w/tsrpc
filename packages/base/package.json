@@ -12,8 +12,6 @@
     "dist"
   ],
   "scripts": {
-    "test": "mocha **/*.test.ts",
-    "coverage": "nyc npm test && open coverage/index.html",
     "build": "rm -rf dist && rollup -c",
     "genTransportProto": "cd src/proto && npx tsbuffer-cli proto -i TransportDataSchema.ts -o TransportDataProto_temp.ts"
   },
@@ -33,12 +31,7 @@
     "tsrpc-proto": "workspace:^4.0.0-dev.0"
   },
   "devDependencies": {
-    "@istanbuljs/nyc-config-typescript": "^1.0.2",
-    "@types/mocha": "^10.0.0",
-    "@types/node": "^18.8.3",
     "k8w-extend-native": "^1.4.6",
-    "mocha": "9",
-    "nyc": "^15.1.0",
     "rollup": "^2.79.1",
     "rollup-plugin-dts": "^4.2.3",
     "rollup-plugin-typescript2": "^0.34.1",

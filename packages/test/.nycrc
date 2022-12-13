@@ -1,0 +1,21 @@
+{
+    "extends": "@istanbuljs/nyc-config-typescript",
+    "all": true,
+    "reporter": [
+        "html"
+    ],
+    "extension": [
+        ".ts",
+        ".js"
+    ],
+    "cwd": "..",
+    "include": [
+        "tsrpc/dist/**",
+        "base/dist/**",
+        "base-client/dist/**",
+        "base-server/dist/**"
+    ],
+    "excludeAfterRemap": false,
+    "temp-dir": "test/.nyc_output",
+    "report-dir": "test/coverage"
+}
