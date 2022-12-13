@@ -399,7 +399,6 @@ describe('HTTP Server & Client basic', function () {
                 });
 
                 setTimeout(() => {
-                    client.logger?.log('sn', sn, name, abort, ret)
                     if (abort) {
                         assert.strictEqual(ret, undefined);
                     }

@@ -154,7 +154,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseCon
             }
             else {
                 this.logger[ret.err.type === TsrpcErrorType.LocalError || ret.err.type === TsrpcErrorType.NetworkError ? 'error' : 'log'](
-                    this.conn.chalk('[Err]', [ret.err.type === TsrpcErrorType.ApiError ? 'info' : 'error']), ret.err
+                    this.conn.chalk('[Err]', [ret.err.type === TsrpcErrorType.ApiError ? 'warn' : 'error']), ret.err
                 );
             }
         }
