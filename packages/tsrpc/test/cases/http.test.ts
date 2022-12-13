@@ -526,7 +526,7 @@ describe('HTTP Server & Client basic', function () {
 
         let promiseStop!: Promise<void>;
         setTimeout(() => {
-            promiseStop = server.stop(15000);
+            promiseStop = server.stop(2000);
         }, 50)
 
         let succNum = 0;

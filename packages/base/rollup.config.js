@@ -16,7 +16,8 @@ export default [
         output: [{
             format: 'cjs',
             file: './dist/index.js',
-            banner: banner
+            banner: banner,
+            sourcemap: true
         }],
         plugins: [
             typescript({
@@ -34,7 +35,8 @@ export default [
         output: [{
             format: 'es',
             file: './dist/index.mjs',
-            banner: banner
+            banner: banner,
+            sourcemap: true
         }],
         plugins: [
             typescript({
@@ -49,7 +51,11 @@ export default [
     },
     {
         input: "./src/index.ts",
-        output: [{ file: './dist/index.d.ts', format: 'es' }],
+        output: [{
+            file: './dist/index.d.ts',
+            format: 'es',
+            sourcemap: true
+        }],
         plugins: [dts({
             compilerOptions: {
                 preserveSymlinks: false
