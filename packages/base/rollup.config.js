@@ -23,7 +23,8 @@ export default [
             typescript({
                 tsconfigOverride: {
                     compilerOptions: {
-                        target: "es5"
+                        target: "es5",
+                        module: "esnext"
                     }
                 }
             })
@@ -42,7 +43,8 @@ export default [
             typescript({
                 tsconfigOverride: {
                     compilerOptions: {
-                        target: "es6"
+                        target: "es6",
+                        module: "esnext"
                     }
                 }
             })

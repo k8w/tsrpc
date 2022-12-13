@@ -5,16 +5,20 @@
       "es6",
       "dom"
     ],
-    "module": "ES2020",
+    "module": "commonjs",
     "outDir": "./dist",
     "importHelpers": true,
     "strict": true,
     "moduleResolution": "node",
-    "types": [],
+    "types": [
+      "node",
+      "mocha"
+    ],
     "esModuleInterop": true,
     "sourceMap": true
   },
   "include": [
-    "src"
+    "src",
+    "test"
   ]
 }
