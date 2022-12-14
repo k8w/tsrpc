@@ -19,7 +19,7 @@
     "url": "git+https://github.com/k8w/tsrpc.git"
   },
   "scripts": {
-    "test": "npx mocha src/**/*.test.ts",
+    "test": "npx mocha src/**/*.test.ts --colors",
     "coverage": "nyc npm test && open coverage/index.html"
   },
   "bugs": {

@@ -11,9 +11,9 @@
     "cwd": "..",
     "include": [
         "tsrpc/dist/**",
-        "base/dist/**",
-        "base-client/dist/**",
-        "base-server/dist/**"
+        "tsrpc-base/dist/**",
+        "tsrpc-base-client/dist/**",
+        "tsrpc-base-server/dist/**"
     ],
     "excludeAfterRemap": false,
     "temp-dir": "test/.nyc_output",
