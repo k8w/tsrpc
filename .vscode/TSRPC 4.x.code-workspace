@@ -1,0 +1,38 @@
+{
+	"folders": [
+		{
+			"name": "✨ /Users/king/Projects/tsrpc",
+			"path": ".."
+		},
+		{
+			"name": "🗳️ tsrpc-test",
+			"path": "../packages/test"
+		},
+		{
+			"name": "📦 tsrpc",
+			"path": "../packages/tsrpc"
+		},
+		{
+			"name": "📦 tsrpc-base",
+			"path": "../packages/tsrpc-base"
+		},
+		{
+			"name": "📦 tsrpc-base-client",
+			"path": "../packages/tsrpc-base-client"
+		},
+		{
+			"name": "📦 tsrpc-base-server",
+			"path": "../packages/tsrpc-base-server"
+		},
+		{
+			"name": "📦 tsrpc-proto",
+			"path": "../packages/tsrpc-proto"
+		}
+	],
+	"settings": {
+		"typescript.tsdk": "node_modules\\typescript\\lib",
+		"monorepoWorkspace.folders.custom": [
+			
+		]
+	}
+}
