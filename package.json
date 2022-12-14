@@ -4,9 +4,9 @@
     "lerna": "^5.5.1"
   },
   "scripts": {
-    "bootstrap": "lerna bootstrap",
-    "test": "lerna run test",
-    "build": "lerna run build",
+    "bootstrap": "lerna bootstrap && pnpm i",
+    "test": "lerna run test --stream -- --colors",
+    "build": "lerna run build --stream",
     "publish:dev": "",
     "publish:latest": ""
   }
