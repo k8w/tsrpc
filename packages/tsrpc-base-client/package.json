@@ -9,6 +9,7 @@
   },
   "types": "./dist/index.d.ts",
   "scripts": {
+    "dev": "rollup -c -w",
     "build": "rm -rf dist && rollup -c"
   },
   "files": [

@@ -1,11 +1,13 @@
 {
   "private": true,
   "devDependencies": {
-    "lerna": "^5.5.1"
+    "lerna": "^5.5.1",
+    "onchange": "^7.1.0"
   },
   "scripts": {
     "bootstrap": "lerna bootstrap && pnpm i",
     "test": "lerna run test --stream -- --colors",
+    "dev": "onchange -i -k 'packages/tsrpc-base/src/**/*.ts' 'packages/tsrpc-base-client/src/**/*.ts' 'packages/tsrpc-base-server/src/**/*.ts' 'packages/tsrpc/src/**/*.ts' -- npm run build",
     "build": "lerna run build --stream",
     "publish:dev": "",
     "publish:latest": ""

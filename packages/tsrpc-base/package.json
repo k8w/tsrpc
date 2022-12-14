@@ -12,6 +12,7 @@
     "dist"
   ],
   "scripts": {
+    "dev": "rollup -c -w",
     "build": "rm -rf dist && rollup -c",
     "genTransportProto": "cd src/proto && npx tsbuffer-cli proto -i TransportDataSchema.ts -o TransportDataProto_temp.ts"
   },

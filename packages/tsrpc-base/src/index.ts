@@ -23,4 +23,3 @@ export * from './proto/ServiceProto';
 export * from './proto/TransportDataProto';
 export * from './proto/TransportDataSchema';
 export * from './proto/TsrpcError';
-
