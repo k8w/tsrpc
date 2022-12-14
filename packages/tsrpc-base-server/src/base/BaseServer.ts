@@ -93,6 +93,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
     /**
      * Listen port, wait connection, and call this.addConnection()
      * @throws Throw `Error` if start failed
+     * @return Successful message (e.g. "Server started at port 3000")
      */
     protected abstract _start(): Promise<string>;
 
@@ -145,6 +146,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
 
     /**
      * Stop server immediately
+     * (Don't need to set server.status)
      */
     protected abstract _stop(): void;
 

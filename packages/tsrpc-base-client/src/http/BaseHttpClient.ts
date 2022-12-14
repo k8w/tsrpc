@@ -157,7 +157,8 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
 export const defaultBaseHttpClientOptions: BaseHttpClientOptions = {
     ...defaultBaseClientOptions,
     server: 'http://127.0.0.1:3000',
-    heartbeat: false as never,
+    heartbeat: false,
+    logConnect: false,
     apiCallTimeout: undefined as never
 }
 
@@ -171,11 +172,13 @@ export interface BaseHttpClientOptions extends BaseClientOptions {
      */
     decodeReturnText?: (data: string) => ApiReturn<any>,
 
-    /** HTTP do not need heartbeat */
+    // Deprecated
+    /** @deprecated HTTP client do not support duplex callApi */
+    apiCallTimeout: never,
+    /** @deprecated HTTP does not has connect info */
+    logConnect: false,
+    /** @deprecated HTTP does not need heartbeat */
     heartbeat: false,
-
-    /** HTTP client do not support duplex callApi */
-    apiCallTimeout: never
 }
 
 export interface PrivateBaseHttpClientOptions extends PrivateBaseClientOptions {

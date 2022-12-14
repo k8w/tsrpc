@@ -38,7 +38,6 @@ importers:
   packages/tsrpc:
     specifiers:
       '@types/node': ^18.8.3
-      '@types/uuid': ^8.3.4
       '@types/ws': ^8.5.3
       chalk: '4'
       k8w-extend-native: ^1.4.6
@@ -51,15 +50,12 @@ importers:
       tsrpc-base-client: workspace:^4.0.0-dev.0
       tsrpc-base-server: workspace:4.0.0-dev.0
       typescript: ^4.8.4
-      uuid: ^9.0.0
       ws: ^8.9.0
     dependencies:
-      '@types/uuid': 8.3.4
       '@types/ws': 8.5.3
       chalk: 4.1.2
       tsrpc-base-client: link:../tsrpc-base-client
       tsrpc-base-server: link:../tsrpc-base-server
-      uuid: 9.0.0
       ws: 8.9.0
     devDependencies:
       '@types/node': 18.8.3
@@ -1516,10 +1512,6 @@ packages:
   /@types/parse-json/4.0.0:
     resolution: {integrity: sha512-//oorEZjL6sbPcKUaCdIGlIUeH26mgzimjBB77G6XRgnDl/L5wOnpyBGRe/Mmf5CVW3PwEBE1NjiMZ/ssFh4wA==}
     dev: true
-
-  /@types/uuid/8.3.4:
-    resolution: {integrity: sha512-c/I8ZRb51j+pYGAu5CrFMRxqZ2ke4y2grEBO5AUjgSkSk+qT2Ea+OdWElz/OiMf5MNpn2b17kuVBwZLQJXzihw==}
-    dev: false
 
   /@types/ws/8.5.3:
     resolution: {integrity: sha512-6YOoWjruKj1uLf3INHH7D3qTXwFfEsg1kf3c0uDdSBJwfa/llkwIjrAGV7j7mVgGNbzTQ3HiHKKDXl6bJPD97w==}
@@ -5229,11 +5221,6 @@ packages:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
     hasBin: true
     dev: true
-
-  /uuid/9.0.0:
-    resolution: {integrity: sha512-MXcSTerfPa4uqyzStbRoTgt5XIe3x5+42+q1sDuy3R5MDk66URdLMOZe5aPX/SQd+kuYAh0FdP/pO28IkQyTeg==}
-    hasBin: true
-    dev: false
 
   /v8-compile-cache-lib/3.0.1:
     resolution: {integrity: sha512-wa7YjyUGfNZngI/vtK0UHAN+lgDCxBPCylVXGp0zu59Fz5aiGtNXaq3DhIov063MorB+VfufLh3JlF2KdTK3xg==}

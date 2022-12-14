@@ -27,12 +27,10 @@
   },
   "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/tsrpc#readme",
   "dependencies": {
-    "@types/uuid": "^8.3.4",
     "@types/ws": "^8.5.3",
     "chalk": "4",
     "tsrpc-base-client": "workspace:^4.0.0-dev.0",
     "tsrpc-base-server": "workspace:4.0.0-dev.0",
-    "uuid": "^9.0.0",
     "ws": "^8.9.0"
   },
   "devDependencies": {

@@ -32,9 +32,13 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
         // Init connection (http req/res, ws conn, ...)
     }
 
+    // TODO override _setStatus and logConnect
+
+    /** Close the connection immediately */
     protected override _disconnect(isManual: boolean, reason?: string): void {
         super._disconnect(isManual, reason);
         this.server.connections.delete(this);
+        // TODO logConnect
     }
 
     // Server may disable JSON transport

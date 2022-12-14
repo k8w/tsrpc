@@ -64,6 +64,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Post Connect
         if (newStatus === ConnectionStatus.Connected) {
+            // TODO logConnect
+
             this.options.heartbeat && this._startHeartbeat();
             this.flows.postConnectFlow.exec(this, this.logger);
         }
@@ -834,6 +836,7 @@ export const defaultBaseConnectionOptions: BaseConnectionOptions = {
     // Log
     logger: console,
     chalk: v => v,
+    logConnect: true,
     logApi: true,
     logMsg: true,
     logReqBody: true,
@@ -869,6 +872,7 @@ export interface BaseConnectionOptions {
     // Log
     logger: Logger,
     chalk: Chalk,
+    logConnect: boolean,    // TODO
     logApi: boolean,
     logMsg: boolean,
     logReqBody: boolean,
