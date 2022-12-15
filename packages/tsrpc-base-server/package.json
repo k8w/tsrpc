@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "dev": "rollup -c -w",
+    "check": "tsc --noEmit",
     "build": "rm -rf dist && rollup -c"
   },
   "repository": {

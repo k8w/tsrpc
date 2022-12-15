@@ -31,9 +31,10 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
             this._wsServer = new WebSocketServer({
                 server: this._httpServer
             });
-            this._wsServer.on('connection', (socket, request) => {
+            this._wsServer.on('connection', (ws, httpReq) => {
                 const conn = new WsServerConnection(this, {
-                    // TODO
+                    ws: ws,
+                    httpReq: httpReq
                 });
                 this.addConnection(conn);
             });

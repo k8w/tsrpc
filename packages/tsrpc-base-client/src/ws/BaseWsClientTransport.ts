@@ -1,14 +1,19 @@
-import { Logger, OpResult } from "tsrpc-base";
+import { OpResultVoid } from "tsrpc-base";
 
 export interface BaseWsClientTransport {
-    onOpen: () => void;
-    onClose: (code?: number, reason?: string) => void;
-    onError: (e: unknown) => void;
-    onMessage: (data: Uint8Array | string) => void;
-    logger: Logger | undefined;
+    connect(options: ConnectOptions): SocketInstance;
+}
 
-    // Create and connect (return ws client)
-    connect(server: string, protocols?: string[]): void;
+export interface ConnectOptions {
+    server: string,
+    protocols: string[],
+    onOpen: () => void,
+    onClose: (code?: number, reason?: string) => void,
+    onError: (e: Error) => void,
+    onMessage: (data: Uint8Array | string) => void,
+}
+
+export interface SocketInstance {
     close(reason: string, code: number): void;
-    send(data: Uint8Array | string): Promise<OpResult<void>>;
+    send(data: Uint8Array | string): Promise<OpResultVoid>;
 }

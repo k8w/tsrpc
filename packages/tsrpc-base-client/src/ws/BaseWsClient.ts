@@ -1,23 +1,16 @@
 import { BaseServiceType, ConnectionStatus, OpResultVoid, PROMISE_ABORTED, ServiceProto, TransportData, TransportOptions } from "tsrpc-base";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../base/BaseClient";
-import { BaseWsClientTransport } from "./BaseWsClientTransport";
+import { BaseWsClientTransport, SocketInstance } from "./BaseWsClientTransport";
 
 export class BaseWsClient<ServiceType extends BaseServiceType = any> extends BaseClient<ServiceType> {
 
     declare readonly options: BaseWsClientOptions;
-    protected _ws: BaseWsClientTransport;
+    protected _transport: BaseWsClientTransport;
+    protected _ws?: SocketInstance;
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseWsClientOptions, privateOptions: PrivateBaseWsClientOptions) {
         super(serviceProto, options, privateOptions);
-
-        // Init transport
-        this._ws = privateOptions.transport;
-        this._ws.logger = this.logger;
-        this._ws.onOpen = this._onWsOpen;
-        this._ws.onClose = this._onWsClose;
-        this._ws.onError = this._onWsError;
-        this._ws.onMessage = this._onWsMessage;
-
+        this._transport = privateOptions.transport;
         this.logger.log(`TSRPC WebSocket Client: ${this.options.server}`);
     }
 
@@ -54,7 +47,14 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
         // Connect WS
         // TODO TIMEOUT
         try {
-            this._ws.connect(this.options.server, [this.dataType]);
+            this._ws = this._transport.connect({
+                server: this.options.server,
+                protocols: [this.dataType],
+                onOpen: this._onWsOpen,
+                onClose: this._onWsClose,
+                onError: this._onWsError,
+                onMessage: this._onWsMessage,
+            })
         }
         catch (e) {
             this.logger?.error(e);
@@ -83,7 +83,8 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
     protected override _disconnect(isManual: boolean, reason?: string): void {
         super._disconnect(isManual, reason);
 
-        this._ws.close(reason ?? '', isManual ? 1000 : 1001);
+        this._ws?.close(reason ?? '', isManual ? 1000 : 1001);
+        this._ws = undefined;
 
         // 连接中，返回连接失败
         if (this._connecting) {
@@ -130,7 +131,7 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
     };
 
     protected override _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid> {
-        return this._ws.send(data);
+        return this._ws!.send(data);
     }
 
 }

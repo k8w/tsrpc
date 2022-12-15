@@ -1,3 +1,4 @@
+// TODO require -> import
 export function getClassObjectId(): { new(id?: any): any } {
     let classObjId: any;
     try {

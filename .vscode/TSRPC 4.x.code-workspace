@@ -5,7 +5,7 @@
 			"path": ".."
 		},
 		{
-			"name": "🗳️ tsrpc-test",
+			"name": "🗳️ test",
 			"path": "../packages/test"
 		},
 		{
@@ -31,8 +31,6 @@
 	],
 	"settings": {
 		"typescript.tsdk": "node_modules\\typescript\\lib",
-		"monorepoWorkspace.folders.custom": [
-			
-		]
+		"monorepoWorkspace.folders.custom": []
 	}
 }
