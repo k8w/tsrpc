@@ -11,7 +11,7 @@ import { BaseConnection, ConnectionStatus, LocalApiName, PROMISE_ABORTED } from 
 // Client 的 call.succ / call.error ：拦截请求，本地 mock
 // Call 分角色（Req or Ret）（Server or Client）
 
-export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = BaseConnection, ApiName extends LocalApiName<Conn> = string> {
+export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = any, ApiName extends LocalApiName<Conn> = string> {
 
     logger: PrefixLogger;
     return?: ApiReturn<Res>;

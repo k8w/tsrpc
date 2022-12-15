@@ -102,7 +102,7 @@ describe('HTTP Server & Client basic', function () {
         });
         await server.start();
 
-        server.implementApi('Test', ApiTest as any);
+        server.implementApi('Test', ApiTest);
         server.implementApi('a/b/c/Test', ApiAbcTest);
 
         let client = new HttpClient(getProto(), {

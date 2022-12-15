@@ -752,10 +752,16 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     // ! Heartbeat 统一走可靠传输通道
 
+    /**
+     * Last latency time (ms) of heartbeat test
+     */
+    lastHeartbeatLatency: number = 0;
+
     protected _heartbeat?: {
         sn: Counter,
-        sendInterval?: ReturnType<typeof setInterval>,
-        recvTimeout?: ReturnType<typeof setTimeout>
+        sendTimer?: ReturnType<typeof setTimeout>,
+        recvTimeout?: ReturnType<typeof setTimeout>,
+        lastSendTime: number
     }
 
     protected _startHeartbeat() {
@@ -766,11 +772,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Set interval and timers
         if (this.options.heartbeatSendInterval) {
             this._heartbeat = {
-                sn: new Counter
+                sn: new Counter,
+                lastSendTime: 0
             };
-            this._heartbeat.sendInterval = setInterval(() => {
-                this._sendHeartbeat();
-            }, this.options.heartbeatSendInterval)
+            this._sendHeartbeat();
         }
 
         // Init recv timeout
@@ -779,8 +784,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
     protected _stopHeartbeat() {
         // Clear interval and timers
-        if (this._heartbeat?.sendInterval) {
-            clearInterval(this._heartbeat.sendInterval)
+        if (this._heartbeat?.sendTimer) {
+            clearTimeout(this._heartbeat.sendTimer)
         }
         if (this._heartbeat?.recvTimeout) {
             clearTimeout(this._heartbeat.recvTimeout)
@@ -790,6 +795,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     }
 
     protected _sendHeartbeat() {
+        if (!this._heartbeat) {
+            return;
+        }
+
+        this._heartbeat.lastSendTime = performance.now();
         this._sendTransportData({
             type: 'heartbeat',
             sn: this._heartbeat!.sn.getNext()
@@ -797,11 +807,26 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     }
 
     private _recvHeartbeat(data: TransportData & { type: 'heartbeat' }) {
+        if (!this._heartbeat) {
+            return;
+        }
         this._resetHeartbeatTimeout();
 
+        // Recv Pong
+        if (data.isReply) {
+            // calculate lastHeartbeatLatency
+            this.lastHeartbeatLatency = performance.now() - this._heartbeat.lastSendTime;
+
+            // send again after interval
+            if (this.options.heartbeatSendInterval) {
+                this._heartbeat.sendTimer = setTimeout(() => {
+                    this._sendHeartbeat();
+                }, this.options.heartbeatSendInterval)
+            }
+        }
         // Recv Ping
-        if (!data.isReply) {
-            // Send Reply
+        else {
+            // Send Pong
             this._sendTransportData({
                 ...data,
                 isReply: true
@@ -931,8 +956,8 @@ export interface PendingCallApiItem {
 }
 
 export type ApiHandler<Conn extends BaseConnection = any, ApiName extends LocalApiName<Conn> = any> = <T extends Conn>(call: ApiCall<LocalApi<Conn>[ApiName]['req'], LocalApi<Conn>[ApiName]['res'], T>) => (void | Promise<void>);
-export type MsgHandler<Conn extends BaseConnection = any, MsgName extends keyof Conn['$ServiceType']['msg'] = any>
-    = <T extends Conn>(msg: T['$ServiceType']['msg'][MsgName], msgName: MsgName, conn: T) => void | Promise<void>;
+export type MsgHandler<Conn extends BaseConnection = any, MsgName extends keyof Conn['$ServiceType']['msg'] = any, MsgType extends Conn['$ServiceType']['msg'][MsgName] = Conn['$ServiceType']['msg'][MsgName]>
+    = <T extends Conn>(msg: MsgType, msgName: MsgName, conn: T) => void | Promise<void>;
 
 export enum ConnectionStatus {
     Connecting = 'Connecting',

@@ -1,9 +1,13 @@
 import http from "http";
 import https from "https";
-import { BaseServiceType } from "tsrpc-base";
+import { BaseServiceType, ServiceProto } from "tsrpc-base";
 import { BaseServer } from "tsrpc-base-server";
 import { WebSocketServer } from "ws";
+import { defaultHttpServerOptions } from "../http/HttpServer";
 import { BaseNodeServerOptions, defaultBaseNodeServerOptions } from "../models/BaseNodeServerOptions";
+import { getClassObjectId } from "../models/getClassObjectId";
+import { processUncaughtException } from "../models/processUncaughtException";
+import { TSRPC_VERSION } from "../models/version";
 import { WsServerConnection } from "./WsServerConnection";
 
 export class WsServer<ServiceType extends BaseServiceType = any> extends BaseServer<ServiceType>{
@@ -13,6 +17,20 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
 
     private _wsServer?: WebSocketServer;
     private _httpServer?: http.Server | https.Server;
+
+    constructor(serviceProto: ServiceProto<ServiceType>, options?: Partial<WsServerOptions>) {
+        super(serviceProto, {
+            ...defaultHttpServerOptions,
+            ...options
+        }, {
+            classObjectId: getClassObjectId(),
+            env: {
+                tsrpc: TSRPC_VERSION,
+                node: process.version
+            }
+        });
+        processUncaughtException(this.logger);
+    }
 
     protected _start(): Promise<string> {
         this.logger.log(`Starting ${this.options.wss ? 'WSS' : 'WS'} server at port ${this.options.port}... (json=${!!this.options.json})`);
@@ -47,11 +65,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
     }
 
     protected _stop(): void {
-        this._wsServer!.close(err => {
-            if (err) {
-                this.logger.error('wsServer close error.', err);
-            }
-        })
+        this._httpServer?.close();
         this._wsServer = undefined;
         this._httpServer = undefined;
     }
@@ -70,7 +84,7 @@ export interface WsServerOptions extends BaseNodeServerOptions {
     /**
      * HTTPS options, the server would use wss instead of http if this value is defined.
      * NOTICE: Once you enabled wss, you CANNOT visit the server via `ws://` anymore.
-     * If you need visit the server via both `ws://` and `wss://`, you can start 2 HttpServer (one with `wss` and another without).
+     * If you need visit the server via both `ws://` and `wss://`, you can start 2 WsServer (one with `wss` and another without).
      * @defaultValue `undefined`
      */
     wss?: {
