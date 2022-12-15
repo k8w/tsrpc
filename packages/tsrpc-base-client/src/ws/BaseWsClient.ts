@@ -52,6 +52,7 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
         }
 
         // Connect WS
+        // TODO TIMEOUT
         try {
             this._ws.connect(this.options.server, [this.dataType]);
         }
