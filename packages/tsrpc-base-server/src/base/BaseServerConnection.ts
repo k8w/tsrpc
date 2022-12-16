@@ -32,6 +32,10 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
         // Init connection (http req/res, ws conn, ...)
     }
 
+    protected _errConnNotConnected(): OpResultVoid & { isSucc: false } {
+        return { isSucc: false, errMsg: `The connection has been broken and no data can be sent.` }
+    }
+
     // TODO override _setStatus and logConnect
 
     /** Close the connection immediately */

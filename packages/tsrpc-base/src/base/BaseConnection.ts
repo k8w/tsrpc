@@ -489,7 +489,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             this.logger.debug('[debugBuf] [SendTransportData]', transportData);
         }
         if (this.status !== ConnectionStatus.Connected) {
-            return { isSucc: false, errMsg: `The connection is not established, cannot send data.` }
+            return this._errConnNotConnected();
         }
 
         const dataType = options?.dataType ?? this.dataType;
@@ -527,7 +527,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Send Data
         if (this.status !== ConnectionStatus.Connected) {
-            return { isSucc: false, errMsg: `The connection is not established, cannot send data.` }
+            return this._errConnNotConnected()
         }
         if (this.options.debugBuf) {
             this.logger.debug('[debugBuf] [SendData]', pre.data);
@@ -546,6 +546,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         return opSend;
     }
+
+    protected abstract _errConnNotConnected(): OpResultVoid & { isSucc: false };
 
     /**
      * Encode and send

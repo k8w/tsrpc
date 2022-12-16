@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiHandler, ApiHandlerUtil, AutoImplementApiReturn, BaseConnection, BaseConnectionOptions, BaseServiceType, defaultBaseConnectionOptions, Flow, getCustomObjectIdTypes, LocalApiName, LogLevel, ProtoInfo, ServiceMapUtil, ServiceProto, setLogLevel } from "tsrpc-base";
+import { ApiHandler, ApiHandlerUtil, AutoImplementApiReturn, BaseConnection, BaseConnectionOptions, BaseServiceType, defaultBaseConnectionOptions, Flow, getCustomObjectIdTypes, LocalApiName, LogLevel, OpResultVoid, ProtoInfo, ServiceMapUtil, ServiceProto, setLogLevel } from "tsrpc-base";
 import { BaseClientFlows } from "./BaseClientFlows";
 
 /**
@@ -63,6 +63,10 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
                 ...privateOptions.env
             }
         })
+    }
+
+    protected _errConnNotConnected(): OpResultVoid & { isSucc: false } {
+        return { isSucc: false, errMsg: `The client is not connected, please call 'client.connect()' before.` }
     }
 
     // TODO base connect
