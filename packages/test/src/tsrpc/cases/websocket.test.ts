@@ -1,8 +1,8 @@
 import assert from "assert";
 import chalk from "chalk";
 import path from "path";
-import { TerminalColorLogger, WsClient, WsServer, WsServerConnection } from "tsrpc";
-import { ConnectionStatus, PrefixLogger, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-base";
+import { TerminalColorLogger, WebSocketClient, WebSocketServer, WebSocketServerConnection } from "tsrpc";
+import { PrefixLogger, ServiceProto, TsrpcError, TsrpcErrorType } from "tsrpc-base";
 import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
 import { ApiTest } from "../api/ApiTest";
 import { MsgChat } from "../proto/MsgChat";
@@ -19,7 +19,7 @@ const clientLogger = new PrefixLogger({
 
 const getProto = () => Object.merge({}, serviceProto) as ServiceProto<ServiceType>;
 
-async function testApi(server: WsServer<ServiceType>, client: WsClient<ServiceType>) {
+async function testApi(server: WebSocketServer<ServiceType>, client: WebSocketClient<ServiceType>) {
     // Succ
     assert.deepStrictEqual(await client.callApi('Test', {
         name: 'Req1'
@@ -86,7 +86,7 @@ async function testApi(server: WsServer<ServiceType>, client: WsClient<ServiceTy
 
 describe('WS Server & Client basic', function () {
     it('cannot callApi before connect', async function () {
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             logger: clientLogger,
             debugBuf: true
         })
@@ -100,7 +100,7 @@ describe('WS Server & Client basic', function () {
     })
 
     it('implement API manually', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             logger: serverLogger,
             debugBuf: true
         });
@@ -109,7 +109,7 @@ describe('WS Server & Client basic', function () {
         server.implementApi('Test', ApiTest);
         server.implementApi('a/b/c/Test', ApiAbcTest);
 
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             logger: clientLogger,
             debugBuf: true
         })
@@ -121,11 +121,11 @@ describe('WS Server & Client basic', function () {
     })
 
     it('extend conn', function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             logger: serverLogger,
             debugBuf: true
         });
-        type MyConn = WsServerConnection<ServiceType> & {
+        type MyConn = WebSocketServerConnection<ServiceType> & {
             sessionData: {
                 value: string;
             }
@@ -137,7 +137,7 @@ describe('WS Server & Client basic', function () {
     })
 
     it('autoImplementApi', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             logger: serverLogger,
             apiCallTimeout: 5000
         });
@@ -145,7 +145,7 @@ describe('WS Server & Client basic', function () {
 
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             logger: clientLogger
         });
         await client.connect();
@@ -156,7 +156,7 @@ describe('WS Server & Client basic', function () {
     });
 
     it('sendMsg', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             port: 3001,
             logger: serverLogger,
             // debugBuf: true
@@ -164,7 +164,7 @@ describe('WS Server & Client basic', function () {
 
         await server.start();
 
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             server: 'ws://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
@@ -190,7 +190,7 @@ describe('WS Server & Client basic', function () {
     });
 
     it('Same-name msg and api', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             port: 3000,
             logger: serverLogger,
             // debugBuf: true
@@ -199,7 +199,7 @@ describe('WS Server & Client basic', function () {
         await server.autoImplementApi(path.resolve(__dirname, '../api'))
         await server.start();
 
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             server: 'ws://127.0.0.1:3000',
             logger: clientLogger,
             // debugBuf: true
@@ -235,7 +235,7 @@ describe('WS Server & Client basic', function () {
     });
 
     it('server send msg', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             port: 3001,
             logger: serverLogger,
             // debugBuf: true
@@ -243,7 +243,7 @@ describe('WS Server & Client basic', function () {
 
         await server.start();
 
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             server: 'ws://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
@@ -269,7 +269,7 @@ describe('WS Server & Client basic', function () {
     });
 
     it('listen msg by regexp', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             port: 3001,
             logger: serverLogger,
             // debugBuf: true
@@ -277,7 +277,7 @@ describe('WS Server & Client basic', function () {
 
         await server.start();
 
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             server: 'ws://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
@@ -304,7 +304,7 @@ describe('WS Server & Client basic', function () {
     });
 
     it('server broadcast msg', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             port: 3001,
             logger: serverLogger,
             // debugBuf: true
@@ -312,12 +312,12 @@ describe('WS Server & Client basic', function () {
 
         await server.start();
 
-        let client1 = new WsClient(getProto(), {
+        let client1 = new WebSocketClient(getProto(), {
             server: 'ws://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
         });
-        let client2 = new WsClient(getProto(), {
+        let client2 = new WebSocketClient(getProto(), {
             server: 'ws://127.0.0.1:3001',
             logger: clientLogger,
             // debugBuf: true
@@ -333,8 +333,8 @@ describe('WS Server & Client basic', function () {
         };
 
         await new Promise<void>(rs => {
-            let recvClients: WsClient<any>[] = [];
-            let msgHandler = async (client: WsClient<any>, msg1: MsgChat, msgName: string) => {
+            let recvClients: WebSocketClient<any>[] = [];
+            let msgHandler = async (client: WebSocketClient<any>, msg1: MsgChat, msgName: string) => {
                 recvClients.push(client);
                 assert.deepStrictEqual(msg1, msg);
                 assert.deepStrictEqual(msgName, 'Chat')
@@ -352,8 +352,8 @@ describe('WS Server & Client basic', function () {
         })
 
         await new Promise<void>(rs => {
-            let recvClients: WsClient<any>[] = [];
-            let msgHandler = async (client: WsClient<any>, msg1: MsgChat, msgName: string) => {
+            let recvClients: WebSocketClient<any>[] = [];
+            let msgHandler = async (client: WebSocketClient<any>, msg1: MsgChat, msgName: string) => {
                 recvClients.push(client);
                 assert.deepStrictEqual(msg1, msg);
                 assert.deepStrictEqual(msgName, 'Chat');
@@ -371,14 +371,14 @@ describe('WS Server & Client basic', function () {
     })
 
     it('abort', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             logger: serverLogger
         });
         await server.start();
 
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             logger: clientLogger
         });
         await client.connect();
@@ -404,14 +404,14 @@ describe('WS Server & Client basic', function () {
     });
 
     it('pendingApis', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             logger: serverLogger
         });
         await server.start();
 
         server.autoImplementApi(path.resolve(__dirname, '../api'))
 
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             logger: clientLogger
         });
         await client.connect();
@@ -458,12 +458,12 @@ describe('WS Server & Client basic', function () {
     })
 
     it('error', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             logger: serverLogger
         });
         await server.start();
 
-        let client1 = new WsClient(getProto(), {
+        let client1 = new WebSocketClient(getProto(), {
             server: 'ws://localhost:80',
             logger: clientLogger
         })
@@ -479,7 +479,7 @@ describe('WS Server & Client basic', function () {
     })
 
     it('server callApiTimeout', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             logger: serverLogger,
             apiCallTimeout: 100
         });
@@ -495,7 +495,7 @@ describe('WS Server & Client basic', function () {
         })
         await server.start();
 
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             logger: clientLogger
         });
         await client.connect();
@@ -512,7 +512,7 @@ describe('WS Server & Client basic', function () {
     });
 
     it('client callApiTimeout', async function () {
-        let server1 = new WsServer(getProto(), {
+        let server1 = new WebSocketServer(getProto(), {
             logger: serverLogger
         });
         server1.implementApi('Test', call => {
@@ -527,7 +527,7 @@ describe('WS Server & Client basic', function () {
         })
         await server1.start();
 
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             callApiTimeout: 100,
             logger: clientLogger
         });
@@ -547,7 +547,7 @@ describe('WS Server & Client basic', function () {
     });
 
     it('Graceful stop', async function () {
-        let server = new WsServer(getProto(), {
+        let server = new WebSocketServer(getProto(), {
             logger: serverLogger
         });
 
@@ -563,7 +563,7 @@ describe('WS Server & Client basic', function () {
         await server.start();
         let isStopped = false;
 
-        let client = new WsClient(getProto(), {
+        let client = new WebSocketClient(getProto(), {
             logger: clientLogger
         });
         await client.connect();
@@ -579,14 +579,14 @@ describe('WS Server & Client basic', function () {
     })
 
     // it('Client heartbeat works', async function () {
-    //     let server = new WsServer(getProto(), {
+    //     let server = new WebSocketServer(getProto(), {
     //         port: 3001,
     //         logger: serverLogger,
     //         debugBuf: true
     //     });
     //     await server.start();
 
-    //     let client = new WsClient(getProto(), {
+    //     let client = new WebSocketClient(getProto(), {
     //         server: 'ws://127.0.0.1:3001',
     //         logger: clientLogger,
     //         heartbeat: true,
@@ -612,14 +612,14 @@ describe('WS Server & Client basic', function () {
     // })
 
     // it('Client heartbeat error', async function () {
-    //     let server = new WsServer(getProto(), {
+    //     let server = new WebSocketServer(getProto(), {
     //         port: 3001,
     //         logger: serverLogger,
     //         debugBuf: true
     //     });
     //     await server.start();
 
-    //     let client = new WsClient(getProto(), {
+    //     let client = new WebSocketClient(getProto(), {
     //         server: 'ws://127.0.0.1:3001',
     //         logger: clientLogger,
     //         heartbeat: true,
@@ -641,7 +641,7 @@ describe('WS Server & Client basic', function () {
 
     //     await new Promise(rs => { setTimeout(rs, 2000) });
     //     client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
-    //     assert.strictEqual(client.status, WsClientStatus.Closed)
+    //     assert.strictEqual(client.status, WebSocketClientStatus.Closed)
     //     assert.deepStrictEqual(disconnectFlowData, {})
 
     //     await client.disconnect();
@@ -650,7 +650,7 @@ describe('WS Server & Client basic', function () {
     // })
 
     // it('Server heartbeat kick', async function () {
-    //     let server = new WsServer(getProto(), {
+    //     let server = new WebSocketServer(getProto(), {
     //         port: 3001,
     //         logger: serverLogger,
     //         debugBuf: true,
@@ -658,7 +658,7 @@ describe('WS Server & Client basic', function () {
     //     });
     //     await server.start();
 
-    //     let client = new WsClient(getProto(), {
+    //     let client = new WebSocketClient(getProto(), {
     //         server: 'ws://127.0.0.1:3001',
     //         logger: clientLogger,
     //         debugBuf: true
@@ -673,7 +673,7 @@ describe('WS Server & Client basic', function () {
     //     await client.connect();
 
     //     await new Promise(rs => { setTimeout(rs, 2000) });
-    //     assert.strictEqual(client.status, WsClientStatus.Closed)
+    //     assert.strictEqual(client.status, WebSocketClientStatus.Closed)
     //     assert.deepStrictEqual(disconnectFlowData, {})
 
     //     await client.disconnect();
@@ -683,7 +683,7 @@ describe('WS Server & Client basic', function () {
 
 // describe('WS Flows', function () {
 //     it('Server conn flow', async function () {
-//         let server = new WsServer(getProto(), {
+//         let server = new WebSocketServer(getProto(), {
 //             logger: serverLogger
 //         });
 
@@ -713,7 +713,7 @@ describe('WS Server & Client basic', function () {
 //         assert.strictEqual(flowExecResult.postConnectFlow, undefined);
 //         assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
 
-//         let client = new WsClient(getProto(), {
+//         let client = new WebSocketClient(getProto(), {
 //             logger: clientLogger
 //         });
 //         await client.connect();
@@ -724,7 +724,7 @@ describe('WS Server & Client basic', function () {
 //     })
 
 //     it('Buffer enc/dec flow', async function () {
-//         let server = new WsServer(getProto(), {
+//         let server = new WebSocketServer(getProto(), {
 //             logger: serverLogger,
 //             debugBuf: true
 //         });
@@ -752,7 +752,7 @@ describe('WS Server & Client basic', function () {
 
 //         await server.start();
 
-//         let client = new WsClient(getProto(), {
+//         let client = new WebSocketClient(getProto(), {
 //             logger: clientLogger,
 //             debugBuf: true
 //         });
@@ -790,7 +790,7 @@ describe('WS Server & Client basic', function () {
 //     });
 
 //     it('ApiCall flow', async function () {
-//         let server = new WsServer(getProto(), {
+//         let server = new WebSocketServer(getProto(), {
 //             logger: serverLogger
 //         });
 
@@ -812,7 +812,7 @@ describe('WS Server & Client basic', function () {
 
 //         await server.start();
 
-//         let client = new WsClient(getProto(), {
+//         let client = new WebSocketClient(getProto(), {
 //             logger: clientLogger
 //         });
 //         await client.connect();
@@ -835,7 +835,7 @@ describe('WS Server & Client basic', function () {
 //     });
 
 //     it('ApiCall flow break', async function () {
-//         let server = new WsServer(getProto(), {
+//         let server = new WebSocketServer(getProto(), {
 //             logger: serverLogger
 //         });
 
@@ -857,7 +857,7 @@ describe('WS Server & Client basic', function () {
 
 //         await server.start();
 
-//         let client = new WsClient(getProto(), {
+//         let client = new WebSocketClient(getProto(), {
 //             logger: clientLogger
 //         });
 //         await client.connect();
@@ -880,7 +880,7 @@ describe('WS Server & Client basic', function () {
 //     });
 
 //     it('ApiCall flow error', async function () {
-//         let server = new WsServer(getProto(), {
+//         let server = new WebSocketServer(getProto(), {
 //             logger: serverLogger
 //         });
 
@@ -901,7 +901,7 @@ describe('WS Server & Client basic', function () {
 
 //         await server.start();
 
-//         let client = new WsClient(getProto(), {
+//         let client = new WebSocketClient(getProto(), {
 //             logger: clientLogger
 //         });
 //         await client.connect();
@@ -928,7 +928,7 @@ describe('WS Server & Client basic', function () {
 //     });
 
 //     it('server ApiReturn flow', async function () {
-//         let server = new WsServer(getProto(), {
+//         let server = new WebSocketServer(getProto(), {
 //             logger: serverLogger
 //         });
 
@@ -954,7 +954,7 @@ describe('WS Server & Client basic', function () {
 
 //         await server.start();
 
-//         let client = new WsClient(getProto(), {
+//         let client = new WebSocketClient(getProto(), {
 //             logger: clientLogger
 //         });
 //         await client.connect();
@@ -971,11 +971,11 @@ describe('WS Server & Client basic', function () {
 //     });
 
 //     it('client ApiReturn flow', async function () {
-//         let server = new WsServer(getProto(), {
+//         let server = new WebSocketServer(getProto(), {
 //             logger: serverLogger
 //         });
 
-//         const flowExecResult: { [K in (keyof WsClient<any>['flows'])]?: boolean } = {};
+//         const flowExecResult: { [K in (keyof WebSocketClient<any>['flows'])]?: boolean } = {};
 
 //         server.implementApi('Test', async call => {
 //             call.succ({ reply: 'xxxxxxxxxxxxxxxxxxxx' });
@@ -983,7 +983,7 @@ describe('WS Server & Client basic', function () {
 
 //         await server.start();
 
-//         let client = new WsClient(getProto(), {
+//         let client = new WebSocketClient(getProto(), {
 //             logger: clientLogger
 //         });
 //         await client.connect();
@@ -1014,7 +1014,7 @@ describe('WS Server & Client basic', function () {
 //     });
 
 //     it('client SendBufferFlow prevent', async function () {
-//         let server = new WsServer(getProto(), {
+//         let server = new WebSocketServer(getProto(), {
 //             logger: serverLogger
 //         });
 
@@ -1026,7 +1026,7 @@ describe('WS Server & Client basic', function () {
 
 //         await server.start();
 
-//         let client = new WsClient(getProto(), {
+//         let client = new WebSocketClient(getProto(), {
 //             logger: clientLogger
 //         });
 //         await client.connect();
@@ -1044,7 +1044,7 @@ describe('WS Server & Client basic', function () {
 //     });
 
 //     it('onInputBufferError', async function () {
-//         let server = new WsServer(getProto(), {
+//         let server = new WebSocketServer(getProto(), {
 //             logger: serverLogger
 //         });
 //         await server.start();
@@ -1070,7 +1070,7 @@ describe('WS Server & Client basic', function () {
 //     })
 
 //     it('ObjectId', async function () {
-//         let server = new WsServer(getProto(), {
+//         let server = new WebSocketServer(getProto(), {
 //             logger: serverLogger
 //         });
 //         server.autoImplementApi(path.resolve(__dirname, '../api'))
@@ -1093,7 +1093,7 @@ describe('WS Server & Client basic', function () {
 //     })
 
 //     it('recvMsgFlow', async function () {
-//         let server = new WsServer(getProto(), {
+//         let server = new WebSocketServer(getProto(), {
 //             logger: serverLogger
 //         });
 //         let serverReceivedMsgs: { name: string, msg: any }[] = [];

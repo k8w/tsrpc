@@ -1,7 +1,7 @@
 ----- Client -----
-[CallApi] [#4] [Req] [Order/CreateOrder] {...}
-[CallApi] [#4] [Res] [Order/CreateOrder] {...}
-[CallApi] [#4] [Err] [Order/CreateOrder] {...}
+[callApi] [#4] [Req] [Order/CreateOrder] {...}
+[callApi] [#4] [Res] [Order/CreateOrder] {...}
+[callApi] [#4] [Err] [Order/CreateOrder] {...}
 [ApiCall] [#4] [Order/Post] [Req] {...}
 [ApiCall] [#4] [Order/Post] Something to log ...
 [ApiCall] [#4] [Order/Post] [Res] {...}
@@ -10,18 +10,10 @@
 [SendMsg] [Order/MsgOrder] {...}
 [RecvMsg] [Order/MsgOrder] {...}
 
------ HTTP Server -----
-[221.15.24.68] [ApiCall] [#3] [Req] [Order/Post] {...}
-[221.15.24.68] [ApiCall] [#3] [Res] [Order/Post] {...}
-[221.15.24.68] [ApiCall] [#3] [Err] [Order/Post] {...}
-[221.15.24.68] [ApiCall] [#3] [Order/Post] Custom logs...
-[221.15.24.68] [SendMsg] [Order/MsgOrder] {...}
-[221.15.24.68] [RecvMsg] [Order/MsgOrder] {...}
-
 ----- WS Server -----
-[221.15.24.68] [Conn#1] [CallApi] [#4] [Req] [Order/CreateOrder] {...}
-[221.15.24.68] [Conn#1] [CallApi] [#4] [Res] [Order/CreateOrder] {...}
-[221.15.24.68] [Conn#1] [CallApi] [#4] [Err] [Order/CreateOrder] {...}
+[221.15.24.68] [Conn#1] [callApi] [#4] [Req] [Order/CreateOrder] {...}
+[221.15.24.68] [Conn#1] [callApi] [#4] [Res] [Order/CreateOrder] {...}
+[221.15.24.68] [Conn#1] [callApi] [#4] [Err] [Order/CreateOrder] {...}
 [221.15.24.68] [Conn#1] [ApiCall] [#4] [Order/Post] [Req] {...}
 [221.15.24.68] [Conn#2] [ApiCall] [#4] [Order/Post] [Res] {...}
 [221.15.24.68] [Conn#2] [ApiCall] [#4] [Order/Post] [Err] {...}

@@ -1,10 +1,8 @@
 import { OpResultVoid } from "tsrpc-base";
 
-export interface BaseWsClientTransport {
-    connect(options: ConnectOptions): SocketInstance;
-}
+export type WebSocketConnect = (options: WebSocketConnectOptions) => WebSocketConnectReturn;
 
-export interface ConnectOptions {
+export interface WebSocketConnectOptions {
     server: string,
     protocols: string[],
     onOpen: () => void,
@@ -13,7 +11,7 @@ export interface ConnectOptions {
     onMessage: (data: Uint8Array | string) => void,
 }
 
-export interface SocketInstance {
+export interface WebSocketConnectReturn {
     close(reason: string, code: number): void;
     send(data: Uint8Array | string): Promise<OpResultVoid>;
 }

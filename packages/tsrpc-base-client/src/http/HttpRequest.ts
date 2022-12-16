@@ -1,10 +1,8 @@
 import { TsrpcError } from "tsrpc-base";
 
-export interface BaseHttpClientTransport {
-    request: (options: RequestOptions) => RequestReturn
-}
+export type HttpRequest = (options: HttpRequestOptions) => HttpRequestReturn;
 
-export interface RequestOptions {
+export interface HttpRequestOptions {
     url: string,
     data: string | Uint8Array,
     method: string,
@@ -16,7 +14,7 @@ export interface RequestOptions {
     responseType: 'text' | 'arraybuffer'
 }
 
-export type RequestReturn = {
+export type HttpRequestReturn = {
     abort: () => void,
     promise: Promise<
         /** Successful: got response from the server */

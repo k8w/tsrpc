@@ -3,20 +3,19 @@ import { BaseServiceType, OpResultVoid, TransportData, TransportOptions } from "
 import { BaseServerConnection } from "tsrpc-base-server";
 import WebSocket from "ws";
 import { HttpUtil } from "../http/models/HttpUtil";
-import { WsServer } from "./WsServer";
+import { WebSocketServer } from "./WebSocketServer";
 
-export class WsServerConnection<ServiceType extends BaseServiceType = any> extends BaseServerConnection<ServiceType> {
+export class WebSocketServerConnection<ServiceType extends BaseServiceType = any> extends BaseServerConnection<ServiceType> {
 
     readonly ws: WebSocket;
     readonly httpReq: http.IncomingMessage;
 
-    constructor(public readonly server: WsServer<ServiceType>, privateOptions: PrivateWsServerConnectionOptions) {
+    constructor(public readonly server: WebSocketServer<ServiceType>, privateOptions: PrivateWebSocketServerConnectionOptions) {
         const ip = HttpUtil.getClientIp(privateOptions.httpReq);
         const protocols = privateOptions.httpReq.headers['sec-websocket-protocol']?.split(',').map(v => v.trim()).filter(v => !!v);
         super(server, {
             dataType: protocols?.includes('buffer') ? 'buffer' : 'text',
-            ip: ip,
-            logPrefixs: [server.chalk(`[${ip}]`, ['gray'])]
+            ip: ip
         });
 
         this.ws = privateOptions.ws;
@@ -55,7 +54,7 @@ export class WsServerConnection<ServiceType extends BaseServiceType = any> exten
 
 }
 
-export interface PrivateWsServerConnectionOptions {
+export interface PrivateWebSocketServerConnectionOptions {
     ws: WebSocket;
     httpReq: http.IncomingMessage;
 }

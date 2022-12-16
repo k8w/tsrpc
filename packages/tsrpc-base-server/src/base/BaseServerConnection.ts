@@ -21,12 +21,12 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
             tsbuffer: server.tsbuffer,
             localProtoInfo: server.localProtoInfo
         });
-        this.logger = new PrefixLogger({
-            logger: server.logger,
-            prefixs: privateOptions.logPrefixs
-        });
         this.id = server['_connId'].getNext();
         this.ip = privateOptions.ip;
+        this.logger = new PrefixLogger({
+            logger: server.logger,
+            prefixs: privateOptions.logPrefixs ?? [server.chalk(`[${this.ip}] [Conn#${this.id}]`, ['gray'])]
+        });
 
         // To be override...
         // Init connection (http req/res, ws conn, ...)
@@ -86,5 +86,5 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
 export interface PrivateBaseServerConnectionOptions {
     dataType: BaseConnectionDataType,
     ip: string,
-    logPrefixs: PrefixLoggerOptions['prefixs'],
+    logPrefixs?: PrefixLoggerOptions['prefixs'],
 }

@@ -145,7 +145,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     async callApi<T extends RemoteApiName<this>>(apiName: T, req: RemoteApi<this>[T]['req'], options?: TransportOptions): Promise<ApiReturn<RemoteApi<this>[T]['res']>> {
         // SN & Log
         let sn = this._callApiSn.getNext();
-        this.options.logApi && this.logger.log(`${this.chalk(`${this.chalk('[callApi]', ['gray'])} [#${sn}] [${apiName}]`, ['gray'])} ${this.chalk('[Req]', ['info'])}`, this.options.logReqBody ? req : '');
+        this.options.logApi && this.logger.log(`${this.chalk(`[callApi] [#${sn}] [${apiName}]`, ['debug'])} ${this.chalk('[Req]', ['info', 'bold'])}`, this.options.logReqBody ? req : '');
 
         // Create PendingCallApiItem
         let pendingItem: PendingCallApiItem = {
@@ -193,10 +193,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Log Return
         if (this.options.logApi) {
             if (ret.isSucc) {
-                this.logger.log(`${this.chalk(`[callApi] [#${pendingItem.sn}]`, ['gray'])} ${this.chalk('[Res]', ['info'])} ${this.chalk(`[${apiName}]`, ['gray'])}`, this.options.logResBody ? ret.res : '');
+                this.logger.log(`${this.chalk(`[callApi] [#${pendingItem.sn}] [${apiName}]`, ['debug'])} ${this.chalk('[Res]', ['info', 'bold'])}`, this.options.logResBody ? ret.res : '');
             }
             else {
-                this.logger[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`${this.chalk(`[callApi] [#${pendingItem.sn}] [${apiName}]`, ['gray'])} ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error'])}`, ret.err);
+                this.logger[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`${this.chalk(`[callApi] [#${pendingItem.sn}] [${apiName}]`, ['debug'])} ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error', 'bold'])}`, ret.err);
             }
         }
 
@@ -280,10 +280,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Parse PendingCallApiItem
         const item = this._pendingCallApis.get(transportData.sn);
-        if (!item) {
-            throw new Error('Invalid SN for callApi return: ' + transportData.sn)
-        }
-        if (item.isAborted) {
+        if (!item || item.isAborted) {
             return;
         }
 
@@ -305,7 +302,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         this._pendingCallApis.delete(sn);
 
         // Log
-        this.options.logApi && this.logger.log(`${this.chalk(`[callApi] [#${pendingItem.sn}]`, ['gray'])}  ${this.chalk('[Abort]', ['warn'])} ${this.chalk(`[${pendingItem.apiName}]`, ['gray'])}`);
+        this.options.logApi && this.logger.log(`${this.chalk(`[callApi] [#${pendingItem.sn}] [${pendingItem.apiName}]`, ['debug'])} ${this.chalk('[Abort]', ['warn', 'bold'])}`);
 
         // onAbort
         pendingItem.onReturn = undefined;
@@ -697,24 +694,24 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             // Text (JSON) or errPhase==validate, errMsg is useful, log it.
             if (opDecodeBody.errPhase === 'validate') {
                 errReason = opDecodeBody.errMsg;
-                logReason = `[RecvTypeErr] ${errReason}`;
+                logReason = `Body type error. ${errReason}`;
             }
             else if (dataType === 'text') {
                 errReason = opDecodeBody.errMsg;
-                logReason = `[RecvDataErr] ${errReason}`;
+                logReason = `${errReason}`;
             }
             else if (protoNotSyncedInfo) {
                 errReason = 'Cannot decode body from the data, because the serviceProto is different between the local and remote.'
-                logReason = `[RecvDataErr] ${errReason}\n${protoNotSyncedInfo}`
+                logReason = `${errReason}\n${protoNotSyncedInfo}`
             }
             // Buffer && errPhase==decode, log a human readable message
             else {
                 errReason = 'Cannot decode body from the data, the box encoding is valid, but the body encoding is unknown.'
-                logReason = `[RecvDataErr] ${errReason} please check:
+                logReason = `${errReason} please check:
   1. Is the serviceProto the same between the local and remote? (Check field 'md5')
   2. Is the buffer modified by Flow? Try to disable data flows and retry.`;
             }
-            this.logger.error(logReason);
+            this.logger.error(this.chalk('[RecvDataErr] ', ['error']) + logReason);
 
             // req: send err
             if (box.type === 'req') {

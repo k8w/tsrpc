@@ -21,9 +21,7 @@ export class HttpClient<ServiceType extends BaseServiceType = any> extends BaseH
                 tsrpc: TSRPC_VERSION,
                 node: process.version
             },
-            transport: {
-                request: v => HttpUtil.request(v, this.options.agent)
-            }
+            request: v => HttpUtil.request(v, this.options.agent)
         })
     }
 

@@ -1,7 +1,7 @@
 import * as http from "http";
 import https from "https";
 import { TsrpcError } from "tsrpc-base";
-import { RequestOptions, RequestReturn } from "tsrpc-base-client";
+import { HttpRequestOptions, HttpRequestReturn } from "tsrpc-base-client";
 
 export class HttpUtil {
     static getClientIp(req: http.IncomingMessage) {
@@ -23,11 +23,11 @@ export class HttpUtil {
         return ipAddress ? ipAddress.replace(/^::ffff:/, '') : '';
     };
 
-    static request(options: RequestOptions, agent?: http.Agent | https.Agent): RequestReturn {
+    static request(options: HttpRequestOptions, agent?: http.Agent | https.Agent): HttpRequestReturn {
         const nodeHttp = options.url.startsWith('https://') ? https : http;
 
-        let rs!: (v: Awaited<RequestReturn['promise']>) => void;
-        const promise: RequestReturn['promise'] = new Promise(_rs => {
+        let rs!: (v: Awaited<HttpRequestReturn['promise']>) => void;
+        const promise: HttpRequestReturn['promise'] = new Promise(_rs => {
             rs = _rs;
         })
 

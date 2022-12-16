@@ -1,16 +1,16 @@
 import { BaseServiceType, ConnectionStatus, OpResultVoid, PROMISE_ABORTED, ServiceProto, TransportData, TransportOptions } from "tsrpc-base";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../base/BaseClient";
-import { BaseWsClientTransport, SocketInstance } from "./BaseWsClientTransport";
+import { WebSocketConnect, WebSocketConnectReturn } from "./WebSocketConnect";
 
-export class BaseWsClient<ServiceType extends BaseServiceType = any> extends BaseClient<ServiceType> {
+export class BaseWebSocketClient<ServiceType extends BaseServiceType = any> extends BaseClient<ServiceType> {
 
-    declare readonly options: BaseWsClientOptions;
-    protected _transport: BaseWsClientTransport;
-    protected _ws?: SocketInstance;
+    declare readonly options: BaseWebSocketClientOptions;
+    protected _connect: WebSocketConnect;
+    protected _ws?: WebSocketConnectReturn;
 
-    constructor(serviceProto: ServiceProto<ServiceType>, options: BaseWsClientOptions, privateOptions: PrivateBaseWsClientOptions) {
+    constructor(serviceProto: ServiceProto<ServiceType>, options: BaseWebSocketClientOptions, privateOptions: PrivateBaseWebSocketClientOptions) {
         super(serviceProto, options, privateOptions);
-        this._transport = privateOptions.transport;
+        this._connect = privateOptions.connect;
         this.logger.log(`TSRPC WebSocket Client: ${this.options.server}`);
     }
 
@@ -47,7 +47,7 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
         // Connect WS
         // TODO TIMEOUT
         try {
-            this._ws = this._transport.connect({
+            this._ws = this._connect({
                 server: this.options.server,
                 protocols: [this.dataType],
                 onOpen: this._onWsOpen,
@@ -136,16 +136,16 @@ export class BaseWsClient<ServiceType extends BaseServiceType = any> extends Bas
 
 }
 
-export const defaultBaseWsClientOptions: BaseWsClientOptions = {
+export const defaultBaseWebSocketClientOptions: BaseWebSocketClientOptions = {
     ...defaultBaseClientOptions,
     server: 'ws://localhost:3000',
 }
 
-export interface BaseWsClientOptions extends BaseClientOptions {
+export interface BaseWebSocketClientOptions extends BaseClientOptions {
     /** Server URL, starts with `ws://` or `wss://`. */
     server: string;
 }
 
-export interface PrivateBaseWsClientOptions extends PrivateBaseClientOptions {
-    transport: BaseWsClientTransport
+export interface PrivateBaseWebSocketClientOptions extends PrivateBaseClientOptions {
+    connect: WebSocketConnect
 }
