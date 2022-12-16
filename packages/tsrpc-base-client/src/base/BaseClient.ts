@@ -66,7 +66,7 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
     }
 
     protected _errConnNotConnected(): OpResultVoid & { isSucc: false } {
-        return { isSucc: false, errMsg: `The client is not connected, please call 'client.connect()' before.` }
+        return { isSucc: false, errMsg: `The client is not connected, please call 'client.connect()' first.` }
     }
 
     // TODO base connect

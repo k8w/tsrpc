@@ -93,7 +93,7 @@ describe('WS Server & Client basic', function () {
         let res = await client.callApi('Test', { name: 'xxx' });
         assert.deepStrictEqual(res, {
             isSucc: false,
-            err: new TsrpcError("The connection is not established, cannot send data.", {
+            err: new TsrpcError("The client is not connected, please call 'client.connect()' first.", {
                 type: TsrpcErrorType.LocalError
             })
         })
