@@ -5,29 +5,28 @@
  */
 export interface Logger {
     debug(...args: any[]): void;
-    log(...args: any[]): void;
+    info(...args: any[]): void;
     warn(...args: any[]): void;
     error(...args: any[]): void;
 }
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 
-const loggerFunNames = ['debug', 'log', 'warn', 'error'] as const;
-
 const empty = () => { };
 
 export function setLogLevel(logger: Logger, logLevel: LogLevel): Logger {
+    let newLogger: Logger;
     switch (logLevel) {
         case 'none':
-            return { debug: empty, log: empty, warn: empty, error: empty };
+            newLogger = { debug: empty, info: empty, warn: empty, error: empty };
         case 'error':
-            return { debug: empty, log: empty, warn: empty, error: logger.error.bind(logger) };
+            newLogger = { debug: empty, info: empty, warn: empty, error: logger.error.bind(logger) };
         case 'warn':
-            return { debug: empty, log: empty, warn: logger.warn.bind(logger), error: logger.error.bind(logger) };
+            newLogger = { debug: empty, info: empty, warn: logger.warn.bind(logger), error: logger.error.bind(logger) };
         case 'info':
-            return { debug: empty, log: logger.log.bind(logger), warn: logger.warn.bind(logger), error: logger.error.bind(logger) };
+            newLogger = { debug: empty, info: logger.info.bind(logger), warn: logger.warn.bind(logger), error: logger.error.bind(logger) };
         case 'debug':
-            return logger;
+            newLogger = { debug: logger.debug.bind(logger), info: logger.info.bind(logger), warn: logger.warn.bind(logger), error: logger.error.bind(logger) };;
         default:
             throw new Error(`Invalid logLevel: '${logLevel}'`)
     }

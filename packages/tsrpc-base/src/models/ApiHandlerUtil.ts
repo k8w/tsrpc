@@ -15,7 +15,7 @@ export class ApiHandlerUtil {
             throw new Error(`Cannot implement API '${apiName}' duplicately.`);
         }
         apiHandlers[apiName as string] = handler;
-        host.logger.log(`Implemented API ${host.chalk(apiName, ['underline'])} successfully.`);
+        host.logger.info(`Implemented API ${host.chalk(apiName, ['underline'])} successfully.`);
     };
 
     static async autoImplementApi(host: ApiHandlerHost, apiHandlers: BaseConnectionApiHandlers, dirOrName: string, dirOrDelay?: string | boolean | number, delay?: boolean | number): Promise<AutoImplementApiReturn> {
@@ -24,7 +24,7 @@ export class ApiHandlerUtil {
         const apiName = typeof dirOrDelay === 'string' ? dirOrName : '*';
         delay = typeof dirOrDelay === 'string' ? delay : dirOrDelay;
 
-        host.logger.log(`Start autoImplementApi '${apiName}' to '${apiDir}'${(delay ? ' (delay)' : '')}...`);
+        host.logger.info(`Start autoImplementApi '${apiName}' to '${apiDir}'${(delay ? ' (delay)' : '')}...`);
 
         const apiServices = Object.values(host.serviceMap.name2LocalApi) as ApiServiceDef[];
         const output = { succ: [], fail: [], delay: [] } as Awaited<ReturnType<typeof ApiHandlerUtil['autoImplementApi']>>;
@@ -73,7 +73,7 @@ export class ApiHandlerUtil {
         }
 
         // Final result log
-        host.logger.log('Finished autoImplementApi: ' + (delay ?
+        host.logger.info('Finished autoImplementApi: ' + (delay ?
             `delay ${output.delay.length}/${apiServices.length}.` :
             `${host.chalk(`succ ${output.succ.length}/${apiServices.length},`, [output.fail.length ? 'warn' : 'info'])} ${host.chalk('failed ' + output.fail.length, output.fail.length ? ['error', 'bold'] : ['normal'])}.`
         ));

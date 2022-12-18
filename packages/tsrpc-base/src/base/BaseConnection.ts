@@ -33,18 +33,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     /** Which side this connection is belong to */
     abstract side: 'server' | 'client';
 
-    sideName(key: 'local' | 'remote' | 'Local' | 'Remote') {
-        const SIDE_NAME = {
-            'client-local': 'client',
-            'client-remote': 'server',
-            'server-local': 'server',
-            'server-remote': 'client',
-            'client-Local': 'Client',
-            'client-Remote': 'Server',
-            'server-Local': 'Server',
-            'server-Remote': 'Client',
-        } as const;
-        return SIDE_NAME[`${this.side}-${key}`];
+    get connName() {
+        return this.side === 'server' ? 'connection' : 'client';
     }
 
     // Options
@@ -55,8 +45,11 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     protected readonly _localProtoInfo: ProtoInfo;
 
     // Status
-    readonly status: ConnectionStatus = ConnectionStatus.Disconnected;
-    protected _setStatus(newStatus: Exclude<ConnectionStatus, ConnectionStatus.Disconnected>) {
+    private _status: ConnectionStatus = ConnectionStatus.Disconnected;
+    public get status(): ConnectionStatus {
+        return this._status;
+    }
+    protected set status(newStatus: ConnectionStatus) {
         if (this.status === newStatus) {
             return;
         }
@@ -64,37 +57,64 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Post Connect
         if (newStatus === ConnectionStatus.Connected) {
-            // TODO logConnect
-
             this.options.heartbeat && this._startHeartbeat();
             this.flows.postConnectFlow.exec(this, this.logger);
         }
     }
-    protected _disconnect(isManual: boolean, reason?: string): void {
-        if (this.status === ConnectionStatus.Disconnected) {
-            return;
+
+    protected _disconnecting?: Promise<OpResultVoid>;
+    protected async _disconnect(isManual: boolean, reason?: string): Promise<OpResultVoid> {
+        if (this._disconnecting) {
+            return this._disconnecting;
         }
-        (this.status as ConnectionStatus) = ConnectionStatus.Disconnected;
-        this._stopHeartbeat();
 
-        // 对所有请求中的 API 报错
-        this._pendingCallApis.forEach(v => {
-            v.onReturn?.({
-                isSucc: false,
-                err: new TsrpcError(`Disconnected to server${reason ? `, reason: ${reason}` : ''}`, { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
-            })
-        });
+        if (this.status === ConnectionStatus.Disconnected) {
+            return { isSucc: true };
+        }
+        if (this._status !== ConnectionStatus.Connected) {
+            return { isSucc: false, errMsg: `You can only call "disconnect" if the ${this.connName} status is "Connected" (the current status is "${this.status}")` }
+        }
+        this._status = ConnectionStatus.Disconnecting;
 
-        // Post Flow
-        this.flows.postDisconnectFlow.exec({
-            conn: this,
-            isManual,
-            reason
-        }, this.logger);
+        this._disconnecting = (async () => {
+            this._stopHeartbeat();
 
-        // To be override ...
-        // e.g. close ws ...
+            // 对所有请求中的 API 报错
+            this._pendingCallApis.forEach(v => {
+                v.onReturn?.({
+                    isSucc: false,
+                    err: new TsrpcError(`Disconnected to server${reason ? `, reason: ${reason}` : ''}`, { type: TsrpcErrorType.NetworkError, code: 'LOST_CONN' })
+                })
+            });
+
+            // Timeout 3s
+            await Promise.race([
+                this._doDisconnect(reason).catch(e => {
+                    this.logger.error('[DisconnectErr]', e)
+                }),
+                new Promise(rs => { setTimeout(rs, 3000) })
+            ]);
+            this._status = ConnectionStatus.Disconnected;
+            this.options.logConnect && this.logger.info('[Disconnect] Disconnected successfully');
+
+            // Post Flow
+            this.flows.postDisconnectFlow.exec({
+                conn: this,
+                isManual,
+                reason
+            }, this.logger);
+
+            return { isSucc: true }
+        })();
+
+        this._disconnecting.catch(e => { }).then(() => {
+            this._disconnecting = undefined;
+        })
+
+        return this._disconnecting;
     }
+    // To be override
+    protected abstract _doDisconnect(reason?: string): Promise<void>;
 
     /**
      * {@link Flow} to process `callApi`, `sendMsg`, buffer input/output, etc...
@@ -145,7 +165,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     async callApi<T extends RemoteApiName<this>>(apiName: T, req: RemoteApi<this>[T]['req'], options?: TransportOptions): Promise<ApiReturn<RemoteApi<this>[T]['res']>> {
         // SN & Log
         let sn = this._callApiSn.getNext();
-        this.options.logApi && this.logger.log(`${this.chalk(`[callApi] [#${sn}] [${apiName}]`, ['debug'])} ${this.chalk('[Req]', ['info', 'bold'])}`, this.options.logReqBody ? req : '');
+        this.options.logApi && this.logger.info(`${this.chalk(`[callApi] [#${sn}] [${apiName}]`, ['debug'])} ${this.chalk('[Req]', ['info', 'bold'])}`, this.options.logReqBody ? req : '');
 
         // Create PendingCallApiItem
         let pendingItem: PendingCallApiItem = {
@@ -193,10 +213,10 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         // Log Return
         if (this.options.logApi) {
             if (ret.isSucc) {
-                this.logger.log(`${this.chalk(`[callApi] [#${pendingItem.sn}] [${apiName}]`, ['debug'])} ${this.chalk('[Res]', ['info', 'bold'])}`, this.options.logResBody ? ret.res : '');
+                this.logger.info(`${this.chalk(`[callApi] [#${pendingItem.sn}] [${apiName}]`, ['debug'])} ${this.chalk('[Res]', ['info', 'bold'])}`, this.options.logResBody ? ret.res : '');
             }
             else {
-                this.logger[ret.err.type === TsrpcError.Type.ApiError ? 'log' : 'error'](`${this.chalk(`[callApi] [#${pendingItem.sn}] [${apiName}]`, ['debug'])} ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error', 'bold'])}`, ret.err);
+                this.logger[ret.err.type === TsrpcError.Type.ApiError ? 'info' : 'error'](`${this.chalk(`[callApi] [#${pendingItem.sn}] [${apiName}]`, ['debug'])} ${this.chalk('[Err]', [TsrpcError.Type.ApiError ? 'warn' : 'error', 'bold'])}`, ret.err);
             }
         }
 
@@ -274,7 +294,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
     protected async _recvApiReturn(transportData: TransportData & { type: 'res' | 'err' }): Promise<void> {
         // err.sn===0 means this is a error that remote cannot decode the data
         if (transportData.type === 'err' && transportData.sn === 0) {
-            this.logger.error(this.chalk(`[${this.sideName('Remote')}Err]`, ['error']), transportData.err, transportData.protoInfo);
+            this.logger.error(this.chalk(`[RemoteErr]`, ['error']), transportData.err, transportData.protoInfo);
             return;
         }
 
@@ -302,7 +322,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         this._pendingCallApis.delete(sn);
 
         // Log
-        this.options.logApi && this.logger.log(`${this.chalk(`[callApi] [#${pendingItem.sn}] [${pendingItem.apiName}]`, ['debug'])} ${this.chalk('[Abort]', ['warn', 'bold'])}`);
+        this.options.logApi && this.logger.info(`${this.chalk(`[callApi] [#${pendingItem.sn}] [${pendingItem.apiName}]`, ['debug'])} ${this.chalk('[Abort]', ['warn', 'bold'])}`);
 
         // onAbort
         pendingItem.onReturn = undefined;
@@ -401,7 +421,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
         // Log
         if (opResult.isSucc) {
-            this.options.logMsg && this.logger.log(`[SendMsg]`, msgName, msg);
+            this.options.logMsg && this.logger.info(`[SendMsg]`, msgName, msg);
         }
         else {
             this.logger.error(`[SendMsgErr] ${msgName} ${opResult.errMsg}`, msg);
@@ -423,7 +443,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
      */
     protected _emitMsg?: MsgEmitter<this>['emit'];
     protected async _recvMsg(transportData: TransportData & { type: 'msg' }): Promise<void> {
-        this.options.logMsg && this.logger.log(`[RecvMsg]`, transportData.serviceName, transportData.body);
+        this.options.logMsg && this.logger.info(`[RecvMsg]`, transportData.serviceName, transportData.body);
 
         // PreRecv Flow
         let pre = await this.flows.preRecvMsgFlow.exec({
@@ -635,8 +655,8 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
             }
             else {
                 this.logger.error(`[RecvDataErr] Unknown buffer encoding, please check:
-  1. Are you using TSRPC ${this.sideName('Remote')} 3.x? (3.x can not communiate with 4.x) Try to upgrade and retry.
-  2. Are you modified the buffer by Flow? Try to disable data flows and retry.`);
+  1. Is the remote side using TSRPC version 3.x? (3.x can not communiate with 4.x) Try to upgrade and retry.
+  2. Are you using Flow that modified the received data? Try to remove flows from both local and remote and retry.`);
             }
 
             // Send error with SN=0
@@ -896,7 +916,7 @@ export interface BaseConnectionOptions {
     // Log
     logger: Logger,
     chalk: Chalk,
-    logConnect: boolean,    // TODO
+    logConnect: boolean,
     logApi: boolean,
     logMsg: boolean,
     logReqBody: boolean,

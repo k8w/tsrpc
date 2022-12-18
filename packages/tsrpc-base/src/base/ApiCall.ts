@@ -42,7 +42,7 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = any, Ap
         this.service = service;
 
         // Log
-        this.conn.options.logApi && this.logger.log(this.conn.chalk('[Req]', ['info', 'bold']), this.conn.options.logReqBody ? this.req : '');
+        this.conn.options.logApi && this.logger.info(this.conn.chalk('[Req]', ['info', 'bold']), this.conn.options.logReqBody ? this.req : '');
 
         // ApiCall timeout
         if (this.conn.options.apiCallTimeout) {
@@ -150,10 +150,10 @@ export class ApiCall<Req = any, Res = any, Conn extends BaseConnection = any, Ap
         // Log Res
         if (this.conn.options.logApi) {
             if (ret.isSucc) {
-                this.logger.log(this.conn.chalk('[Res]', ['info', 'bold']), this.conn.options.logResBody ? ret.res : '');
+                this.logger.info(this.conn.chalk('[Res]', ['info', 'bold']), this.conn.options.logResBody ? ret.res : '');
             }
             else {
-                this.logger[ret.err.type === TsrpcErrorType.LocalError || ret.err.type === TsrpcErrorType.NetworkError ? 'error' : 'log'](
+                this.logger[ret.err.type === TsrpcErrorType.LocalError || ret.err.type === TsrpcErrorType.NetworkError ? 'error' : 'info'](
                     this.conn.chalk('[Err]', [ret.err.type === TsrpcErrorType.ApiError ? 'warn' : 'error', 'bold']), ret.err
                 );
             }

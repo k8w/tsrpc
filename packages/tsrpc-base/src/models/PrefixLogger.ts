@@ -22,8 +22,8 @@ export class PrefixLogger implements Logger {
         return this.prefixs.map(v => typeof v === 'string' ? v : v());
     }
 
-    log(...args: any[]) {
-        this.logger.log(...this.getPrefix().concat(args));
+    info(...args: any[]) {
+        this.logger.info(...this.getPrefix().concat(args));
     }
 
     debug(...args: any[]) {
