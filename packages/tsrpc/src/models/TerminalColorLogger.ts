@@ -39,8 +39,8 @@ export class TerminalColorLogger implements Logger {
         console.debug.call(console, chalk.gray(`${this._pid}${this._time()}`), chalk.cyan('[DEBUG]'), ...args);
     }
 
-    log(...args: any[]) {
-        console.log.call(console, chalk.gray(`${this._pid}${this._time()}`), chalk.green('[INFO]'), ...args);
+    info(...args: any[]) {
+        console.info.call(console, chalk.gray(`${this._pid}${this._time()}`), chalk.green('[INFO]'), ...args);
     }
 
     warn(...args: any[]) {

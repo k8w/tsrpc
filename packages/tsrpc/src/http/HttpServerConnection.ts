@@ -1,11 +1,12 @@
 import { IncomingMessage, ServerResponse } from 'http';
-import { ApiCall, ApiReturn, ApiService, BaseConnection, BaseServiceType, BoxTextDecoding, BoxTextEncoding, MsgService, OpResult, OpResultVoid, ProtoInfo, TransportData, TransportDataUtil, TransportOptions, TsrpcError, TsrpcErrorType } from "tsrpc-base";
+import { ApiCall, ApiReturn, ApiService, BaseConnection, BaseServiceType, BoxTextDecoding, BoxTextEncoding, ConnectionStatus, MsgService, OpResult, OpResultVoid, ProtoInfo, TransportData, TransportDataUtil, TransportOptions, TsrpcError, TsrpcErrorType } from "tsrpc-base";
 import { BaseServerConnection, ServerStatus } from "tsrpc-base-server";
 import { TSRPC_VERSION } from '../models/version';
 import { HttpServer } from './HttpServer';
 import { HttpUtil } from './models/HttpUtil';
 
 export class HttpServerConnection<ServiceType extends BaseServiceType = any> extends BaseServerConnection<ServiceType> {
+
     readonly httpReq: IncomingMessage & { rawBody?: Buffer };
     readonly httpRes: ServerResponse;
     call?: ApiCall;
@@ -103,6 +104,25 @@ export class HttpServerConnection<ServiceType extends BaseServiceType = any> ext
             this.httpRes.statusCode = 500;
             this.httpRes.end();
         }
+
+        this._doConnect();
+    }
+
+    protected async _doDisconnect(isManual: boolean, reason?: string | undefined): Promise<OpResultVoid> {
+        if (this.status !== ConnectionStatus.Connected) {
+            return { isSucc: true };
+        }
+        if (!this.httpRes.writable) {
+            return { isSucc: true }
+        }
+
+        if (reason) {
+            this.logger.warn(this.httpReq.method, this.httpReq.url, reason);
+            this.httpRes.setHeader('X-TSRPC-Close-Reason', reason);
+        }
+        this.httpRes.statusCode = 500;
+        this.httpRes.end('Error');
+        return { isSucc: true }
     }
 
     protected async _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid> {

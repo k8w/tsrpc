@@ -3,9 +3,7 @@ import { BaseClient } from "./BaseClient";
 
 export type BaseClientFlows<Conn extends BaseClient> = BaseConnectionFlows<Conn> & {
     preConnectFlow: Flow<{
-        readonly conn: Conn,
-        /** Return `res` to `client.connect()`, without latter connect procedure */
-        return?: OpResultVoid
+        readonly conn: Conn
     }>,
 
     // 旧版 Flow 兼容

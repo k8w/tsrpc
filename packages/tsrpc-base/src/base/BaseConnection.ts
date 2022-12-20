@@ -53,7 +53,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         if (this.status === newStatus) {
             return;
         }
-        (this.status as ConnectionStatus) = newStatus;
+        this._status = newStatus;
 
         // Post Connect
         if (newStatus === ConnectionStatus.Connected) {
@@ -89,13 +89,35 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
 
             // Timeout 3s
             await Promise.race([
-                this._doDisconnect(reason).catch(e => {
-                    this.logger.error('[DisconnectErr]', e)
+                this._doDisconnect(isManual, reason).then(v => {
+                    if (!v.isSucc) {
+                        this.logger.debug('[DisconnectErr]', v.errMsg)
+                    }
                 }),
-                new Promise(rs => { setTimeout(rs, 3000) })
+                new Promise<void>(rs => {
+                    setTimeout(() => {
+                        this.logger.debug('[DisconnectErr] _doDisconnect timeout')
+                        rs();
+                    }, 3000)
+                })
             ]);
             this._status = ConnectionStatus.Disconnected;
-            this.options.logConnect && this.logger.info('[Disconnect] Disconnected successfully');
+
+            if (this.options.logConnect) {
+                if (this.side === 'client') {
+                    // Lost connection
+                    if (!isManual) {
+                        this.logger.warn(`[Disconnect] Lost connection to the server`)
+                    }
+                    else {
+                        this.logger.info('[Disconnect] Disconnected successfully')
+                    }
+                }
+                else {
+                    this.logger.info('[Disconnect] Connection disconnected');
+                }
+
+            }
 
             // Post Flow
             this.flows.postDisconnectFlow.exec({
@@ -114,7 +136,7 @@ export abstract class BaseConnection<ServiceType extends BaseServiceType = any> 
         return this._disconnecting;
     }
     // To be override
-    protected abstract _doDisconnect(reason?: string): Promise<void>;
+    protected abstract _doDisconnect(isManual: boolean, reason?: string): Promise<OpResultVoid>;
 
     /**
      * {@link Flow} to process `callApi`, `sendMsg`, buffer input/output, etc...

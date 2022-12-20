@@ -433,7 +433,7 @@ describe('WS Server & Client basic', function () {
                 });
 
                 setTimeout(() => {
-                    client.logger?.log('sn', sn, name, abort, ret)
+                    client.logger?.info('sn', sn, name, abort, ret)
                     if (abort) {
                         assert.strictEqual(ret, undefined);
                     }
@@ -603,7 +603,7 @@ describe('WS Server & Client basic', function () {
     //         let a = {};
     //     }
 
-    //     client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
+    //     client.logger?.info('lastHeartbeatLatency', client.lastHeartbeatLatency);
     //     assert.strictEqual(client.status, ConnectionStatus.Connected)
     //     assert.ok(client.lastHeartbeatLatency > 0, `client.lastHeartbeatLatency = ${client.lastHeartbeatLatency}`);
 
@@ -640,7 +640,7 @@ describe('WS Server & Client basic', function () {
     //     (TransportDataUtil as any).HeartbeatPacket = new Uint8Array([0, 0]);
 
     //     await new Promise(rs => { setTimeout(rs, 2000) });
-    //     client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
+    //     client.logger?.info('lastHeartbeatLatency', client.lastHeartbeatLatency);
     //     assert.strictEqual(client.status, WebSocketClientStatus.Closed)
     //     assert.deepStrictEqual(disconnectFlowData, {})
 
@@ -703,7 +703,7 @@ describe('WS Server & Client basic', function () {
 //             return v;
 //         });
 //         server.flows.postDisconnectFlow.push(v => {
-//             server.logger.log('server postDisconnectFlow')
+//             server.logger.info('server postDisconnectFlow')
 //             flowExecResult.postDisconnectFlow = true;
 //             return v;
 //         })
@@ -948,7 +948,7 @@ describe('WS Server & Client basic', function () {
 //         });
 //         server.flows.postApiReturnFlow.push(v => {
 //             flowExecResult.postApiReturnFlow = true;
-//             v.call.logger.log('RETTT', v.return);
+//             v.call.logger.info('RETTT', v.return);
 //             return v;
 //         })
 
@@ -998,7 +998,7 @@ describe('WS Server & Client basic', function () {
 //         });
 //         client.flows.postApiReturnFlow.push(v => {
 //             flowExecResult.postApiReturnFlow = true;
-//             client.logger?.log('RETTT', v.return);
+//             client.logger?.info('RETTT', v.return);
 //             return v;
 //         })
 

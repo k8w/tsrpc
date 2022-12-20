@@ -3,15 +3,16 @@ import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseCli
 import { HttpRequest } from "./HttpRequest";
 
 export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends BaseClient<ServiceType> {
-
     declare readonly options: BaseHttpClientOptions;
+    declare _doConnect: never;
+    declare _doDisconnect: never;
     protected _request: HttpRequest;
 
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseHttpClientOptions, privateOptions: PrivateBaseHttpClientOptions) {
         super(serviceProto, options, privateOptions);
-        super._setStatus(ConnectionStatus.Connected);
+        this.status = ConnectionStatus.Connected;
         this._request = privateOptions.request;
-        this.logger.log(`TSRPC HTTP Client: ${this.options.server}`);
+        this.logger.info(`TSRPC HTTP Client: ${this.options.server}`);
     }
 
     protected async _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid> {
@@ -138,8 +139,6 @@ export class BaseHttpClient<ServiceType extends BaseServiceType = any> extends B
     // #endregion
 
     // #region HTTP not supported APIs
-    /** @deprecated HTTP client does not have status */
-    declare readonly status: never;
     /** @deprecated HTTP client do not support duplex callApi */
     declare implementApi: never;
     /** @deprecated HTTP client not support listen Msg, please use `WsClient` instead. */

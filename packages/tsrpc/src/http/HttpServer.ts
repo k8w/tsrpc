@@ -31,7 +31,7 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
     httpServer?: http.Server | https.Server;
 
     protected async _start(): Promise<string> {
-        this.logger.log(`Starting ${this.options.https ? 'HTTPS' : 'HTTP'} server at port ${this.options.port}... (json=${!!this.options.json})`);
+        this.logger.info(`Starting ${this.options.https ? 'HTTPS' : 'HTTP'} server at port ${this.options.port}... (json=${!!this.options.json})`);
 
         const requestListener = (req: IncomingMessage, res: ServerResponse) => {
             // Create Connection
@@ -39,7 +39,6 @@ export class HttpServer<ServiceType extends BaseServiceType = any> extends BaseS
                 httpReq: req,
                 httpRes: res
             });
-            this.addConnection(conn);
         }
 
         // Create Server

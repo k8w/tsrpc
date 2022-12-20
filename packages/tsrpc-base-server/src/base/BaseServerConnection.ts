@@ -1,5 +1,5 @@
-import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
-import { BaseServer } from "./BaseServer";
+import { ApiReturn, BaseConnection, BaseConnectionDataType, BaseServiceType, BoxDecoding, ConnectionStatus, OpResultVoid, PrefixLogger, PrefixLoggerOptions, TransportData, TsrpcError, TsrpcErrorType } from "tsrpc-base";
+import { BaseServer, ServerStatus } from "./BaseServer";
 import { BaseServerFlows } from "./BaseServerFlows";
 
 export abstract class BaseServerConnection<ServiceType extends BaseServiceType = any> extends BaseConnection<ServiceType> {
@@ -30,19 +30,30 @@ export abstract class BaseServerConnection<ServiceType extends BaseServiceType =
 
         // To be override...
         // Init connection (http req/res, ws conn, ...)
+
+        // Call by sub class
+        // this._doConnect()
+    }
+
+    // Need to be called immediately once constructed
+    protected _doConnect() {
+        // addConnection
+        this.server.connections.add(this);
+        this.status = ConnectionStatus.Connected;
+
+        if (this.server.status !== ServerStatus.Started) {
+            this._disconnect(false, 'Server stopped')
+        }
     }
 
     protected _errConnNotConnected(): OpResultVoid & { isSucc: false } {
         return { isSucc: false, errMsg: `The connection has been broken and no data can be sent.` }
     }
 
-    // TODO override _setStatus and logConnect
-
     /** Close the connection immediately */
-    protected override _disconnect(isManual: boolean, reason?: string): void {
-        super._disconnect(isManual, reason);
+    protected override _disconnect(isManual: boolean, reason?: string): Promise<OpResultVoid> {
         this.server.connections.delete(this);
-        // TODO logConnect
+        return super._disconnect(isManual, reason);;
     }
 
     // Server may disable JSON transport

@@ -1,4 +1,4 @@
-import { BaseServiceType, ConnectionStatus, OpResultVoid, PROMISE_ABORTED, ServiceProto, TransportData, TransportOptions } from "tsrpc-base";
+import { BaseServiceType, Logger, OpResultVoid, ServiceProto, TransportData, TransportOptions } from "tsrpc-base";
 import { BaseClient, BaseClientOptions, defaultBaseClientOptions, PrivateBaseClientOptions } from "../base/BaseClient";
 import { WebSocketConnect, WebSocketConnectReturn } from "./WebSocketConnect";
 
@@ -11,113 +11,60 @@ export class BaseWebSocketClient<ServiceType extends BaseServiceType = any> exte
     constructor(serviceProto: ServiceProto<ServiceType>, options: BaseWebSocketClientOptions, privateOptions: PrivateBaseWebSocketClientOptions) {
         super(serviceProto, options, privateOptions);
         this._connect = privateOptions.connect;
-        this.logger.log(`TSRPC WebSocket Client: ${this.options.server}`);
+        this.logger.info(`TSRPC WebSocket Client: ${this.options.server}`);
     }
 
-    private _connecting?: {
-        promise: Promise<OpResultVoid>,
-        rs: (v: OpResultVoid) => void
-    };
-    /**
-     * Start connecting, you must connect first before `callApi()` and `sendMsg()`.
-     * @throws never
-     */
-    async connect(): Promise<OpResultVoid> {
-        // 已连接成功
-        if (this.status === ConnectionStatus.Connected) {
-            return { isSucc: true };
-        }
+    protected _doConnect(logger: Logger): Promise<OpResultVoid> {
+        this.options.logConnect && logger.info(`${this.chalk('[Connect]', ['info'])}Start connecting to server "${this.options.server}"...`);
 
-        // 已连接中
-        if (this._connecting) {
-            return this._connecting.promise;
-        }
+        return new Promise(rs => {
+            try {
+                this._ws = this._connect({
+                    server: this.options.server,
+                    protocols: [this.dataType],
+                    onOpen: () => {
+                        rs({ isSucc: true })
+                    },
+                    onClose: this._onWsClose,
+                    onError: this._onWsError,
+                    onMessage: this._onWsMessage,
+                })
+            }
+            catch (e) {
+                this._ws = undefined;
+                rs({ isSucc: false, errMsg: (e as Error).message });
+            }
+        })
+    }
 
-        // Pre Flow
-        let pre = await this.flows.preConnectFlow.exec({ conn: this }, this.logger);
-        // Pre return
-        if (pre?.return) {
-            return pre.return;
-        }
-        // Canceled
-        if (!pre) {
-            return PROMISE_ABORTED;
-        }
-
-        // Connect WS
-        // TODO TIMEOUT
-        try {
-            this._ws = this._connect({
-                server: this.options.server,
-                protocols: [this.dataType],
-                onOpen: this._onWsOpen,
-                onClose: this._onWsClose,
-                onError: this._onWsError,
-                onMessage: this._onWsMessage,
-            })
-        }
-        catch (e) {
-            this.logger?.error(e);
-            return { isSucc: false, errMsg: (e as Error).message }
-        }
-
-        // Connecting
-        this._setStatus(ConnectionStatus.Connecting);
-        this.logger?.log(`Start connecting ${this.options.server}...`);
-        this._connecting = {} as any;
-        let promiseConnect = new Promise<OpResultVoid>(rs => {
-            this._connecting!.rs = rs;
+    protected _rsDisconnect?: (res: OpResultVoid) => void;
+    protected _doDisconnect(isManual: boolean, reason?: string): Promise<OpResultVoid> {
+        return new Promise<OpResultVoid>(rs => {
+            if (this._ws) {
+                try {
+                    this._rsDisconnect = rs;
+                    this._ws.close(reason ?? '', isManual ? 1000 : 1001);
+                }
+                catch (e) {
+                    rs({ isSucc: false, errMsg: (e as Error).message });
+                }
+            }
+        }).then(res => {
+            this._rsDisconnect = undefined;
+            return res;
         });
-        this._connecting!.promise = promiseConnect;
-
-        return promiseConnect;
     }
-
-    /**
-     * Disconnect immediately
-     * @throws never
-     */
-    disconnect(reason?: string): void {
-        return this._disconnect(true, reason);
-    }
-    protected override _disconnect(isManual: boolean, reason?: string): void {
-        super._disconnect(isManual, reason);
-
-        this._ws?.close(reason ?? '', isManual ? 1000 : 1001);
-        this._ws = undefined;
-
-        // 连接中，返回连接失败
-        if (this._connecting) {
-            this.logger.error(`Failed to connect to WebSocket server: ${this.options.server}`);
-            this._connecting.rs({
-                isSucc: false,
-                errMsg: `Failed to connect to WebSocket server: ${this.options.server}`
-            });
-            this._connecting = undefined;
-        }
-    }
-
-    protected _onWsOpen = () => {
-        if (!this._connecting) {
-            return;
-        }
-
-        // Resolve this.connect()
-        this._setStatus(ConnectionStatus.Connected);
-        this._connecting.rs({ isSucc: true });
-        this._connecting = undefined;
-        this.logger?.log(`Connect to ${this.options.server} successfully`);
-
-        this.flows.postConnectFlow.exec(this, this.logger);
-    };
 
     protected _onWsClose = (code?: number, reason?: string) => {
-        this.logger.debug('Websocket disconnect succ', `code=${code} reason=${reason}`);
+        this.logger.debug('Websocket onclose triggered', `server=${this.options.server} code=${code} reason=${reason}`);
+        this._ws = undefined;
 
         // 连接意外断开
-        if (this.status !== ConnectionStatus.Disconnected) {
-            this.logger.warn(`Lost connection to ${this.options.server}`, `code=${code} reason=${reason}`);
+        if (!this._disconnecting) {
             this._disconnect(false, reason ?? 'Lost connection to server');
+        }
+        else {
+            this._rsDisconnect?.({ isSucc: true });
         }
     };
 

@@ -33,7 +33,7 @@ export class WebSocketServer<ServiceType extends BaseServiceType = any> extends 
     }
 
     protected _start(): Promise<string> {
-        this.logger.log(`Starting WebSocket${this.options.wss ? '(WSS)' : ''} server at port ${this.options.port}... (json=${!!this.options.json})`);
+        this.logger.info(`Starting WebSocket${this.options.wss ? '(WSS)' : ''} server at port ${this.options.port}... (json=${!!this.options.json})`);
 
         return new Promise<string>((rs, rj) => {
             // Create HTTP/S Server
@@ -54,7 +54,6 @@ export class WebSocketServer<ServiceType extends BaseServiceType = any> extends 
                     ws: ws,
                     httpReq: httpReq
                 });
-                this.addConnection(conn);
             });
 
             // Start Server

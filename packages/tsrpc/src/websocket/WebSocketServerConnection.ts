@@ -23,7 +23,12 @@ export class WebSocketServerConnection<ServiceType extends BaseServiceType = any
 
         // Init ws
         this.ws.onclose = async e => {
-            this._disconnect(false, e.reason);
+            if (this._rsDoDisconnect) {
+                this._rsDoDisconnect({ isSucc: true });
+            }
+            else {
+                this._disconnect(false, e.reason);
+            }
         };
         this.ws.onerror = e => { this.logger.error('[WsError]', e.error) };
         this.ws.onmessage = e => {
@@ -42,6 +47,19 @@ export class WebSocketServerConnection<ServiceType extends BaseServiceType = any
             }
             this._recvData(data);
         };
+
+        this._doConnect();
+    }
+
+    protected _rsDoDisconnect?: (res: OpResultVoid) => void;
+    protected _doDisconnect(isManual: boolean, reason?: string | undefined): Promise<OpResultVoid> {
+        return new Promise<OpResultVoid>(rs => {
+            this.ws.close(isManual ? 1000 : 1001, reason ?? '');
+            this._rsDoDisconnect = rs;
+        }).catch((e: Error) => ({ isSucc: false, errMsg: e.message })).then(v => {
+            this._rsDoDisconnect = undefined;
+            return v;
+        })
     }
 
     protected _sendData(data: string | Uint8Array, transportData: TransportData, options?: TransportOptions): Promise<OpResultVoid> {

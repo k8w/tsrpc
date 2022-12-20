@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiHandler, ApiHandlerUtil, AutoImplementApiReturn, BaseConnection, BaseConnectionOptions, BaseServiceType, defaultBaseConnectionOptions, Flow, getCustomObjectIdTypes, LocalApiName, LogLevel, OpResultVoid, ProtoInfo, ServiceMapUtil, ServiceProto, setLogLevel } from "tsrpc-base";
+import { ApiHandler, ApiHandlerUtil, AutoImplementApiReturn, BaseConnection, BaseConnectionOptions, BaseServiceType, ConnectionStatus, defaultBaseConnectionOptions, Flow, getCustomObjectIdTypes, LocalApiName, Logger, LogLevel, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMapUtil, ServiceProto, setLogLevel } from "tsrpc-base";
 import { BaseClientFlows } from "./BaseClientFlows";
 
 /**
@@ -71,6 +71,65 @@ export abstract class BaseClient<ServiceType extends BaseServiceType = any> exte
 
     // TODO base connect
     // Some 不需要连接（如 HTTP IPC），也可以视为自动连接（屏蔽 connect 方法）
+    protected _connecting?: Promise<OpResultVoid>;
+    /**
+     * Start connecting, you must connect first before `callApi()` and `sendMsg()`.
+     * @throws never
+     */
+    async connect(options?: ConnectOptions): Promise<OpResultVoid> {
+        // 已连接成功
+        if (this.status === ConnectionStatus.Connected) {
+            return { isSucc: true };
+        }
+        // 连接中
+        if (this._connecting) {
+            return this._connecting;
+        }
+        if (this.status !== ConnectionStatus.Disconnected) {
+            return { isSucc: false, errMsg: `You can only call "connect" if the ${this.connName} status is "Disconnected" (the current status is "${this.status}")` }
+        }
+        this.status = ConnectionStatus.Connecting;
+
+        this._connecting = (async () => {
+            // Pre Flow
+            let pre = await this.flows.preConnectFlow.exec({ conn: this }, this.logger);
+            // Canceled
+            if (!pre) {
+                this.status = ConnectionStatus.Disconnected;
+                return PROMISE_ABORTED;
+            }
+
+            // Connect (Timeout 5000s)
+            const op: OpResultVoid = await Promise.race([
+                new Promise<OpResultVoid>(rs => {
+                    setTimeout(() => {
+                        rs({ isSucc: false, errMsg: 'Connect to the server failed because of timeout.' })
+                    }, options?.timeout ?? 5000)
+                }),
+                this._doConnect(this.logger)
+            ])
+
+            if (op.isSucc) {
+                this.options.logConnect && this.logger.info('[Connect] Connected to the server successfully');
+                this.status = ConnectionStatus.Connected;
+                this.flows.postConnectFlow.exec(this, this.logger);
+            }
+            else {
+                this.logger?.error('[ConnectErr]', op);
+                this.status = ConnectionStatus.Disconnected;
+            }
+
+            return op;
+        })();
+
+        this._connecting.catch(e => { }).then(() => {
+            this._connecting = undefined;
+        })
+
+        return this._connecting;
+    }
+    // Need log connecting
+    protected abstract _doConnect(logger: Logger): Promise<OpResultVoid>;
 
     /**
      * Register an implementation function for a client-side API.
@@ -155,4 +214,12 @@ export interface PrivateBaseClientOptions {
     classObjectId: { new(id?: any): any };
 
     env: Pick<ProtoInfo, 'tsrpc' | 'node'>;
+}
+
+export interface ConnectOptions {
+    /**
+     * Timeout to connect (ms)
+     * @defaultValue 5000
+     */
+    timeout: number
 }

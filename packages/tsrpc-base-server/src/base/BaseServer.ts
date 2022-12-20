@@ -1,5 +1,5 @@
 import { TSBuffer } from "tsbuffer";
-import { ApiHandler, ApiHandlerUtil, AutoImplementApiReturn, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, BoxBuffer, BoxTextEncoding, Chalk, ConnectionStatus, Counter, defaultBaseConnectionOptions, EventEmitter, Flow, getCustomObjectIdTypes, Logger, LogLevel, MsgHandler, MsgHandlerUtil, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
+import { ApiHandler, ApiHandlerUtil, AutoImplementApiReturn, BaseConnection, BaseConnectionDataType, BaseConnectionOptions, BaseServiceType, BoxBuffer, BoxTextEncoding, Chalk, Counter, defaultBaseConnectionOptions, EventEmitter, Flow, getCustomObjectIdTypes, Logger, LogLevel, MsgHandler, MsgHandlerUtil, OpResultVoid, PROMISE_ABORTED, ProtoInfo, ServiceMap, ServiceMapUtil, ServiceProto, setLogLevel, TransportData, TransportDataUtil } from "tsrpc-base";
 import { BaseServerConnection } from "./BaseServerConnection";
 import { BaseServerFlows } from "./BaseServerFlows";
 
@@ -87,28 +87,20 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
         }
         this._status = ServerStatus.Started;
 
-        this.logger.log(this.chalk('[ServerStart]', ['info']) + ' ' + succMsg);
+        this.logger.info(this.chalk('[ServerStart]', ['info']) + ' ' + succMsg);
     }
 
     /**
-     * Listen port, wait connection, and call this.addConnection()
+     * Listen port, wait connection
      * @throws Throw `Error` if start failed
      * @return Successful message (e.g. "Server started at port 3000")
      */
     protected abstract _start(): Promise<string>;
 
     protected _connId = new Counter();
-    addConnection(conn: Conn) {
-        this.connections.add(conn);
-        conn['_setStatus'](ConnectionStatus.Connected);
-
-        if (this._status !== ServerStatus.Started) {
-            conn['_disconnect'](false, 'Server stopped')
-        }
-    }
-
     protected _pendingApiCallNum = 0;
     protected _rsGracefulStop?: () => void;
+
     /**
      * Stop the server
      * @param gracefulWaitTime `undefined` represent stop immediately, otherwise wait all API requests finished and then stop the server.
@@ -140,7 +132,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
         // Do Stop (immediately)
         this._status = ServerStatus.Stopped;
         this.connections.forEach(conn => { conn['_disconnect'](true, 'Server stopped') });
-        this.logger.log(`${this.chalk('[ServerStop]', ['info'])} Server stopped`);
+        this.logger.info(`${this.chalk('[ServerStop]', ['info'])} Server stopped`);
         return this._stop();
     }
 
@@ -312,7 +304,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = any, Conn
         }
 
         // SEND
-        this.options.logMsg && this.logger.log(`[BroadcastMsg]`, `[${msgName}]`, `[To:${getConnStr()}]`, msg);
+        this.options.logMsg && this.logger.info(`[BroadcastMsg]`, `[${msgName}]`, `[To:${getConnStr()}]`, msg);
         let promiseSends: Promise<OpResultVoid>[] = [];
         connGroups.forEach(v => {
             const data = v.data;

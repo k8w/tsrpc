@@ -5,13 +5,13 @@ function test(logLevel: LogLevel) {
     const result: [number, number, number, number] = [0, 0, 0, 0];
     let logger: Logger = {
         debug: () => { ++result[0] },
-        log: () => { ++result[1] },
+        info: () => { ++result[1] },
         warn: () => { ++result[2] },
         error: () => { ++result[3] },
     };
     logger = setLogLevel(logger, logLevel);
     logger.debug('aaa');
-    logger.log('aaa');
+    logger.info('aaa');
     logger.warn('aaa');
     logger.error('aaa');
     return result;

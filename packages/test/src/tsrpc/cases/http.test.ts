@@ -814,7 +814,7 @@ describe('HTTP Flows', function () {
         });
         server.flows.postApiCallReturnFlow.push(call => {
             flowExecResult.postApiCallReturnFlow = true;
-            call.logger.log('RETTT', call.return);
+            call.logger.info('RETTT', call.return);
             return call;
         })
 
