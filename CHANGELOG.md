@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.4.12] - 2023-02-07
+### Added
+- Add `closeTimeout` for `WsConnection.close`
+### Fixed
+- Heartbeat timeout should terminate ws connection instantly
+
 ## [3.4.11] - 2022-11-26
 ### Changed
 - Update deps

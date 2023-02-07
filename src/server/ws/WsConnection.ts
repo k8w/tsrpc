@@ -47,7 +47,8 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
             const timeout = this.server.options.heartbeatWaitTime;
             this._heartbeatInterval = setInterval(() => {
                 if (Date.now() - this._lastHeartbeatTime > timeout) {
-                    this.close('Receive heartbeat timeout', 3001);
+                    this.logger.debug('Receive heartbeat timeout')
+                    this.close('Receive heartbeat timeout', 3001, 1000);
                 }
             }, timeout);
         }
@@ -130,11 +131,24 @@ export class WsConnection<ServiceType extends BaseServiceType = any> extends Bas
 
     protected _rsClose?: () => void;
     /** Close WebSocket connection */
-    close(reason?: string, code = 1000): Promise<void> {
+    close(reason?: string, code = 1000, closeTimeout = 3000): Promise<void> {
+        // 停止心跳
+        if (this._heartbeatInterval) {
+            clearInterval(this._heartbeatInterval);
+            this._heartbeatInterval = undefined;
+        }
+
         // 已连接 Close之
         return new Promise<void>(rs => {
             this._rsClose = rs;
-            this.ws.close(code, reason);
+            const ws = this.ws;
+            ws.close(code, reason);
+            // 超时保护
+            setTimeout(() => {
+                if (ws.readyState !== WebSocket.CLOSED) {
+                    ws.terminate();
+                }
+            }, closeTimeout)
         }).finally(() => {
             this._rsClose = undefined
         })

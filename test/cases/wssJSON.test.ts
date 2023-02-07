@@ -857,7 +857,7 @@ describe('WS Server & Client basic', function () {
         });
         await client.connect();
 
-        await new Promise(rs => { setTimeout(rs, 2000) });
+        await new Promise(rs => { setTimeout(rs, 3000) });
         client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
         assert.strictEqual(client.status, WsClientStatus.Opened)
         assert.ok(client.lastHeartbeatLatency > 0);

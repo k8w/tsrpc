@@ -816,13 +816,17 @@ describe('WS JSON Server & Client basic', function () {
             debugBuf: true,
             json: true
         });
-        await client.connect();
+        assert.equal(await (await client.connect()).isSucc, true);
 
         await new Promise(rs => { setTimeout(rs, 2000) });
+        console.log('心跳正常，没断开');
+
         // 人为制造一个延迟
-        for (let i = 0; i < 100000; ++i) {
+        console.log('人为制造一个延迟')
+        for (let i = 0; i < 1000000; ++i) {
             let a = {};
         }
+        console.log('延迟结束')
 
         client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
         assert.strictEqual(client.status, WsClientStatus.Opened)
