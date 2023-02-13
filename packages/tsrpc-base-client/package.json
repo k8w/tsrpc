@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "rollup -c -w",
     "check": "tsc --noEmit",
-    "build": "rm -rf dist && rollup -c"
+    "build": "shx rm -rf dist && rollup -c"
   },
   "files": [
     "dist"

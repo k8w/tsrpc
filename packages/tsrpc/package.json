@@ -14,7 +14,7 @@
   "scripts": {
     "dev": "rollup -c -w",
     "check": "tsc --noEmit",
-    "build": "rm -rf dist && rollup -c && node scripts/postBuild.js"
+    "build": "shx rm -rf dist && rollup -c && node scripts/postBuild.js"
   },
   "repository": {
     "type": "git",

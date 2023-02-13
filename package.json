@@ -3,7 +3,8 @@
   "devDependencies": {
     "lerna": "^6.4.1",
     "nx": "^15.6.3",
-    "onchange": "^7.1.0"
+    "onchange": "^7.1.0",
+    "shx": "^0.3.4"
   },
   "scripts": {
     "preinstall": "node scripts/pre-install",
