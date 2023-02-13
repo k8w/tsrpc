@@ -1,17 +1,22 @@
 {
   "private": true,
   "devDependencies": {
-    "lerna": "^5.5.1",
+    "lerna": "^6.4.1",
+    "nx": "^15.6.3",
     "onchange": "^7.1.0"
   },
   "scripts": {
+    "preinstall": "node scripts/pre-install",
     "bootstrap": "lerna bootstrap && pnpm i",
-    "test": "lerna run test --stream",
+    "test": "lerna run test",
     "check": "lerna run check",
-    "coverage": "lerna run coverage --stream",
+    "coverage": "lerna run coverage",
     "dev": "onchange -i -k 'packages/tsrpc-base/src/**/*.ts' 'packages/tsrpc-base-client/src/**/*.ts' 'packages/tsrpc-base-server/src/**/*.ts' 'packages/tsrpc/src/**/*.ts' -- npm run build",
-    "build": "lerna run build --stream",
+    "build": "lerna run build",
     "publish:dev": "",
     "publish:latest": ""
+  },
+  "peerDependencies": {
+    "nx": "^15.6.3"
   }
 }

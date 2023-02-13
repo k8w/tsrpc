@@ -2,7 +2,6 @@
   "packages": [
     "packages/*"
   ],
-  "useNx": false,
   "version": "4.0.0-dev.0",
   "npmClient": "pnpm",
   "useWorkspaces": true
