@@ -347,7 +347,7 @@ export abstract class BaseServer<
     }
 
     // Pre Flow
-    let pre = await this.flows.preSendMsgFlow.exec(
+    const pre = await this.flows.preSendMsgFlow.exec(
       {
         msgName: msgName,
         msg: msg,
@@ -364,7 +364,7 @@ export abstract class BaseServer<
     conns = pre.conns;
 
     // GetService
-    let service = this.serviceMap.name2Msg[msgName as string];
+    const service = this.serviceMap.name2Msg[msgName as string];
     if (!service) {
       this.logger.error(
         '[BroadcastMsgErr]',
@@ -382,7 +382,7 @@ export abstract class BaseServer<
     };
 
     // Group conns by dataType (different encode method)
-    let connGroups: {
+    const connGroups: {
       conns: Conn[];
       dataType: BaseConnectionDataType;
       data: any;
@@ -395,7 +395,7 @@ export abstract class BaseServer<
       }));
 
     // Encode
-    for (let groupItem of connGroups) {
+    for (const groupItem of connGroups) {
       // Encode body
       const opEncodeBody =
         groupItem.dataType === 'buffer'
@@ -476,11 +476,11 @@ export abstract class BaseServer<
     let promiseSends: Promise<OpResultVoid>[] = [];
     connGroups.forEach((v) => {
       const data = v.data;
-      let promises = v.conns.map((v) => v['_sendData'](data, transportData));
+      const promises = v.conns.map((v) => v['_sendData'](data, transportData));
 
       // Post SendData Flow (run once only)
       Promise.all(promises).then((ops) => {
-        let succConns = ops.filterIndex((v) => v.isSucc).map((i) => v.conns[i]);
+        const succConns = ops.filterIndex((v) => v.isSucc).map((i) => v.conns[i]);
         if (succConns.length) {
           this.flows.postSendDataFlow.exec(
             {
@@ -498,10 +498,10 @@ export abstract class BaseServer<
     });
 
     // Merge errMsgs and return
-    let errMsgs: string[] = [];
+    const errMsgs: string[] = [];
     return Promise.all(promiseSends).then((results) => {
       for (let i = 0; i < results.length; ++i) {
-        let op = results[i];
+        const op = results[i];
         if (!op.isSucc) {
           errMsgs.push(`Conn$${conns![i].id}: ${op.errMsg} `);
         }

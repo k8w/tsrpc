@@ -75,7 +75,7 @@ export class HttpServerConnection<
     }
 
     // Wait data
-    let chunks: Buffer[] = [];
+    const chunks: Buffer[] = [];
     req.on('data', (data: Buffer) => {
       chunks.push(data);
     });
@@ -231,7 +231,7 @@ export class HttpServerConnection<
    */
   protected override _decodeBoxText: (typeof TransportDataUtil)['decodeBoxText'] =
     (data) => {
-      let op = this._doDecodeBoxText(data);
+      const op = this._doDecodeBoxText(data);
       if (!op.isSucc) {
         this._sendTransportData({
           type: 'err',
@@ -254,7 +254,7 @@ export class HttpServerConnection<
     const sn = this.id;
 
     // Parse service
-    let serviceName = url.slice(this.server.options.jsonHostPath.length);
+    const serviceName = url.slice(this.server.options.jsonHostPath.length);
     let service: ApiService | MsgService | undefined;
     if (isMsg) {
       service = this.serviceMap.name2Msg[serviceName];

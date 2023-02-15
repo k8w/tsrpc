@@ -41,4 +41,4 @@ export const defaultWebSocketClientOptions: BaseWebSocketClientOptions = {
   ...defaultBaseNodeClientOptions,
 };
 
-export interface WebSocketClientOptions extends BaseWebSocketClientOptions {}
+export type WebSocketClientOptions = BaseWebSocketClientOptions

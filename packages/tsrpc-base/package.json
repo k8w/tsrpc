@@ -14,7 +14,7 @@
   "scripts": {
     "dev": "rollup -c -w",
     "check": "tsc --noEmit",
-    "lint": "eslint src/**/*.ts",
+    "lint": "eslint src/**/*.ts --fix",
     "build": "shx rm -rf dist && rollup -c",
     "genTransportProto": "cd src/proto && npx tsbuffer-cli proto -i TransportDataSchema.ts -o TransportDataProto_temp.ts"
   },

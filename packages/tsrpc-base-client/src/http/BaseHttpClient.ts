@@ -57,7 +57,7 @@ export class BaseHttpClient<
         : this.options.server;
 
     // Do Send
-    let { promise, abort } = this._request({
+    const { promise, abort } = this._request({
       url: url,
       data: data,
       method: 'POST',

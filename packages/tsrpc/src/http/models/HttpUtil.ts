@@ -5,14 +5,14 @@ import { HttpRequestOptions, HttpRequestReturn } from 'tsrpc-base-client';
 
 export class HttpUtil {
   static getClientIp(req: http.IncomingMessage) {
-    var ipAddress;
+    let ipAddress;
     // The request may be forwarded from local web server.
-    var forwardedIpsStr = req.headers['x-forwarded-for'] as string | undefined;
+    const forwardedIpsStr = req.headers['x-forwarded-for'] as string | undefined;
     if (forwardedIpsStr) {
       // 'x-forwarded-for' header may return multiple IP addresses in
       // the format: "client IP, proxy 1 IP, proxy 2 IP" so take the
       // the first one
-      var forwardedIps = forwardedIpsStr.split(',');
+      const forwardedIps = forwardedIpsStr.split(',');
       ipAddress = forwardedIps[0];
     }
     if (!ipAddress) {

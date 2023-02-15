@@ -13,7 +13,7 @@ const style2ChalkCmd = {
 } as const;
 export function NodeChalk(content: string, styles: ChalkStyle[]) {
   let output: string = content;
-  for (let style of styles) {
+  for (const style of styles) {
     output = chalk[style2ChalkCmd[style]](output);
   }
   return output;

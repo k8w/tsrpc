@@ -65,8 +65,8 @@ async function testApi(
   );
 
   // Inner error
-  for (let v of ['Test', 'a/b/c/Test']) {
-    let ret = await client.callApi(v as any, {
+  for (const v of ['Test', 'a/b/c/Test']) {
+    const ret = await client.callApi(v as any, {
       name: 'InnerError',
     });
     delete ret.err!.innerErr.stack;
@@ -82,8 +82,8 @@ async function testApi(
   }
 
   // TsrpcError
-  for (let v of ['Test', 'a/b/c/Test']) {
-    let ret = await client.callApi(v as any, {
+  for (const v of ['Test', 'a/b/c/Test']) {
+    const ret = await client.callApi(v as any, {
       name: 'TsrpcError',
     });
     assert.deepStrictEqual(ret, {
@@ -97,8 +97,8 @@ async function testApi(
   }
 
   // call.error
-  for (let v of ['Test', 'a/b/c/Test']) {
-    let ret = await client.callApi(v as any, {
+  for (const v of ['Test', 'a/b/c/Test']) {
+    const ret = await client.callApi(v as any, {
       name: 'error',
     });
     assert.deepStrictEqual(ret, {
@@ -112,7 +112,7 @@ async function testApi(
 
 describe('HTTP Server & Client basic', function () {
   it('implement API manually', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
     await server.start();
@@ -120,7 +120,7 @@ describe('HTTP Server & Client basic', function () {
     server.implementApi('Test', ApiTest);
     server.implementApi('a/b/c/Test', ApiAbcTest);
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
@@ -194,7 +194,7 @@ describe('HTTP Server & Client basic', function () {
   // })
 
   it('autoImplementApi', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
       apiCallTimeout: 5000,
     });
@@ -202,7 +202,7 @@ describe('HTTP Server & Client basic', function () {
 
     server.autoImplementApi(path.resolve(__dirname, '../api'));
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
@@ -212,7 +212,7 @@ describe('HTTP Server & Client basic', function () {
   });
 
   it('sendMsg', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       port: 3001,
       ...serverLogger,
       // debugBuf: true
@@ -220,13 +220,13 @@ describe('HTTP Server & Client basic', function () {
     await server.autoImplementApi(path.resolve(__dirname, '../api'));
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       server: 'http://127.0.0.1:3001',
       ...clientLogger,
     });
 
     return new Promise((rs) => {
-      let msg: MsgChat = {
+      const msg: MsgChat = {
         channel: 123,
         userName: 'fff',
         content: '666',
@@ -244,7 +244,7 @@ describe('HTTP Server & Client basic', function () {
   });
 
   it('Same-name msg and api', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       port: 3001,
       ...serverLogger,
     });
@@ -252,12 +252,12 @@ describe('HTTP Server & Client basic', function () {
     await server.autoImplementApi(path.resolve(__dirname, '../api'));
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       server: 'http://127.0.0.1:3001',
       ...clientLogger,
     });
 
-    let ret = await client.callApi('Test', { name: 'xxx' });
+    const ret = await client.callApi('Test', { name: 'xxx' });
     assert.ok(ret.isSucc);
 
     return new Promise((rs) => {
@@ -274,20 +274,20 @@ describe('HTTP Server & Client basic', function () {
   });
 
   it('abort', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
     await server.start();
 
     server.autoImplementApi(path.resolve(__dirname, '../api'));
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
     let result: any | undefined;
-    let promise = client.callApi('Test', { name: 'aaaaaaaa' });
-    let sn = client.lastSn;
+    const promise = client.callApi('Test', { name: 'aaaaaaaa' });
+    const sn = client.lastSn;
     setTimeout(() => {
       client.abort(sn);
     }, 10);
@@ -306,14 +306,14 @@ describe('HTTP Server & Client basic', function () {
   });
 
   it('abortByKey', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
     await server.start();
 
     server.autoImplementApi(path.resolve(__dirname, '../api'));
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
@@ -371,14 +371,14 @@ describe('HTTP Server & Client basic', function () {
   });
 
   it('abortAll', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
     await server.start();
 
     server.autoImplementApi(path.resolve(__dirname, '../api'));
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
@@ -431,30 +431,30 @@ describe('HTTP Server & Client basic', function () {
   });
 
   it('pendingApis', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
     await server.start();
 
     server.autoImplementApi(path.resolve(__dirname, '../api'));
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
     for (let i = 0; i < 10; ++i) {
-      let promise = Promise.all(
+      const promise = Promise.all(
         Array.from(
           { length: 10 },
           () =>
             new Promise<void>((rs) => {
-              let name = ['Req', 'InnerError', 'TsrpcError', 'error'][
+              const name = ['Req', 'InnerError', 'TsrpcError', 'error'][
                 (Math.random() * 4) | 0
               ];
               let ret: any | undefined;
-              let promise = client.callApi('Test', { name: name });
-              let sn = client.lastSn;
-              let abort = Math.random() > 0.5;
+              const promise = client.callApi('Test', { name: name });
+              const sn = client.lastSn;
+              const abort = Math.random() > 0.5;
               if (abort) {
                 setTimeout(() => {
                   client.abort(sn);
@@ -489,17 +489,17 @@ describe('HTTP Server & Client basic', function () {
   });
 
   it('error', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
     await server.start();
 
-    let client1 = new HttpClient(getProto(), {
+    const client1 = new HttpClient(getProto(), {
       server: 'http://localhost:80',
       ...clientLogger,
     });
 
-    let ret = await client1.callApi('Test', { name: 'xx' });
+    const ret = await client1.callApi('Test', { name: 'xx' });
     console.log(ret);
     assert.strictEqual(ret.isSucc, false);
     assert.strictEqual(ret.err?.code, 'ECONNREFUSED');
@@ -509,7 +509,7 @@ describe('HTTP Server & Client basic', function () {
   });
 
   it('server timeout', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
       apiCallTimeout: 100,
     });
@@ -526,10 +526,10 @@ describe('HTTP Server & Client basic', function () {
     });
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
-    let ret = await client.callApi('Test', { name: 'Jack' });
+    const ret = await client.callApi('Test', { name: 'Jack' });
     assert.deepStrictEqual(ret, {
       isSucc: false,
       err: new TsrpcError('Remote Timeout', {
@@ -542,7 +542,7 @@ describe('HTTP Server & Client basic', function () {
   });
 
   it('client timeout', async function () {
-    let server1 = new HttpServer(getProto(), {
+    const server1 = new HttpServer(getProto(), {
       ...serverLogger,
     });
     server1.implementApi('Test', (call) => {
@@ -557,12 +557,12 @@ describe('HTTP Server & Client basic', function () {
     });
     await server1.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       callApiTimeout: 100,
       ...clientLogger,
     });
 
-    let ret = await client.callApi('Test', { name: 'Jack123' });
+    const ret = await client.callApi('Test', { name: 'Jack123' });
     // SERVER TIMEOUT的call还没执行完，但是call却被放入Pool了，导致这个BUG
     assert.deepStrictEqual(ret, {
       isSucc: false,
@@ -576,7 +576,7 @@ describe('HTTP Server & Client basic', function () {
   });
 
   it('Graceful stop', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
 
@@ -587,7 +587,7 @@ describe('HTTP Server & Client basic', function () {
 
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
@@ -614,7 +614,7 @@ describe('HTTP Server & Client basic', function () {
 
 describe('HTTP Flows', function () {
   it('Server conn flow', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
 
@@ -643,7 +643,7 @@ describe('HTTP Flows', function () {
     assert.strictEqual(flowExecResult.postConnectFlow, undefined);
     assert.strictEqual(flowExecResult.postDisconnectFlow, undefined);
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
     await client.callApi('Test', { name: 'xxx' });
@@ -654,7 +654,7 @@ describe('HTTP Flows', function () {
   });
 
   it('Buffer enc/dec flow', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
 
@@ -686,7 +686,7 @@ describe('HTTP Flows', function () {
 
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
@@ -708,7 +708,7 @@ describe('HTTP Flows', function () {
       return v;
     });
 
-    let ret = await client.callApi('Test', { name: 'xxx' });
+    const ret = await client.callApi('Test', { name: 'xxx' });
     assert.strictEqual(flowExecResult.preRecvBufferFlow, true);
     assert.strictEqual(flowExecResult.preSendBufferFlow, true);
     assert.deepStrictEqual(ret, {
@@ -722,7 +722,7 @@ describe('HTTP Flows', function () {
   });
 
   it('ApiCall flow', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
 
@@ -746,7 +746,7 @@ describe('HTTP Flows', function () {
 
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
@@ -757,7 +757,7 @@ describe('HTTP Flows', function () {
       return v;
     });
 
-    let ret = await client.callApi('Test', { name: 'xxx' });
+    const ret = await client.callApi('Test', { name: 'xxx' });
     assert.strictEqual(flowExecResult.postApiCallReturnFlow, true);
     assert.deepStrictEqual(ret, {
       isSucc: false,
@@ -768,7 +768,7 @@ describe('HTTP Flows', function () {
   });
 
   it('ApiCall flow break', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
 
@@ -792,7 +792,7 @@ describe('HTTP Flows', function () {
 
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
@@ -803,7 +803,7 @@ describe('HTTP Flows', function () {
       return v;
     });
 
-    let ret = await client.callApi('Test', { name: 'xxx' });
+    const ret = await client.callApi('Test', { name: 'xxx' });
     assert.strictEqual(flowExecResult.postApiCallReturnFlow, true);
     assert.deepStrictEqual(ret, {
       isSucc: false,
@@ -814,7 +814,7 @@ describe('HTTP Flows', function () {
   });
 
   it('ApiCall flow error', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
 
@@ -838,7 +838,7 @@ describe('HTTP Flows', function () {
 
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
@@ -849,7 +849,7 @@ describe('HTTP Flows', function () {
       return v;
     });
 
-    let ret = await client.callApi('Test', { name: 'xxx' });
+    const ret = await client.callApi('Test', { name: 'xxx' });
     assert.strictEqual(flowExecResult.postApiCallReturnFlow, true);
     assert.deepStrictEqual(ret, {
       isSucc: false,
@@ -864,7 +864,7 @@ describe('HTTP Flows', function () {
   });
 
   it('server ApiReturn flow', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
 
@@ -890,11 +890,11 @@ describe('HTTP Flows', function () {
 
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
-    let ret = await client.callApi('Test', { name: 'xxx' });
+    const ret = await client.callApi('Test', { name: 'xxx' });
     assert.strictEqual(flowExecResult.preApiCallReturnFlow, true);
     assert.strictEqual(flowExecResult.postApiCallReturnFlow, true);
     assert.deepStrictEqual(ret, {
@@ -906,7 +906,7 @@ describe('HTTP Flows', function () {
   });
 
   it('client ApiReturn flow', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
 
@@ -919,7 +919,7 @@ describe('HTTP Flows', function () {
 
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
@@ -932,7 +932,7 @@ describe('HTTP Flows', function () {
       return v;
     });
 
-    let ret = await client.callApi('Test', { name: 'xxx' });
+    const ret = await client.callApi('Test', { name: 'xxx' });
     assert.strictEqual(flowExecResult.preCallApiReturnFlow, true);
     assert.deepStrictEqual(ret, {
       isSucc: false,
@@ -943,7 +943,7 @@ describe('HTTP Flows', function () {
   });
 
   it('client SendDataFlow prevent', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
 
@@ -955,7 +955,7 @@ describe('HTTP Flows', function () {
 
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
@@ -976,12 +976,12 @@ describe('HTTP Flows', function () {
   });
 
   it('onInputBufferError', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
     client.flows.preSendDataFlow.push((v) => {
@@ -994,7 +994,7 @@ describe('HTTP Flows', function () {
       return v;
     });
 
-    let ret = await client.callApi('Test', { name: 'XXX' });
+    const ret = await client.callApi('Test', { name: 'XXX' });
     assert.deepStrictEqual(ret, {
       isSucc: false,
       err: new TsrpcError('Unknown buffer encoding', {
@@ -1006,19 +1006,19 @@ describe('HTTP Flows', function () {
   });
 
   it('ObjectId', async function () {
-    let server = new HttpServer(getProto(), {
+    const server = new HttpServer(getProto(), {
       ...serverLogger,
     });
     server.autoImplementApi(path.resolve(__dirname, '../api'));
     await server.start();
 
-    let client = new HttpClient(getProto(), {
+    const client = new HttpClient(getProto(), {
       ...clientLogger,
     });
 
     // ObjectId
-    let objId1 = new ObjectId();
-    let ret = await client.callApi('ObjId', {
+    const objId1 = new ObjectId();
+    const ret = await client.callApi('ObjId', {
       id1: objId1,
     });
     assert.strictEqual(ret.isSucc, true, ret.err?.message);

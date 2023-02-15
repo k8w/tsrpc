@@ -113,7 +113,7 @@ export abstract class BaseServerConnection<
   ): Promise<ApiReturn<any>> {
     const server = this.server;
     ++server['_pendingApiCallNum'];
-    let promise = super._recvApiReq(transportData);
+    const promise = super._recvApiReq(transportData);
     promise.then(() => {
       --server['_pendingApiCallNum'];
 

@@ -126,7 +126,7 @@ export abstract class BaseClient<
 
     this._connecting = (async () => {
       // Pre Flow
-      let pre = await this.flows.preConnectFlow.exec(
+      const pre = await this.flows.preConnectFlow.exec(
         { conn: this },
         this.logger
       );
