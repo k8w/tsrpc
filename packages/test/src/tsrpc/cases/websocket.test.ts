@@ -605,7 +605,6 @@ describe('WS Server & Client basic', function () {
     });
 
     await server.start();
-    const isStopped = false;
 
     const client = new WebSocketClient(getProto(), {
       logger: clientLogger,

@@ -18,7 +18,7 @@ export class ServiceMapUtil {
     };
 
     for (const v of proto.services) {
-      const match = v.name.match(/(.+\/)?([^\/]+)$/)!;
+      const match = v.name.match(/(.+\/)?([^/]+)$/)!;
       const path = match[1] || '';
       const name = match[2];
       if (v.type === 'api') {
