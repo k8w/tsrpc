@@ -1,46 +1,57 @@
-import { Overwrite } from "tsbuffer-schema";
-import { BaseConnectionFlows, Flow, MsgFlow, SendDataFlow } from "tsrpc-base";
-import { BaseServerConnection } from "./BaseServerConnection";
+import { Overwrite } from 'tsbuffer-schema';
+import { BaseConnectionFlows, Flow, MsgFlow, SendDataFlow } from 'tsrpc-base';
+import { BaseServerConnection } from './BaseServerConnection';
 
-export type BaseServerFlows<Conn extends BaseServerConnection> = Overwrite<BaseConnectionFlows<Conn>, {
-    preSendMsgFlow: Flow<MsgFlow<Conn> & {
+export type BaseServerFlows<Conn extends BaseServerConnection> = Overwrite<
+  BaseConnectionFlows<Conn>,
+  {
+    preSendMsgFlow: Flow<
+      MsgFlow<Conn> & {
         /** When `server.broadcastMsg()`, preSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
         /** This property would be set if it is under `server.broadcastMsg()`. */
-        readonly conns?: Conn[]
-    }>,
-    postSendMsgFlow: Flow<MsgFlow<Conn> & {
+        readonly conns?: Conn[];
+      }
+    >;
+    postSendMsgFlow: Flow<
+      MsgFlow<Conn> & {
         /** When `server.broadcastMsg()`, preSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
-        readonly conns?: Conn[]
-    }>,
-    preSendDataFlow: Flow<SendDataFlow<Conn> & {
+        readonly conns?: Conn[];
+      }
+    >;
+    preSendDataFlow: Flow<
+      SendDataFlow<Conn> & {
         /** When `server.broadcastMsg()`, preSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
-        readonly conns?: Conn[]
-    }>,
-    postSendDataFlow: Flow<SendDataFlow<Conn> & {
+        readonly conns?: Conn[];
+      }
+    >;
+    postSendDataFlow: Flow<
+      SendDataFlow<Conn> & {
         /** When `server.broadcastMsg()`, postSendDataFlow would only run once, with this param. (`conn` would be `conns[0]`) */
-        readonly conns?: Conn[]
-    }>,
+        readonly conns?: Conn[];
+      }
+    >;
 
     /** @deprecated Use `preRecvDataFlow` instead */
-    preRecvBufferFlow?: never,
+    preRecvBufferFlow?: never;
     /** @deprecated Use `preSendDataFlow` instead */
-    preSendBufferFlow?: never,
+    preSendBufferFlow?: never;
     /** @deprecated Use `preApiCallReturnFlow` instead */
-    preApiReturnFlow?: never,
+    preApiReturnFlow?: never;
     /** @deprecated Use `postApiCallReturnFlow` instead */
-    postApiReturnFlow?: never,
+    postApiReturnFlow?: never;
     /** @deprecated Use `postApiCallReturnFlow` instead */
-    postApiCallFlow?: never,
+    postApiCallFlow?: never;
     /** @deprecated Use `preRecvMsgFlow` instead */
-    preMsgCallFlow?: never,
+    preMsgCallFlow?: never;
     /** @deprecated Use `onMsg` instead */
-    postMsgCallFlow?: never,
-}>;
+    postMsgCallFlow?: never;
+  }
+>;
 
 export type BroadcastMsgFlow<Conn extends BaseServerConnection> = {
-    [K in keyof Conn['$ServiceType']['msg']]: {
-        msgName: K & string,
-        msg: Conn['$ServiceType']['msg'][K],
-        readonly conns: Conn[],
-    }
+  [K in keyof Conn['$ServiceType']['msg']]: {
+    msgName: K & string;
+    msg: Conn['$ServiceType']['msg'][K];
+    readonly conns: Conn[];
+  };
 }[keyof Conn['$ServiceType']['msg']];

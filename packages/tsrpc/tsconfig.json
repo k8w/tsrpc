@@ -1,25 +1,15 @@
 {
   "compilerOptions": {
     "target": "es2019",
-    "lib": [
-      "es2019",
-      "es2020.promise",
-      "es2020.bigint",
-      "es2020.string"
-    ],
+    "lib": ["es2019", "es2020.promise", "es2020.bigint", "es2020.string"],
     "module": "esnext",
     "outDir": "./dist",
     "importHelpers": true,
     "strict": true,
     "moduleResolution": "node",
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "esModuleInterop": true,
     "sourceMap": true
   },
-  "include": [
-    "src",
-    "test"
-  ]
+  "include": ["src", "test"]
 }

@@ -1,305 +1,446 @@
-import { PickUnion } from "k8w-extend-native";
-import { TSBuffer } from "tsbuffer";
-import { TSBufferProto } from "tsbuffer-schema";
-import { OpResult } from "../models/OpResult";
-import { ApiService, MsgService, ServiceMap } from "../models/ServiceMapUtil";
-import { TransportDataProto } from "../proto/TransportDataProto";
-import { TsrpcError } from "../proto/TsrpcError";
-import { BoxBuffer, BoxDecoding, BoxTextDecoding, BoxTextEncoding, TransportData } from "./TransportData";
+import { PickUnion } from 'k8w-extend-native';
+import { TSBuffer } from 'tsbuffer';
+import { TSBufferProto } from 'tsbuffer-schema';
+import { OpResult } from '../models/OpResult';
+import { ApiService, MsgService, ServiceMap } from '../models/ServiceMapUtil';
+import { TransportDataProto } from '../proto/TransportDataProto';
+import { TsrpcError } from '../proto/TsrpcError';
+import {
+  BoxBuffer,
+  BoxDecoding,
+  BoxTextDecoding,
+  BoxTextEncoding,
+  TransportData,
+} from './TransportData';
 
 // Send buffer: TransportData -> BoxBuffer -> Uint8Array
 // Send text: TransportData -> BoxText -> string
 // Recv buffer: Uint8Array -> BoxBuffer -> TransportData
 // Recv text: string -> BoxJsonObject -> TransportData
 export class TransportDataUtil {
-
-    private static _tsbuffer?: TSBuffer;
-    static get tsbuffer(): TSBuffer {
-        if (!this._tsbuffer) {
-            this._tsbuffer = new TSBuffer(TransportDataProto as TSBufferProto)
-        }
-
-        return this._tsbuffer;
+  private static _tsbuffer?: TSBuffer;
+  static get tsbuffer(): TSBuffer {
+    if (!this._tsbuffer) {
+      this._tsbuffer = new TSBuffer(TransportDataProto as TSBufferProto);
     }
 
-    /**
-     * @returns null 代表无需编码 body
-     */
-    private static _getBodyInfo(transportData: { type: string, serviceName?: string, serviceId?: number }, serviceMap: ServiceMap, action: 'encode' | 'decode'): OpResult<{ serviceId: number, schemaId: string } | null> {
-        const { type, serviceName, serviceId } = transportData;
+    return this._tsbuffer;
+  }
 
-        // Get service & schemaId
-        let service: ApiService | MsgService | undefined;
-        if (serviceId !== undefined) {
-            service = serviceMap.id2Service[serviceId];
-            if (!service) {
-                return { isSucc: false, errMsg: `Invalid service ID: ${serviceId}` }
-            }
-        }
-        else if (serviceName) {
-            // msg: {type:msg}
-            if (type === 'msg') {
-                service = serviceMap.name2Msg[serviceName]
-            }
-            // localApi: dec-req || enc-other
-            else if (action === 'decode' && type === 'req' || action === 'encode' && type !== 'req') {
-                service = serviceMap.name2LocalApi[serviceName]
-            }
-            // remoteApi: enc-req || dec-other
-            else if (action === 'encode' && type === 'req' || action === 'decode' && type !== 'req') {
-                service = serviceMap.name2RemoteApi[serviceName]
-            }
-            if (!service) {
-                return { isSucc: false, errMsg: `Undefined ${type === 'msg' ? 'Msg' : 'API'} name: ${serviceName}` }
-            }
-        }
+  /**
+   * @returns null 代表无需编码 body
+   */
+  private static _getBodyInfo(
+    transportData: { type: string; serviceName?: string; serviceId?: number },
+    serviceMap: ServiceMap,
+    action: 'encode' | 'decode'
+  ): OpResult<{ serviceId: number; schemaId: string } | null> {
+    const { type, serviceName, serviceId } = transportData;
 
+    // Get service & schemaId
+    let service: ApiService | MsgService | undefined;
+    if (serviceId !== undefined) {
+      service = serviceMap.id2Service[serviceId];
+      if (!service) {
+        return { isSucc: false, errMsg: `Invalid service ID: ${serviceId}` };
+      }
+    } else if (serviceName) {
+      // msg: {type:msg}
+      if (type === 'msg') {
+        service = serviceMap.name2Msg[serviceName];
+      }
+      // localApi: dec-req || enc-other
+      else if (
+        (action === 'decode' && type === 'req') ||
+        (action === 'encode' && type !== 'req')
+      ) {
+        service = serviceMap.name2LocalApi[serviceName];
+      }
+      // remoteApi: enc-req || dec-other
+      else if (
+        (action === 'encode' && type === 'req') ||
+        (action === 'decode' && type !== 'req')
+      ) {
+        service = serviceMap.name2RemoteApi[serviceName];
+      }
+      if (!service) {
         return {
-            isSucc: true,
-            res: service ? {
-                serviceId: service.id,
-                schemaId: type === 'req' ? (service as ApiService).reqSchemaId
-                    : type === 'res' ? (service as ApiService).resSchemaId
-                        : (service as MsgService).msgSchemaId
-            } : null
+          isSucc: false,
+          errMsg: `Undefined ${
+            type === 'msg' ? 'Msg' : 'API'
+          } name: ${serviceName}`,
         };
+      }
     }
 
-    static encodeBodyBuffer(transportData: TransportData, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<BoxBuffer> {
-        let opBodyInfo = this._getBodyInfo(transportData, serviceMap, 'encode');
-        if (!opBodyInfo.isSucc) { return opBodyInfo };
+    return {
+      isSucc: true,
+      res: service
+        ? {
+            serviceId: service.id,
+            schemaId:
+              type === 'req'
+                ? (service as ApiService).reqSchemaId
+                : type === 'res'
+                ? (service as ApiService).resSchemaId
+                : (service as MsgService).msgSchemaId,
+          }
+        : null,
+    };
+  }
 
-        // Encode body
-        if (opBodyInfo.res) {
-            let { serviceName, body, ...rest } = transportData as TransportData & { type: 'req' | 'res' | 'msg' } & { serviceName?: string };
-            let opEncode = tsbuffer.encode(body, opBodyInfo.res.schemaId, { skipValidate })
-            if (!opEncode.isSucc) { return opEncode };
-
-            // Make BoxBuffer (replace body by buffer)
-            return {
-                isSucc: true,
-                res: {
-                    ...rest,
-                    serviceId: opBodyInfo.res.serviceId,
-                    body: opEncode.buf,
-                }
-            }
-        }
-        // No need to encode
-        else {
-            return { isSucc: true, res: transportData as TransportData & { type: Exclude<TransportData['type'], 'req' | 'res' | 'msg'> } };
-        }
+  static encodeBodyBuffer(
+    transportData: TransportData,
+    serviceMap: ServiceMap,
+    tsbuffer: TSBuffer,
+    skipValidate: boolean | undefined
+  ): OpResult<BoxBuffer> {
+    let opBodyInfo = this._getBodyInfo(transportData, serviceMap, 'encode');
+    if (!opBodyInfo.isSucc) {
+      return opBodyInfo;
     }
 
-    static encodeBodyText(transportData: TransportData, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined, stringifyBodyJson: ((bodyJson: Object, transportData: TransportData, schemaId: string) => string) | undefined): OpResult<BoxTextEncoding> {
-        let opBodyInfo = this._getBodyInfo(transportData, serviceMap, 'encode');
-        if (!opBodyInfo.isSucc) { return opBodyInfo };
+    // Encode body
+    if (opBodyInfo.res) {
+      let { serviceName, body, ...rest } = transportData as TransportData & {
+        type: 'req' | 'res' | 'msg';
+      } & { serviceName?: string };
+      let opEncode = tsbuffer.encode(body, opBodyInfo.res.schemaId, {
+        skipValidate,
+      });
+      if (!opEncode.isSucc) {
+        return opEncode;
+      }
 
-        // Encode body
-        if (opBodyInfo.res) {
-            let { body, ...rest } = transportData as TransportData & { type: 'req' | 'res' | 'msg' } & { apiName?: string };
-            let opEncode = tsbuffer.encodeJSON(body, opBodyInfo.res.schemaId, { skipValidate })
-            if (!opEncode.isSucc) { return opEncode };
+      // Make BoxBuffer (replace body by buffer)
+      return {
+        isSucc: true,
+        res: {
+          ...rest,
+          serviceId: opBodyInfo.res.serviceId,
+          body: opEncode.buf,
+        },
+      };
+    }
+    // No need to encode
+    else {
+      return {
+        isSucc: true,
+        res: transportData as TransportData & {
+          type: Exclude<TransportData['type'], 'req' | 'res' | 'msg'>;
+        },
+      };
+    }
+  }
 
-            // Make BoxText (replace body by text)
-            return {
-                isSucc: true,
-                res: {
-                    ...rest,
-                    body: stringifyBodyJson ? stringifyBodyJson(opEncode.json, transportData, opBodyInfo.res.schemaId) : JSON.stringify(opEncode.json)
-                }
-            }
-        }
-        // No need to encode
-        else {
-            return { isSucc: true, res: transportData as TransportData & { type: Exclude<TransportData['type'], 'req' | 'res' | 'msg'> } };
-        }
+  static encodeBodyText(
+    transportData: TransportData,
+    serviceMap: ServiceMap,
+    tsbuffer: TSBuffer,
+    skipValidate: boolean | undefined,
+    stringifyBodyJson:
+      | ((
+          bodyJson: Object,
+          transportData: TransportData,
+          schemaId: string
+        ) => string)
+      | undefined
+  ): OpResult<BoxTextEncoding> {
+    let opBodyInfo = this._getBodyInfo(transportData, serviceMap, 'encode');
+    if (!opBodyInfo.isSucc) {
+      return opBodyInfo;
     }
 
-    static encodeBoxBuffer(box: BoxBuffer, skipSN?: boolean): OpResult<Uint8Array> {
-        if (skipSN && 'sn' in box) {
-            box.sn = undefined;
-        }
+    // Encode body
+    if (opBodyInfo.res) {
+      let { body, ...rest } = transportData as TransportData & {
+        type: 'req' | 'res' | 'msg';
+      } & { apiName?: string };
+      let opEncode = tsbuffer.encodeJSON(body, opBodyInfo.res.schemaId, {
+        skipValidate,
+      });
+      if (!opEncode.isSucc) {
+        return opEncode;
+      }
 
-        // Box 都是代码构造的，所以无需类型检查
-        let op = this.tsbuffer.encode(box, 'TransportDataSchema', { skipValidate: true });
-        if (!op.isSucc) {
-            return op;
-        }
-        return { isSucc: true, res: op.buf }
+      // Make BoxText (replace body by text)
+      return {
+        isSucc: true,
+        res: {
+          ...rest,
+          body: stringifyBodyJson
+            ? stringifyBodyJson(
+                opEncode.json,
+                transportData,
+                opBodyInfo.res.schemaId
+              )
+            : JSON.stringify(opEncode.json),
+        },
+      };
+    }
+    // No need to encode
+    else {
+      return {
+        isSucc: true,
+        res: transportData as TransportData & {
+          type: Exclude<TransportData['type'], 'req' | 'res' | 'msg'>;
+        },
+      };
+    }
+  }
+
+  static encodeBoxBuffer(
+    box: BoxBuffer,
+    skipSN?: boolean
+  ): OpResult<Uint8Array> {
+    if (skipSN && 'sn' in box) {
+      box.sn = undefined;
     }
 
-    static encodeBoxText(box: BoxTextEncoding, skipSN: boolean | undefined): OpResult<string> {
-        switch (box.type) {
-            case 'req':
-            case 'res':
-            case 'err': {
-                const protoInfo = box.protoInfo;
-                return {
-                    isSucc: true,
-                    res: `{"type":"${box.type}"`    // type
-                        + (box.type === 'req' ? `",serviceName":"${box.serviceName}"` : '') // serviceName
-                        + (skipSN ? '' : `,"sn":${box.sn}`) // sn
-                        + (box.type === 'err' ? `,"err":${JSON.stringify(box.err)}` : `,"body":${box.body}`) // body/err
-                        + (protoInfo ? `,"protoInfo":{"lastModified":"${protoInfo.lastModified}","md5":"${protoInfo.md5}","tsrpc":"${protoInfo.tsrpc}",${protoInfo.node ? `,"node":"${protoInfo.node}"` : ''}}` : '') // protoInfo
-                        + '}'
-                };
-            }
-            case 'msg': {
-                return {
-                    isSucc: true,
-                    res: `{"type":"msg","serviceName":"${box.serviceName}","body":${box.body}}`
-                };
-            }
-            default:
-                return { isSucc: true, res: JSON.stringify(box) }
-        }
+    // Box 都是代码构造的，所以无需类型检查
+    let op = this.tsbuffer.encode(box, 'TransportDataSchema', {
+      skipValidate: true,
+    });
+    if (!op.isSucc) {
+      return op;
+    }
+    return { isSucc: true, res: op.buf };
+  }
+
+  static encodeBoxText(
+    box: BoxTextEncoding,
+    skipSN: boolean | undefined
+  ): OpResult<string> {
+    switch (box.type) {
+      case 'req':
+      case 'res':
+      case 'err': {
+        const protoInfo = box.protoInfo;
+        return {
+          isSucc: true,
+          res:
+            `{"type":"${box.type}"` + // type
+            (box.type === 'req' ? `",serviceName":"${box.serviceName}"` : '') + // serviceName
+            (skipSN ? '' : `,"sn":${box.sn}`) + // sn
+            (box.type === 'err'
+              ? `,"err":${JSON.stringify(box.err)}`
+              : `,"body":${box.body}`) + // body/err
+            (protoInfo
+              ? `,"protoInfo":{"lastModified":"${
+                  protoInfo.lastModified
+                }","md5":"${protoInfo.md5}","tsrpc":"${protoInfo.tsrpc}",${
+                  protoInfo.node ? `,"node":"${protoInfo.node}"` : ''
+                }}`
+              : '') + // protoInfo
+            '}',
+        };
+      }
+      case 'msg': {
+        return {
+          isSucc: true,
+          res: `{"type":"msg","serviceName":"${box.serviceName}","body":${box.body}}`,
+        };
+      }
+      default:
+        return { isSucc: true, res: JSON.stringify(box) };
+    }
+  }
+
+  private static _pick<T, U extends keyof T>(
+    obj: T,
+    keys: U[]
+  ): PickUnion<T, U> {
+    let output: any = {};
+    for (let k in keys) {
+      output[k] = obj[k as U];
+    }
+    return output;
+  }
+
+  static decodeBoxBuffer(
+    data: Uint8Array,
+    pendingCallApis: Map<number, { apiName: string }>,
+    serviceMap: ServiceMap,
+    skipValidate: boolean | undefined,
+    boxInfo: Partial<BoxDecoding> | undefined
+  ): OpResult<BoxBuffer> {
+    let op = this.tsbuffer.decode(data, 'TransportDataSchema', {
+      skipValidate,
+    });
+    if (!op.isSucc) {
+      if (op.errPhase === 'validate') {
+        op.errMsg = 'Invalid box format. ' + op.errMsg;
+      } else {
+        op.errMsg = 'Unknown buffer encoding';
+      }
+      return op;
     }
 
-    private static _pick<T, U extends keyof T>(obj: T, keys: U[]): PickUnion<T, U> {
-        let output: any = {};
-        for (let k in keys) {
-            output[k] = obj[k as U];
-        }
-        return output;
+    let box = op.value as BoxBuffer;
+    if (boxInfo) {
+      Object.assign(box, boxInfo);
     }
 
-    static decodeBoxBuffer(data: Uint8Array, pendingCallApis: Map<number, { apiName: string }>, serviceMap: ServiceMap, skipValidate: boolean | undefined, boxInfo: Partial<BoxDecoding> | undefined): OpResult<BoxBuffer> {
-        let op = this.tsbuffer.decode(data, 'TransportDataSchema', { skipValidate });
-        if (!op.isSucc) {
-            if (op.errPhase === 'validate') {
-                op.errMsg = 'Invalid box format. ' + op.errMsg;
-            }
-            else {
-                op.errMsg = 'Unknown buffer encoding'
-            }
-            return op
-        }
-
-        let box = op.value as BoxBuffer;
-        if (boxInfo) {
-            Object.assign(box, boxInfo);
-        }
-
-        if (box.type === 'res') {
-            const item = pendingCallApis.get(box.sn);
-            if (!item) {
-                return { isSucc: false, errMsg: `Invalid SN for callApi return: ${box.sn}` };
-            }
-            box.serviceId = serviceMap.name2RemoteApi[item.apiName]!.id;
-        }
-
-        return { isSucc: true, res: box }
+    if (box.type === 'res') {
+      const item = pendingCallApis.get(box.sn);
+      if (!item) {
+        return {
+          isSucc: false,
+          errMsg: `Invalid SN for callApi return: ${box.sn}`,
+        };
+      }
+      box.serviceId = serviceMap.name2RemoteApi[item.apiName]!.id;
     }
 
-    static decodeBoxText(data: string, pendingCallApis: Map<number, { apiName: string }>, skipValidate: boolean | undefined, boxInfo: Partial<BoxDecoding> | undefined): OpResult<BoxTextDecoding> {
-        try {
-            var box = JSON.parse(data) as BoxTextDecoding;
-        }
-        catch (e: any) {
-            return { isSucc: false, errMsg: 'Invalid JSON string: ' + e.message }
-        }
-        if (boxInfo) {
-            Object.assign(box, boxInfo);
-        }
+    return { isSucc: true, res: box };
+  }
 
-        if (!skipValidate) {
-            let vRes = this.tsbuffer.validate(box, 'BoxJsonObject');
-            if (!vRes.isSucc) {
-                return {
-                    ...vRes,
-                    errPhase: 'validate'
-                };
-            }
-        }
-
-        if (box.type === 'res') {
-            const item = pendingCallApis.get(box.sn);
-            if (!item) {
-                return { isSucc: false, errMsg: `Invalid SN for callApi return: ${box.sn}` };
-            }
-            box.serviceName = item.apiName;
-        }
-
-        return { isSucc: true, res: box };
+  static decodeBoxText(
+    data: string,
+    pendingCallApis: Map<number, { apiName: string }>,
+    skipValidate: boolean | undefined,
+    boxInfo: Partial<BoxDecoding> | undefined
+  ): OpResult<BoxTextDecoding> {
+    try {
+      var box = JSON.parse(data) as BoxTextDecoding;
+    } catch (e: any) {
+      return { isSucc: false, errMsg: 'Invalid JSON string: ' + e.message };
+    }
+    if (boxInfo) {
+      Object.assign(box, boxInfo);
     }
 
-    static decodeBodyBuffer(box: BoxBuffer, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<TransportData> & { errPhase?: 'decode' | 'validate' } {
-        let opBodyInfo = this._getBodyInfo(box, serviceMap, 'decode');
-        if (!opBodyInfo.isSucc) { return opBodyInfo };
-
-        // Decode body
-        if (opBodyInfo.res) {
-            const { body, serviceId, ...rest } = box as BoxBuffer & { type: 'req' | 'res' | 'msg' };
-            const service = serviceMap.id2Service[serviceId];
-            if (!service) {
-                return { isSucc: false, errMsg: `Invalid serviceId: ${serviceId}` };
-            }
-
-            let opDecode = tsbuffer.decode(body, opBodyInfo.res.schemaId, { skipValidate });
-            if (!opDecode.isSucc) {
-                return opDecode;
-            }
-
-            return {
-                isSucc: true,
-                res: {
-                    ...rest,
-                    serviceName: service.name,
-                    body: opDecode.value
-                }
-            }
-        }
-        // err: TsrpcErrorData -> TsrpcError
-        else if (box.type === 'err') {
-            return {
-                isSucc: true,
-                res: {
-                    ...box,
-                    err: new TsrpcError(box.err)
-                }
-            }
-        }
-        // No need to decode body
-        else {
-            return { isSucc: true, res: box as BoxBuffer & { type: Exclude<BoxBuffer['type'], 'req' | 'res' | 'msg'> } };
-        }
+    if (!skipValidate) {
+      let vRes = this.tsbuffer.validate(box, 'BoxJsonObject');
+      if (!vRes.isSucc) {
+        return {
+          ...vRes,
+          errPhase: 'validate',
+        };
+      }
     }
 
-    static decodeBodyText(box: BoxTextDecoding, serviceMap: ServiceMap, tsbuffer: TSBuffer, skipValidate: boolean | undefined): OpResult<TransportData> & { errPhase?: 'decode' | 'validate' } {
-        let opBodyInfo = this._getBodyInfo(box, serviceMap, 'decode');
-        if (!opBodyInfo.isSucc) { return opBodyInfo };
-
-        // Decode body
-        if (opBodyInfo.res) {
-            const { body, ...rest } = box as BoxTextDecoding & { type: 'req' | 'res' | 'msg' };
-            let opDecode = tsbuffer.decodeJSON(body, opBodyInfo.res.schemaId, { skipValidate });
-            if (!opDecode.isSucc) {
-                return opDecode;
-            }
-
-            return {
-                isSucc: true,
-                res: {
-                    ...rest,
-                    body: opDecode.value
-                }
-            }
-        }
-        // err: TsrpcErrorData -> TsrpcError
-        else if (box.type === 'err') {
-            return {
-                isSucc: true,
-                res: {
-                    ...box,
-                    err: new TsrpcError(box.err)
-                }
-            }
-        }
-        // No need to decode body
-        else {
-            return { isSucc: true, res: box as BoxTextDecoding & { type: Exclude<BoxTextDecoding['type'], 'req' | 'res' | 'msg'> } };
-        }
+    if (box.type === 'res') {
+      const item = pendingCallApis.get(box.sn);
+      if (!item) {
+        return {
+          isSucc: false,
+          errMsg: `Invalid SN for callApi return: ${box.sn}`,
+        };
+      }
+      box.serviceName = item.apiName;
     }
 
+    return { isSucc: true, res: box };
+  }
+
+  static decodeBodyBuffer(
+    box: BoxBuffer,
+    serviceMap: ServiceMap,
+    tsbuffer: TSBuffer,
+    skipValidate: boolean | undefined
+  ): OpResult<TransportData> & { errPhase?: 'decode' | 'validate' } {
+    let opBodyInfo = this._getBodyInfo(box, serviceMap, 'decode');
+    if (!opBodyInfo.isSucc) {
+      return opBodyInfo;
+    }
+
+    // Decode body
+    if (opBodyInfo.res) {
+      const { body, serviceId, ...rest } = box as BoxBuffer & {
+        type: 'req' | 'res' | 'msg';
+      };
+      const service = serviceMap.id2Service[serviceId];
+      if (!service) {
+        return { isSucc: false, errMsg: `Invalid serviceId: ${serviceId}` };
+      }
+
+      let opDecode = tsbuffer.decode(body, opBodyInfo.res.schemaId, {
+        skipValidate,
+      });
+      if (!opDecode.isSucc) {
+        return opDecode;
+      }
+
+      return {
+        isSucc: true,
+        res: {
+          ...rest,
+          serviceName: service.name,
+          body: opDecode.value,
+        },
+      };
+    }
+    // err: TsrpcErrorData -> TsrpcError
+    else if (box.type === 'err') {
+      return {
+        isSucc: true,
+        res: {
+          ...box,
+          err: new TsrpcError(box.err),
+        },
+      };
+    }
+    // No need to decode body
+    else {
+      return {
+        isSucc: true,
+        res: box as BoxBuffer & {
+          type: Exclude<BoxBuffer['type'], 'req' | 'res' | 'msg'>;
+        },
+      };
+    }
+  }
+
+  static decodeBodyText(
+    box: BoxTextDecoding,
+    serviceMap: ServiceMap,
+    tsbuffer: TSBuffer,
+    skipValidate: boolean | undefined
+  ): OpResult<TransportData> & { errPhase?: 'decode' | 'validate' } {
+    let opBodyInfo = this._getBodyInfo(box, serviceMap, 'decode');
+    if (!opBodyInfo.isSucc) {
+      return opBodyInfo;
+    }
+
+    // Decode body
+    if (opBodyInfo.res) {
+      const { body, ...rest } = box as BoxTextDecoding & {
+        type: 'req' | 'res' | 'msg';
+      };
+      let opDecode = tsbuffer.decodeJSON(body, opBodyInfo.res.schemaId, {
+        skipValidate,
+      });
+      if (!opDecode.isSucc) {
+        return opDecode;
+      }
+
+      return {
+        isSucc: true,
+        res: {
+          ...rest,
+          body: opDecode.value,
+        },
+      };
+    }
+    // err: TsrpcErrorData -> TsrpcError
+    else if (box.type === 'err') {
+      return {
+        isSucc: true,
+        res: {
+          ...box,
+          err: new TsrpcError(box.err),
+        },
+      };
+    }
+    // No need to decode body
+    else {
+      return {
+        isSucc: true,
+        res: box as BoxTextDecoding & {
+          type: Exclude<BoxTextDecoding['type'], 'req' | 'res' | 'msg'>;
+        },
+      };
+    }
+  }
 }

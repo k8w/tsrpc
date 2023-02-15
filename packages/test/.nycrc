@@ -1,21 +1,16 @@
 {
-    "extends": "@istanbuljs/nyc-config-typescript",
-    "all": true,
-    "reporter": [
-        "html"
-    ],
-    "extension": [
-        ".ts",
-        ".js"
-    ],
-    "cwd": "..",
-    "include": [
-        "tsrpc/dist/**",
-        "tsrpc-base/dist/**",
-        "tsrpc-base-client/dist/**",
-        "tsrpc-base-server/dist/**"
-    ],
-    "excludeAfterRemap": false,
-    "temp-dir": "test/.nyc_output",
-    "report-dir": "test/coverage"
+  "extends": "@istanbuljs/nyc-config-typescript",
+  "all": true,
+  "reporter": ["html"],
+  "extension": [".ts", ".js"],
+  "cwd": "..",
+  "include": [
+    "tsrpc/dist/**",
+    "tsrpc-base/dist/**",
+    "tsrpc-base-client/dist/**",
+    "tsrpc-base-server/dist/**"
+  ],
+  "excludeAfterRemap": false,
+  "temp-dir": "test/.nyc_output",
+  "report-dir": "test/coverage"
 }

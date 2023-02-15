@@ -4,4 +4,12 @@
  */
 export type Chalk = (content: string, styles: ChalkStyle[]) => string;
 
-export type ChalkStyle = 'normal' | 'info' | 'error' | 'debug' | 'warn' | 'gray' | 'underline' | 'bold';
+export type ChalkStyle =
+  | 'normal'
+  | 'info'
+  | 'error'
+  | 'debug'
+  | 'warn'
+  | 'gray'
+  | 'underline'
+  | 'bold';

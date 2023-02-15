@@ -1,3 +1,3 @@
 export interface MsgTest {
-    content: string
+  content: string;
 }

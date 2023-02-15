@@ -1,21 +1,19 @@
 // TODO require -> import
-export function getClassObjectId(): { new(id?: any): any } {
-    let classObjId: any;
+export function getClassObjectId(): { new (id?: any): any } {
+  let classObjId: any;
+  try {
+    classObjId = require('mongodb').ObjectId;
+  } catch {}
+
+  if (!classObjId) {
     try {
-        classObjId = require('mongodb').ObjectId;
-    }
-    catch { }
+      classObjId = require('bson').ObjectId;
+    } catch {}
+  }
 
-    if (!classObjId) {
-        try {
-            classObjId = require('bson').ObjectId;
-        }
-        catch { }
-    }
+  if (!classObjId) {
+    classObjId = String;
+  }
 
-    if (!classObjId) {
-        classObjId = String;
-    }
-
-    return classObjId;
+  return classObjId;
 }
