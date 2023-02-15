@@ -8,5 +8,9 @@
     "plugins": [
         "@typescript-eslint"
     ],
-    "root": true
+    "root": true,
+    "ignorePatterns": [
+        "node_modules",
+        "dist"
+    ]
 }
