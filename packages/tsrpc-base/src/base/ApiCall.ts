@@ -68,7 +68,7 @@ export class ApiCall<
 
     // Validate
     if (!this.conn.options.skipDecodeValidate) {
-      let vRes = this.conn.tsbuffer.validate(
+      const vRes = this.conn.tsbuffer.validate(
         this.req,
         this.service.reqSchemaId
       );
@@ -81,7 +81,7 @@ export class ApiCall<
     }
 
     // Pre Flow
-    let preFlow = await this.conn.flows.preApiCallFlow.exec(this, this.logger);
+    const preFlow = await this.conn.flows.preApiCallFlow.exec(this, this.logger);
     if (!preFlow) {
       this._stopTimeout();
       this.logger.debug(
@@ -102,7 +102,7 @@ export class ApiCall<
     }
 
     // Exec
-    let promise = new Promise<ApiReturn<Res>>((rs) => {
+    const promise = new Promise<ApiReturn<Res>>((rs) => {
       this._rsExecute = rs;
     });
     promise.then(() => {
@@ -155,7 +155,7 @@ export class ApiCall<
     this._rsExecute?.(ret);
 
     // PreReturn Flow
-    let pre = await this.conn.flows.preApiCallReturnFlow.exec(
+    const pre = await this.conn.flows.preApiCallReturnFlow.exec(
       this as this & { return: ApiReturn<Res> },
       this.logger
     );
@@ -166,7 +166,7 @@ export class ApiCall<
 
     // Send (if connected still)
     if (this.conn.status === ConnectionStatus.Connected) {
-      let op = await this.conn['_sendTransportData'](
+      const op = await this.conn['_sendTransportData'](
         {
           ...(ret.isSucc
             ? {

@@ -55,11 +55,11 @@ export class ApiHandlerUtil {
     >;
 
     let index = 0;
-    for (let service of apiServices) {
+    for (const service of apiServices) {
       ++index;
       const apiName = service.name;
       const loadHandler = (isDelay: boolean) => {
-        let promise = this._loadApiHandler(host, apiName, apiDir);
+        const promise = this._loadApiHandler(host, apiName, apiDir);
         if (isDelay) {
           promise.then((v) => {
             if (!v.isSucc) {
@@ -225,11 +225,11 @@ export class ApiHandlerUtil {
     }
 
     // 优先 default，其次 ApiName 同名
-    let handler = module.default ?? module['Api' + handlerName];
+    const handler = module.default ?? module['Api' + handlerName];
     if (handler) {
       return { isSucc: true, res: handler };
     } else {
-      let similarMember = Object.keys(module).find((v) => /Api\w+/.test(v));
+      const similarMember = Object.keys(module).find((v) => /Api\w+/.test(v));
       return {
         isSucc: false,
         errMsg:

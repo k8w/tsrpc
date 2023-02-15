@@ -18,7 +18,7 @@ export class EventEmitter<EventType extends Record<string, any[]> = any> {
     type: string,
     value: EventEmitter<any>['_listeners'][string][0]
   ) {
-    let listeners = this._getListeners(type);
+    const listeners = this._getListeners(type);
     if (
       !listeners.some(
         (v) => v.listener === value.listener && v.context === value.context

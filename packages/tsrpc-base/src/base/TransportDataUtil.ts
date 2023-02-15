@@ -95,17 +95,17 @@ export class TransportDataUtil {
     tsbuffer: TSBuffer,
     skipValidate: boolean | undefined
   ): OpResult<BoxBuffer> {
-    let opBodyInfo = this._getBodyInfo(transportData, serviceMap, 'encode');
+    const opBodyInfo = this._getBodyInfo(transportData, serviceMap, 'encode');
     if (!opBodyInfo.isSucc) {
       return opBodyInfo;
     }
 
     // Encode body
     if (opBodyInfo.res) {
-      let { serviceName, body, ...rest } = transportData as TransportData & {
+      const { serviceName, body, ...rest } = transportData as TransportData & {
         type: 'req' | 'res' | 'msg';
       } & { serviceName?: string };
-      let opEncode = tsbuffer.encode(body, opBodyInfo.res.schemaId, {
+      const opEncode = tsbuffer.encode(body, opBodyInfo.res.schemaId, {
         skipValidate,
       });
       if (!opEncode.isSucc) {
@@ -146,17 +146,17 @@ export class TransportDataUtil {
         ) => string)
       | undefined
   ): OpResult<BoxTextEncoding> {
-    let opBodyInfo = this._getBodyInfo(transportData, serviceMap, 'encode');
+    const opBodyInfo = this._getBodyInfo(transportData, serviceMap, 'encode');
     if (!opBodyInfo.isSucc) {
       return opBodyInfo;
     }
 
     // Encode body
     if (opBodyInfo.res) {
-      let { body, ...rest } = transportData as TransportData & {
+      const { body, ...rest } = transportData as TransportData & {
         type: 'req' | 'res' | 'msg';
       } & { apiName?: string };
-      let opEncode = tsbuffer.encodeJSON(body, opBodyInfo.res.schemaId, {
+      const opEncode = tsbuffer.encodeJSON(body, opBodyInfo.res.schemaId, {
         skipValidate,
       });
       if (!opEncode.isSucc) {
@@ -198,7 +198,7 @@ export class TransportDataUtil {
     }
 
     // Box 都是代码构造的，所以无需类型检查
-    let op = this.tsbuffer.encode(box, 'TransportDataSchema', {
+    const op = this.tsbuffer.encode(box, 'TransportDataSchema', {
       skipValidate: true,
     });
     if (!op.isSucc) {
@@ -250,8 +250,8 @@ export class TransportDataUtil {
     obj: T,
     keys: U[]
   ): PickUnion<T, U> {
-    let output: any = {};
-    for (let k in keys) {
+    const output: any = {};
+    for (const k in keys) {
       output[k] = obj[k as U];
     }
     return output;
@@ -264,7 +264,7 @@ export class TransportDataUtil {
     skipValidate: boolean | undefined,
     boxInfo: Partial<BoxDecoding> | undefined
   ): OpResult<BoxBuffer> {
-    let op = this.tsbuffer.decode(data, 'TransportDataSchema', {
+    const op = this.tsbuffer.decode(data, 'TransportDataSchema', {
       skipValidate,
     });
     if (!op.isSucc) {
@@ -276,7 +276,7 @@ export class TransportDataUtil {
       return op;
     }
 
-    let box = op.value as BoxBuffer;
+    const box = op.value as BoxBuffer;
     if (boxInfo) {
       Object.assign(box, boxInfo);
     }
@@ -311,7 +311,7 @@ export class TransportDataUtil {
     }
 
     if (!skipValidate) {
-      let vRes = this.tsbuffer.validate(box, 'BoxJsonObject');
+      const vRes = this.tsbuffer.validate(box, 'BoxJsonObject');
       if (!vRes.isSucc) {
         return {
           ...vRes,
@@ -340,7 +340,7 @@ export class TransportDataUtil {
     tsbuffer: TSBuffer,
     skipValidate: boolean | undefined
   ): OpResult<TransportData> & { errPhase?: 'decode' | 'validate' } {
-    let opBodyInfo = this._getBodyInfo(box, serviceMap, 'decode');
+    const opBodyInfo = this._getBodyInfo(box, serviceMap, 'decode');
     if (!opBodyInfo.isSucc) {
       return opBodyInfo;
     }
@@ -355,7 +355,7 @@ export class TransportDataUtil {
         return { isSucc: false, errMsg: `Invalid serviceId: ${serviceId}` };
       }
 
-      let opDecode = tsbuffer.decode(body, opBodyInfo.res.schemaId, {
+      const opDecode = tsbuffer.decode(body, opBodyInfo.res.schemaId, {
         skipValidate,
       });
       if (!opDecode.isSucc) {
@@ -398,7 +398,7 @@ export class TransportDataUtil {
     tsbuffer: TSBuffer,
     skipValidate: boolean | undefined
   ): OpResult<TransportData> & { errPhase?: 'decode' | 'validate' } {
-    let opBodyInfo = this._getBodyInfo(box, serviceMap, 'decode');
+    const opBodyInfo = this._getBodyInfo(box, serviceMap, 'decode');
     if (!opBodyInfo.isSucc) {
       return opBodyInfo;
     }
@@ -408,7 +408,7 @@ export class TransportDataUtil {
       const { body, ...rest } = box as BoxTextDecoding & {
         type: 'req' | 'res' | 'msg';
       };
-      let opDecode = tsbuffer.decodeJSON(body, opBodyInfo.res.schemaId, {
+      const opDecode = tsbuffer.decodeJSON(body, opBodyInfo.res.schemaId, {
         skipValidate,
       });
       if (!opDecode.isSucc) {

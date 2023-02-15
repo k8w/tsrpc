@@ -10,19 +10,19 @@ export class ServiceMapUtil {
     proto: ServiceProto,
     side: 'server' | 'client'
   ): ServiceMap {
-    let map: ServiceMap = {
+    const map: ServiceMap = {
       id2Service: {},
       name2LocalApi: {},
       name2RemoteApi: {},
       name2Msg: {},
     };
 
-    for (let v of proto.services) {
-      let match = v.name.match(/(.+\/)?([^\/]+)$/)!;
-      let path = match[1] || '';
-      let name = match[2];
+    for (const v of proto.services) {
+      const match = v.name.match(/(.+\/)?([^\/]+)$/)!;
+      const path = match[1] || '';
+      const name = match[2];
       if (v.type === 'api') {
-        let svc: ApiService = {
+        const svc: ApiService = {
           ...v,
           reqSchemaId: `${path}Ptl${name}/Req${name}`,
           resSchemaId: `${path}Ptl${name}/Res${name}`,
@@ -36,7 +36,7 @@ export class ServiceMapUtil {
         }
         map.id2Service[v.id] = svc;
       } else {
-        let svc: MsgService = {
+        const svc: MsgService = {
           ...v,
           msgSchemaId: `${path}Msg${name}/Msg${name}`,
         };

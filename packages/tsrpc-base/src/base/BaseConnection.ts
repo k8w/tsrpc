@@ -212,7 +212,7 @@ export abstract class BaseConnection<
     options?: TransportOptions
   ): Promise<ApiReturn<RemoteApi<this>[T]['res']>> {
     // SN & Log
-    let sn = this._callApiSn.getNext();
+    const sn = this._callApiSn.getNext();
     this.options.logApi &&
       this.logger.info(
         `${this.chalk(`[callApi] [#${sn}] [${apiName}]`, [
@@ -222,7 +222,7 @@ export abstract class BaseConnection<
       );
 
     // Create PendingCallApiItem
-    let pendingItem: PendingCallApiItem = {
+    const pendingItem: PendingCallApiItem = {
       sn,
       apiName,
       req,
@@ -239,7 +239,7 @@ export abstract class BaseConnection<
     }
 
     // PreCall Flow
-    let preCall = await this.flows.preCallApiFlow.exec(
+    const preCall = await this.flows.preCallApiFlow.exec(
       { apiName, req, conn: this },
       this.logger
     );
@@ -264,7 +264,7 @@ export abstract class BaseConnection<
     }
 
     // PreReturn Flow (before return)
-    let preReturn = await this.flows.preCallApiReturnFlow.exec(
+    const preReturn = await this.flows.preCallApiReturnFlow.exec(
       {
         ...preCall,
         return: ret,
@@ -312,7 +312,7 @@ export abstract class BaseConnection<
     options?: TransportOptions
   ): Promise<ApiReturn<RemoteApi<this>[T]['res']>> {
     // Make TransportData
-    let transportData: TransportData = {
+    const transportData: TransportData = {
       type: 'req',
       serviceName,
       sn: pendingItem.sn,
@@ -324,14 +324,14 @@ export abstract class BaseConnection<
     }
 
     // Send & Recv
-    let promiseSend = this._sendTransportData(transportData, options);
-    let promiseReturn = this._waitApiReturn(
+    const promiseSend = this._sendTransportData(transportData, options);
+    const promiseReturn = this._waitApiReturn(
       pendingItem,
       options?.timeout ?? this.options.callApiTimeout
     );
 
     // Encode or Send Error
-    let opSend = await promiseSend;
+    const opSend = await promiseSend;
     if (!opSend.isSucc) {
       return {
         isSucc: false,
@@ -340,7 +340,7 @@ export abstract class BaseConnection<
     }
 
     // Wait ApiReturn
-    let ret = await promiseReturn;
+    const ret = await promiseReturn;
     return pendingItem.isAborted ? PROMISE_ABORTED : ret;
   }
 
@@ -416,7 +416,7 @@ export abstract class BaseConnection<
    */
   abort(sn: number): void {
     // Find and Clear
-    let pendingItem = this._pendingCallApis.get(sn);
+    const pendingItem = this._pendingCallApis.get(sn);
     if (!pendingItem) {
       return;
     }
@@ -519,7 +519,7 @@ export abstract class BaseConnection<
     options?: TransportOptions
   ): Promise<OpResultVoid> {
     // Pre Flow
-    let pre = await this.flows.preSendMsgFlow.exec(
+    const pre = await this.flows.preSendMsgFlow.exec(
       {
         msgName: msgName,
         msg: msg,
@@ -534,7 +534,7 @@ export abstract class BaseConnection<
     msg = pre.msg as ServiceType['msg'][T];
 
     // Encode & Send
-    let opResult = await this._sendTransportData(
+    const opResult = await this._sendTransportData(
       {
         type: 'msg',
         serviceName: msgName,
@@ -579,7 +579,7 @@ export abstract class BaseConnection<
       );
 
     // PreRecv Flow
-    let pre = await this.flows.preRecvMsgFlow.exec(
+    const pre = await this.flows.preRecvMsgFlow.exec(
       {
         conn: this,
         msgName: transportData.serviceName,
@@ -1067,7 +1067,7 @@ export abstract class BaseConnection<
   /**
    * Last latency time (ms) of heartbeat test
    */
-  lastHeartbeatLatency: number = 0;
+  lastHeartbeatLatency = 0;
 
   protected _heartbeat?: {
     sn: Counter;

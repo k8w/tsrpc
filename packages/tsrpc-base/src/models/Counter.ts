@@ -6,7 +6,7 @@ export class Counter {
   private _max: number;
   private _last: number;
 
-  constructor(min: number = 1, max: number = Number.MAX_SAFE_INTEGER) {
+  constructor(min = 1, max: number = Number.MAX_SAFE_INTEGER) {
     this._min = min;
     this._max = max;
     this._last = max;
