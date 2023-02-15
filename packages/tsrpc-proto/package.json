@@ -21,9 +21,7 @@
     "tsbuffer-schema": "^2.2.0"
   },
   "devDependencies": {
+    "shx": "^0.3.4",
     "tsbuffer-schema": "^2.2.0"
-  },
-  "dependencies": {
-    "shx": "^0.3.4"
   }
 }

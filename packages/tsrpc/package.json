@@ -30,7 +30,6 @@
   "dependencies": {
     "@types/ws": "^8.5.3",
     "chalk": "4",
-    "shx": "^0.3.4",
     "tsrpc-base-client": "workspace:^4.0.0-dev.0",
     "tsrpc-base-server": "workspace:4.0.0-dev.0",
     "ws": "^8.9.0"
@@ -41,6 +40,7 @@
     "rollup": "^2.79.1",
     "rollup-plugin-dts": "^4.2.2",
     "rollup-plugin-typescript2": "^0.32.1",
+    "shx": "^0.3.4",
     "ts-node": "^10.9.1",
     "tslib": "^2.4.0",
     "tsrpc-base": "workspace:^4.0.0-dev.0",
