@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "rollup -c -w",
     "check": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts --fix",
     "build": "shx rm -rf dist && rollup -c"
   },
   "files": [

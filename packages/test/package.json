@@ -21,6 +21,7 @@
   "scripts": {
     "test": "npx mocha src/**/*.test.ts --colors",
     "check": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts --fix",
     "coverage": "nyc npm test && open coverage/index.html"
   },
   "bugs": {
