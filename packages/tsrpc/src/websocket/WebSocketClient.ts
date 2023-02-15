@@ -10,13 +10,13 @@ import { TSRPC_VERSION } from '../models/version';
 import { connectWebSocket } from './models/connectWebSocket';
 
 export class WebSocketClient<
-    ServiceType extends BaseServiceType = any
+  ServiceType extends BaseServiceType = any
 > extends BaseWebSocketClient<ServiceType> {
   declare options: WebSocketClientOptions;
 
   constructor(
-      proto: ServiceProto<ServiceType>,
-      options?: Partial<WebSocketClientOptions>
+    proto: ServiceProto<ServiceType>,
+    options?: Partial<WebSocketClientOptions>
   ) {
     super(
       proto,
