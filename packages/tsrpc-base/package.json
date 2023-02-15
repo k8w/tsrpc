@@ -37,7 +37,6 @@
     "rollup": "^2.79.1",
     "rollup-plugin-dts": "^4.2.3",
     "rollup-plugin-typescript2": "^0.34.1",
-    "shx": "^0.3.4",
     "tsbuffer-schema": "^2.2.0",
     "tsbuffer-validator": "^2.1.1",
     "tslib": "^2.4.1",

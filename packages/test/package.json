@@ -31,8 +31,7 @@
     "@types/node": "^18.8.3",
     "k8w-extend-native": "^1.4.6",
     "mocha": "9",
-    "nyc": "^15.1.0",
-    "shx": "^0.3.4"
+    "nyc": "^15.1.0"
   },
   "dependencies": {
     "bson": "^4.7.0",

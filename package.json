@@ -1,9 +1,16 @@
 {
   "private": true,
+  "type": "module",
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.52.0",
+    "@typescript-eslint/parser": "^5.52.0",
+    "eslint": "^8.34.0",
+    "eslint-config-prettier": "^8.6.0",
     "lerna": "^6.4.1",
     "nx": "^15.6.3",
-    "prettier": "^2.8.4"
+    "prettier": "^2.8.4",
+    "shx": "^0.3.4",
+    "typescript": "^4.9.5"
   },
   "scripts": {
     "lint": "nx run-many --target=lint",
