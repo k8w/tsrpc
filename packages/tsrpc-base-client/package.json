@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base-client#readme",
   "dependencies": {
-    "tsrpc-base": "workspace:^4.0.0-dev.0"
+    "tsrpc-base": "workspace:^"
   },
   "devDependencies": {
     "rollup": "^2.79.1",

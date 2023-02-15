@@ -36,10 +36,11 @@
   },
   "dependencies": {
     "bson": "^4.7.0",
-    "tsrpc": "workspace:^4.0.0-dev.0",
-    "tsrpc-base": "workspace:^4.0.0-dev.0",
-    "tsrpc-base-client": "workspace:^4.0.0-dev.0",
-    "tsrpc-base-server": "workspace:^4.0.0-dev.0"
+    "chalk": "4",
+    "tsrpc": "workspace:^",
+    "tsrpc-base": "workspace:^",
+    "tsrpc-base-client": "workspace:^",
+    "tsrpc-base-server": "workspace:^"
   },
   "peerDependencies": {
     "k8w-extend-native": "^1.4.6"

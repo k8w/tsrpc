@@ -30,7 +30,7 @@
   "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base#readme",
   "dependencies": {
     "tsbuffer": "2.2.7",
-    "tsrpc-proto": "workspace:^4.0.0-dev.0"
+    "tsrpc-proto": "workspace:^"
   },
   "devDependencies": {
     "k8w-extend-native": "^1.4.6",
