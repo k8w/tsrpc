@@ -4,10 +4,10 @@
     "lerna": "^6.4.1",
     "nx": "^15.6.3",
     "onchange": "^7.1.0",
-    "prettier": "^2.8.4",
-    "shx": "^0.3.4"
+    "prettier": "^2.8.4"
   },
   "scripts": {
+    "lint": "nx run-many --target=lint",
     "test": "nx run-many --target=test",
     "check": "nx run-many --target=check",
     "coverage": "nx run-many --target=coverage",
