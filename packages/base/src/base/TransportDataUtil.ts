@@ -140,6 +140,7 @@ export class TransportDataUtil {
     skipValidate: boolean | undefined,
     stringifyBodyJson:
       | ((
+          // eslint-disable-next-line @typescript-eslint/ban-types
           bodyJson: Object,
           transportData: TransportData,
           schemaId: string
@@ -301,8 +302,9 @@ export class TransportDataUtil {
     skipValidate: boolean | undefined,
     boxInfo: Partial<BoxDecoding> | undefined
   ): OpResult<BoxTextDecoding> {
+    let box: BoxTextDecoding;
     try {
-      var box = JSON.parse(data) as BoxTextDecoding;
+      box = JSON.parse(data);
     } catch (e: any) {
       return { isSucc: false, errMsg: 'Invalid JSON string: ' + e.message };
     }

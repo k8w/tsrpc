@@ -18,7 +18,7 @@ import { BaseServerFlows } from './BaseServerFlows';
 export abstract class BaseServerConnection<
   ServiceType extends BaseServiceType = any
 > extends BaseConnection<ServiceType> {
-  side: 'server' = 'server';
+  side: 'server' = 'server' as const;
   declare options: this['server']['options'];
 
   readonly id: number;

@@ -208,8 +208,9 @@ export class ApiHandlerUtil {
       handlerPath +
       'Api' +
       handlerName;
+    let module: any;
     try {
-      var module = await import(modulePath);
+      module = await import(modulePath);
     } catch (e: any) {
       if (e.code === 'ERR_MODULE_NOT_FOUND' || e.code === 'MODULE_NOT_FOUND') {
         return { isSucc: false, errMsg: (e as Error).message };

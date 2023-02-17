@@ -24,7 +24,7 @@ export interface ServiceType {
     Chat: MsgChat;
     Test: MsgTest;
   };
-  clientApi: {};
+  clientApi: never;
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {

@@ -44,7 +44,7 @@ export class MsgHandlerUtil {
     host: MsgHandlerHost,
     msgHandlers: BaseConnection['_msgHandlers'],
     msgName: string | RegExp,
-    handler?: Function,
+    handler?: MsgHandler,
     context?: any
   ) {
     if (msgName instanceof RegExp) {

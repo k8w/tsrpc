@@ -24,7 +24,9 @@ import {
 } from './TransportData';
 import { TransportDataUtil } from './TransportDataUtil';
 
-export const PROMISE_ABORTED = new Promise<any>((rs) => {});
+export const PROMISE_ABORTED = new Promise<any>((rs) => {
+  // nop
+});
 
 /**
  * BaseConnection
@@ -147,7 +149,9 @@ export abstract class BaseConnection<
     })();
 
     this._disconnecting
-      .catch((e) => {})
+      .catch((e) => {
+        // nop
+      })
       .then(() => {
         this._disconnecting = undefined;
       });
@@ -648,12 +652,12 @@ export abstract class BaseConnection<
   ): void;
   offMsg<T extends string & keyof ServiceType['msg']>(
     msgName: T | RegExp,
-    handler: Function,
+    handler: MsgHandler,
     context?: any
   ): void;
   offMsg<T extends string & keyof ServiceType['msg']>(
     msgName: T | RegExp,
-    handler?: Function,
+    handler?: MsgHandler,
     context?: any
   ) {
     return MsgHandlerUtil.offMsg(
@@ -672,6 +676,7 @@ export abstract class BaseConnection<
   // #region Encode options (may override by HTTP Text)
   protected _encodeSkipSN?: boolean;
   protected _stringifyBodyJson?: (
+    // eslint-disable-next-line @typescript-eslint/ban-types
     bodyJson: Object,
     transportData: TransportData,
     schemaId: string

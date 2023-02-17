@@ -291,12 +291,12 @@ export abstract class BaseServer<
   ): void;
   offMsg<T extends string & keyof ServiceType['msg']>(
     msgName: T | RegExp,
-    handler: Function,
+    handler: MsgHandler,
     context?: any
   ): void;
   offMsg<T extends string & keyof ServiceType['msg']>(
     msgName: T | RegExp,
-    handler?: Function,
+    handler?: MsgHandler,
     context?: any
   ) {
     return MsgHandlerUtil.offMsg(

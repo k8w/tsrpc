@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 export class EventEmitter<EventType extends Record<string, any[]> = any> {
   private _listeners: {
     [type: string]: {

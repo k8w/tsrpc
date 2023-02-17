@@ -12,7 +12,9 @@ export interface Logger {
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 
-const empty = () => {};
+const empty = () => {
+  // nop
+};
 
 export function setLogLevel(logger: Logger, logLevel: LogLevel): Logger {
   switch (logLevel) {

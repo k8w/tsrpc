@@ -39,7 +39,7 @@ import { BaseClientFlows } from './BaseClientFlows';
 export abstract class BaseClient<
   ServiceType extends BaseServiceType = any
 > extends BaseConnection<ServiceType> {
-  side: 'client' = 'client';
+  side: 'client' = 'client' as const;
 
   declare readonly options: BaseClientOptions;
 
@@ -163,7 +163,9 @@ export abstract class BaseClient<
     })();
 
     this._connecting
-      .catch((e) => {})
+      .catch((e) => {
+        // 
+      })
       .then(() => {
         this._connecting = undefined;
       });
