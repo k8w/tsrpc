@@ -22,7 +22,7 @@ export type HttpRequestReturn = {
         isSucc: true;
         body: string | Uint8Array;
         headers?: {
-          'x-@tsrpc/proto-info'?: string;
+          'x-tsrpc-proto-info'?: string;
         };
         statusCode: number;
       }

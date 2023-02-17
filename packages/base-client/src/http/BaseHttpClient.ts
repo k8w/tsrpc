@@ -1,24 +1,24 @@
 import {
-  ApiReturn,
-  BaseServiceType,
-  BoxTextEncoding,
-  ConnectionStatus,
-  OpResult,
-  OpResultVoid,
-  PROMISE_ABORTED,
-  ProtoInfo,
-  ServiceProto,
-  TransportData,
-  TransportDataUtil,
-  TransportOptions,
-  TsrpcError,
-  TsrpcErrorType,
+    ApiReturn,
+    BaseServiceType,
+    BoxTextEncoding,
+    ConnectionStatus,
+    OpResult,
+    OpResultVoid,
+    PROMISE_ABORTED,
+    ProtoInfo,
+    ServiceProto,
+    TransportData,
+    TransportDataUtil,
+    TransportOptions,
+    TsrpcError,
+    TsrpcErrorType
 } from '@tsrpc/base';
 import {
-  BaseClient,
-  BaseClientOptions,
-  defaultBaseClientOptions,
-  PrivateBaseClientOptions,
+    BaseClient,
+    BaseClientOptions,
+    defaultBaseClientOptions,
+    PrivateBaseClientOptions
 } from '../base/BaseClient';
 import { HttpRequest } from './HttpRequest';
 
@@ -69,12 +69,12 @@ export class BaseHttpClient<
             : 'application/octet-stream',
         ...(transportData.type === 'msg' || transportData.type === 'custom'
           ? {
-              'x-@tsrpc/data-type': transportData.type,
+              'x-tsrpc-data-type': transportData.type,
             }
           : undefined),
         ...('protoInfo' in transportData && transportData.protoInfo
           ? {
-              'x-@tsrpc/proto-info': JSON.stringify(transportData.protoInfo),
+              'x-tsrpc-proto-info': JSON.stringify(transportData.protoInfo),
             }
           : undefined),
       },
@@ -128,13 +128,13 @@ export class BaseHttpClient<
 
           // Parse remote proto info from header
           let protoInfo: ProtoInfo | undefined;
-          if (ret.headers?.['x-@tsrpc/proto-info']) {
+          if (ret.headers?.['x-tsrpc-proto-info']) {
             try {
-              protoInfo = JSON.parse(ret.headers['x-@tsrpc/proto-info']);
+              protoInfo = JSON.parse(ret.headers['x-tsrpc-proto-info']);
             } catch (e) {
               this.logger.warn(
-                'Invalid reponse header "x-@tsrpc/proto-info":',
-                ret.headers['x-@tsrpc/proto-info'],
+                'Invalid reponse header "x-tsrpc-proto-info":',
+                ret.headers['x-tsrpc-proto-info'],
                 e
               );
             }

@@ -54,7 +54,7 @@ export class HttpUtil {
           rs({
             isSucc: true,
             body: options.responseType === 'text' ? buf.toString() : buf,
-            headers: httpRes.headers as { 'x-@tsrpc/proto-info'?: string },
+            headers: httpRes.headers as { 'x-tsrpc-proto-info'?: string },
             statusCode: httpRes.statusCode ?? 200,
           });
         });
