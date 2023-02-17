@@ -1,4 +1,4 @@
-import { ApiCall, TsrpcError } from 'tsrpc-base';
+import { ApiCall, TsrpcError } from '@tsrpc/base';
 import { ReqTest, ResTest } from '../proto/PtlTest';
 
 export async function ApiTest(call: ApiCall<ReqTest, ResTest>) {

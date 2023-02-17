@@ -1,4 +1,4 @@
-import { BaseClientOptions } from 'tsrpc-base-client';
+import { BaseClientOptions } from '@tsrpc/base-client';
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
 import { NodeChalk } from './NodeChalk';
 

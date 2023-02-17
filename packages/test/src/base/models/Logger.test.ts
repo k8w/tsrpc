@@ -1,5 +1,5 @@
+import { Logger, LogLevel, setLogLevel } from '@tsrpc/base';
 import assert from 'assert';
-import { Logger, LogLevel, setLogLevel } from 'tsrpc-base';
 
 function test(logLevel: LogLevel) {
   const result: [number, number, number, number] = [0, 0, 0, 0];

@@ -11,7 +11,7 @@ import {
   TransportData,
   TsrpcError,
   TsrpcErrorType,
-} from 'tsrpc-base';
+} from '@tsrpc/base';
 import { BaseServer, ServerStatus } from './BaseServer';
 import { BaseServerFlows } from './BaseServerFlows';
 

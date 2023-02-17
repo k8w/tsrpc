@@ -1,7 +1,7 @@
 import {
   WebSocketConnectOptions,
   WebSocketConnectReturn,
-} from 'tsrpc-base-client';
+} from '@tsrpc/base-client';
 import WebSocket from 'ws';
 
 export function connectWebSocket(

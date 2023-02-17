@@ -38,67 +38,7 @@ importers:
       ts-node: 10.9.1_4bewfcp2iebiwuold25d6rgcsy
       typescript: 4.9.5
 
-  packages/test:
-    specifiers:
-      '@types/mocha': ^10.0.0
-      '@types/node': ^18.8.3
-      bson: ^4.7.0
-      chalk: '4'
-      k8w-extend-native: ^1.4.6
-      mocha: '9'
-      nyc: ^15.1.0
-      tsrpc: workspace:^
-      tsrpc-base: workspace:^
-      tsrpc-base-client: workspace:^
-      tsrpc-base-server: workspace:^
-    dependencies:
-      bson: 4.7.2
-      chalk: 4.1.2
-      tsrpc: link:../tsrpc
-      tsrpc-base: link:../tsrpc-base
-      tsrpc-base-client: link:../tsrpc-base-client
-      tsrpc-base-server: link:../tsrpc-base-server
-    devDependencies:
-      '@types/mocha': 10.0.1
-      '@types/node': 18.13.0
-      k8w-extend-native: 1.4.6
-      mocha: 9.2.2
-      nyc: 15.1.0
-
-  packages/tsrpc:
-    specifiers:
-      '@types/node': ^18.8.3
-      '@types/ws': ^8.5.3
-      chalk: '4'
-      k8w-extend-native: ^1.4.6
-      rollup: ^2.79.1
-      rollup-plugin-dts: ^4.2.2
-      rollup-plugin-typescript2: ^0.32.1
-      ts-node: ^10.9.1
-      tslib: ^2.4.0
-      tsrpc-base: workspace:^
-      tsrpc-base-client: workspace:^
-      tsrpc-base-server: workspace:4.0.0-dev.0
-      typescript: ^4.8.4
-      ws: ^8.9.0
-    dependencies:
-      '@types/ws': 8.5.4
-      chalk: 4.1.2
-      tsrpc-base-client: link:../tsrpc-base-client
-      tsrpc-base-server: link:../tsrpc-base-server
-      ws: 8.12.1
-    devDependencies:
-      '@types/node': 18.13.0
-      k8w-extend-native: 1.4.6
-      rollup: 2.79.1
-      rollup-plugin-dts: 4.2.3_zptcx3kz3uwp66hzhyyt545weq
-      rollup-plugin-typescript2: 0.32.1_zptcx3kz3uwp66hzhyyt545weq
-      ts-node: 10.9.1_4bewfcp2iebiwuold25d6rgcsy
-      tslib: 2.5.0
-      tsrpc-base: link:../tsrpc-base
-      typescript: 4.9.5
-
-  packages/tsrpc-base:
+  packages/base:
     specifiers:
       k8w-extend-native: ^1.4.6
       rollup: ^2.79.1
@@ -108,11 +48,9 @@ importers:
       tsbuffer-schema: ^2.2.0
       tsbuffer-validator: ^2.1.1
       tslib: ^2.4.1
-      tsrpc-proto: workspace:^
       typescript: ^4.9.3
     dependencies:
       tsbuffer: 2.2.7
-      tsrpc-proto: link:../tsrpc-proto
     devDependencies:
       k8w-extend-native: 1.4.6
       rollup: 2.79.1
@@ -123,17 +61,17 @@ importers:
       tslib: 2.5.0
       typescript: 4.9.5
 
-  packages/tsrpc-base-client:
+  packages/base-client:
     specifiers:
+      '@tsrpc/base': workspace:^
       rollup: ^2.79.1
       rollup-plugin-dts: ^4.2.2
       rollup-plugin-typescript2: ^0.32.1
       tsbuffer: ^2.2.5
       tslib: ^2.4.0
-      tsrpc-base: workspace:^
       typescript: ^4.8.4
     dependencies:
-      tsrpc-base: link:../tsrpc-base
+      '@tsrpc/base': link:../base
     devDependencies:
       rollup: 2.79.1
       rollup-plugin-dts: 4.2.3_zptcx3kz3uwp66hzhyyt545weq
@@ -142,8 +80,9 @@ importers:
       tslib: 2.5.0
       typescript: 4.9.5
 
-  packages/tsrpc-base-server:
+  packages/base-server:
     specifiers:
+      '@tsrpc/base': workspace:^
       k8w-extend-native: ^1.4.6
       rollup: ^2.79.1
       rollup-plugin-dts: ^4.2.2
@@ -151,10 +90,9 @@ importers:
       tsbuffer: ^2.2.5
       tsbuffer-schema: ^2.2.0
       tslib: ^2.4.0
-      tsrpc-base: workspace:^
       typescript: ^4.8.4
     dependencies:
-      tsrpc-base: link:../tsrpc-base
+      '@tsrpc/base': link:../base
     devDependencies:
       k8w-extend-native: 1.4.6
       rollup: 2.79.1
@@ -165,11 +103,74 @@ importers:
       tslib: 2.5.0
       typescript: 4.9.5
 
-  packages/tsrpc-proto:
+  packages/browser:
+    specifiers: {}
+
+  packages/cli:
+    specifiers: {}
+
+  packages/miniapp:
+    specifiers: {}
+
+  packages/test:
     specifiers:
-      tsbuffer-schema: ^2.2.0
+      '@tsrpc/base': workspace:^
+      '@tsrpc/base-client': workspace:^
+      '@tsrpc/base-server': workspace:^
+      '@types/mocha': ^10.0.0
+      '@types/node': ^18.8.3
+      bson: ^4.7.0
+      chalk: '4'
+      k8w-extend-native: ^1.4.6
+      mocha: '9'
+      nyc: ^15.1.0
+      tsrpc: workspace:^
+    dependencies:
+      '@tsrpc/base': link:../base
+      '@tsrpc/base-client': link:../base-client
+      '@tsrpc/base-server': link:../base-server
+      bson: 4.7.2
+      chalk: 4.1.2
+      tsrpc: link:../tsrpc
     devDependencies:
-      tsbuffer-schema: 2.2.0
+      '@types/mocha': 10.0.1
+      '@types/node': 18.13.0
+      k8w-extend-native: 1.4.6
+      mocha: 9.2.2
+      nyc: 15.1.0
+
+  packages/tsrpc:
+    specifiers:
+      '@tsrpc/base': workspace:^
+      '@tsrpc/base-client': workspace:^
+      '@tsrpc/base-server': workspace:4.0.0-dev.0
+      '@types/node': ^18.8.3
+      '@types/ws': ^8.5.3
+      chalk: '4'
+      k8w-extend-native: ^1.4.6
+      rollup: ^2.79.1
+      rollup-plugin-dts: ^4.2.2
+      rollup-plugin-typescript2: ^0.32.1
+      ts-node: ^10.9.1
+      tslib: ^2.4.0
+      typescript: ^4.8.4
+      ws: ^8.9.0
+    dependencies:
+      '@tsrpc/base-client': link:../base-client
+      '@tsrpc/base-server': link:../base-server
+      '@types/ws': 8.5.4
+      chalk: 4.1.2
+      ws: 8.12.1
+    devDependencies:
+      '@tsrpc/base': link:../base
+      '@types/node': 18.13.0
+      k8w-extend-native: 1.4.6
+      rollup: 2.79.1
+      rollup-plugin-dts: 4.2.3_zptcx3kz3uwp66hzhyyt545weq
+      rollup-plugin-typescript2: 0.32.1_zptcx3kz3uwp66hzhyyt545weq
+      ts-node: 10.9.1_4bewfcp2iebiwuold25d6rgcsy
+      tslib: 2.5.0
+      typescript: 4.9.5
 
 packages:
 
@@ -516,7 +517,7 @@ packages:
     resolution: {integrity: sha512-QfyleXSD9slh4qM54wDaqKVPvtUH1NJMgsFc9BabqSHO1Ttpandv1EAvTCN9Lu73RbCX3LJpn+BfJmnjHbjCyw==}
     engines: {node: ^14.15.0 || >=16.0.0}
     dependencies:
-      chalk: 4.1.0
+      chalk: 4.1.2
       execa: 5.0.0
       strong-log-transformer: 2.1.0
     dev: true

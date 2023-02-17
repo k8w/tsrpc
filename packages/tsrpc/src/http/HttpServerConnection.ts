@@ -1,4 +1,3 @@
-import { IncomingMessage, ServerResponse } from 'http';
 import {
   ApiCall,
   ApiReturn,
@@ -17,8 +16,9 @@ import {
   TransportOptions,
   TsrpcError,
   TsrpcErrorType,
-} from 'tsrpc-base';
-import { BaseServerConnection, ServerStatus } from 'tsrpc-base-server';
+} from '@tsrpc/base';
+import { BaseServerConnection, ServerStatus } from '@tsrpc/base-server';
+import { IncomingMessage, ServerResponse } from 'http';
 import { TSRPC_VERSION } from '../models/version';
 import { HttpServer } from './HttpServer';
 import { HttpUtil } from './models/HttpUtil';
@@ -245,7 +245,7 @@ export class HttpServerConnection<
     };
 
   protected _doDecodeBoxText(data: string): OpResult<BoxTextDecoding> {
-    const isMsg = this.httpReq.headers['x-tsrpc-data-type'] === 'msg';
+    const isMsg = this.httpReq.headers['x-@tsrpc/data-type'] === 'msg';
     let url = this.httpReq.url!;
     const urlEndPos = url.indexOf('?');
     if (urlEndPos > -1) {
@@ -270,14 +270,14 @@ export class HttpServerConnection<
 
     // Parse protoInfo
     let protoInfo: ProtoInfo | undefined;
-    const header = this.httpReq.headers['x-tsrpc-proto-info'];
+    const header = this.httpReq.headers['x-@tsrpc/proto-info'];
     try {
       if (typeof header === 'string') {
         protoInfo = JSON.parse(header);
       }
     } catch (e) {
       this.logger.warn(
-        'Invalid request header "x-tsrpc-proto-info":',
+        'Invalid request header "x-@tsrpc/proto-info":',
         header,
         'err:',
         e

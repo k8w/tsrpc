@@ -1,5 +1,5 @@
+import { Logger } from '@tsrpc/base';
 import chalk from 'chalk';
-import { Logger } from 'tsrpc-base';
 
 export interface TerminalColorLoggerOptions {
   /**

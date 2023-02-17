@@ -1,11 +1,11 @@
-import http from 'http';
 import {
   BaseServiceType,
   OpResultVoid,
   TransportData,
   TransportOptions,
-} from 'tsrpc-base';
-import { BaseServerConnection } from 'tsrpc-base-server';
+} from '@tsrpc/base';
+import { BaseServerConnection } from '@tsrpc/base-server';
+import http from 'http';
 import WebSocket from 'ws';
 import { HttpUtil } from '../http/models/HttpUtil';
 import { WebSocketServer } from './WebSocketServer';

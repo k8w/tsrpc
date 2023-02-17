@@ -1,4 +1,3 @@
-import { TSBuffer } from 'tsbuffer';
 import {
   ApiHandler,
   ApiHandlerUtil,
@@ -19,7 +18,8 @@ import {
   ServiceMapUtil,
   ServiceProto,
   setLogLevel,
-} from 'tsrpc-base';
+} from '@tsrpc/base';
+import { TSBuffer } from 'tsbuffer';
 import { BaseClientFlows } from './BaseClientFlows';
 
 /**
@@ -33,8 +33,8 @@ import { BaseClientFlows } from './BaseClientFlows';
  *
  * @see
  * {@link https://github.com/k8w/tsrpc}
- * {@link https://github.com/k8w/tsrpc-browser}
- * {@link https://github.com/k8w/tsrpc-miniapp}
+ * {@link https://github.com/k8w/@tsrpc/browser}
+ * {@link https://github.com/k8w/@tsrpc/miniapp}
  */
 export abstract class BaseClient<
   ServiceType extends BaseServiceType = any

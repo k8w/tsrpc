@@ -1,4 +1,4 @@
-import { ServiceProto } from 'tsrpc-base';
+import { ServiceProto } from '@tsrpc/base';
 import { ReqTest, ResTest } from './a/b/c/PtlTest';
 import { MsgChat } from './MsgChat';
 import { MsgTest } from './MsgTest';

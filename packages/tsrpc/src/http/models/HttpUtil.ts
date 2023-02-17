@@ -1,13 +1,15 @@
+import { TsrpcError } from '@tsrpc/base';
+import { HttpRequestOptions, HttpRequestReturn } from '@tsrpc/base-client';
 import * as http from 'http';
 import https from 'https';
-import { TsrpcError } from 'tsrpc-base';
-import { HttpRequestOptions, HttpRequestReturn } from 'tsrpc-base-client';
 
 export class HttpUtil {
   static getClientIp(req: http.IncomingMessage) {
     let ipAddress;
     // The request may be forwarded from local web server.
-    const forwardedIpsStr = req.headers['x-forwarded-for'] as string | undefined;
+    const forwardedIpsStr = req.headers['x-forwarded-for'] as
+      | string
+      | undefined;
     if (forwardedIpsStr) {
       // 'x-forwarded-for' header may return multiple IP addresses in
       // the format: "client IP, proxy 1 IP, proxy 2 IP" so take the
@@ -52,7 +54,7 @@ export class HttpUtil {
           rs({
             isSucc: true,
             body: options.responseType === 'text' ? buf.toString() : buf,
-            headers: httpRes.headers as { 'x-tsrpc-proto-info'?: string },
+            headers: httpRes.headers as { 'x-@tsrpc/proto-info'?: string },
             statusCode: httpRes.statusCode ?? 200,
           });
         });

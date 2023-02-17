@@ -1,9 +1,9 @@
-import { BaseServiceType, ServiceProto } from 'tsrpc-base';
+import { BaseServiceType, ServiceProto } from '@tsrpc/base';
 import {
   BaseWebSocketClient,
   BaseWebSocketClientOptions,
   defaultBaseWebSocketClientOptions,
-} from 'tsrpc-base-client';
+} from '@tsrpc/base-client';
 import { defaultBaseNodeClientOptions } from '../models/BaseNodeClientOptions';
 import { getClassObjectId } from '../models/getClassObjectId';
 import { TSRPC_VERSION } from '../models/version';
@@ -41,4 +41,4 @@ export const defaultWebSocketClientOptions: BaseWebSocketClientOptions = {
   ...defaultBaseNodeClientOptions,
 };
 
-export type WebSocketClientOptions = BaseWebSocketClientOptions
+export type WebSocketClientOptions = BaseWebSocketClientOptions;

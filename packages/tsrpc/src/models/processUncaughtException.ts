@@ -1,4 +1,4 @@
-import { Logger } from 'tsrpc-base';
+import { Logger } from '@tsrpc/base';
 
 let isUncaughtExceptionProcessed = false;
 export function processUncaughtException(logger: Logger) {

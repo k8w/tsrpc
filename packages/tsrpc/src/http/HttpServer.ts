@@ -1,12 +1,12 @@
-import http, { IncomingMessage, ServerResponse } from 'http';
-import https from 'https';
 import {
   ApiReturn,
   BaseConnectionDataType,
   BaseServiceType,
   ServiceProto,
-} from 'tsrpc-base';
-import { BaseServer } from 'tsrpc-base-server';
+} from '@tsrpc/base';
+import { BaseServer } from '@tsrpc/base-server';
+import http, { IncomingMessage, ServerResponse } from 'http';
+import https from 'https';
 import {
   BaseNodeServerOptions,
   defaultBaseNodeServerOptions,

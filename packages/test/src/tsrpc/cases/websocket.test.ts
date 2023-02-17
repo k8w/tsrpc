@@ -1,3 +1,9 @@
+import {
+  PrefixLogger,
+  ServiceProto,
+  TsrpcError,
+  TsrpcErrorType,
+} from '@tsrpc/base';
 import assert from 'assert';
 import chalk from 'chalk';
 import path from 'path';
@@ -7,12 +13,6 @@ import {
   WebSocketServer,
   WebSocketServerConnection,
 } from 'tsrpc';
-import {
-  PrefixLogger,
-  ServiceProto,
-  TsrpcError,
-  TsrpcErrorType,
-} from 'tsrpc-base';
 import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
 import { ApiTest } from '../api/ApiTest';
 import { MsgChat } from '../proto/MsgChat';

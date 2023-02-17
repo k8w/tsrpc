@@ -31,8 +31,8 @@
   "dependencies": {
     "@types/ws": "^8.5.3",
     "chalk": "4",
-    "tsrpc-base-client": "workspace:^",
-    "tsrpc-base-server": "workspace:4.0.0-dev.0",
+    "@tsrpc/base-client": "workspace:^",
+    "@tsrpc/base-server": "workspace:4.0.0-dev.0",
     "ws": "^8.9.0"
   },
   "devDependencies": {
@@ -43,13 +43,13 @@
     "rollup-plugin-typescript2": "^0.32.1",
     "ts-node": "^10.9.1",
     "tslib": "^2.4.0",
-    "tsrpc-base": "workspace:^",
+    "@tsrpc/base": "workspace:^",
     "typescript": "^4.8.4"
   },
   "peerDependencies": {
     "k8w-extend-native": "^1.4.6",
     "tslib": "^2.4.0",
-    "tsrpc-base": "workspace:^",
-    "tsrpc-base-server": "workspace:^"
+    "@tsrpc/base": "workspace:^",
+    "@tsrpc/base-server": "workspace:^"
   }
 }

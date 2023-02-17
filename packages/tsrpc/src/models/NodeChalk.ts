@@ -1,5 +1,5 @@
+import { ChalkStyle } from '@tsrpc/base';
 import chalk from 'chalk';
-import { ChalkStyle } from 'tsrpc-base';
 
 const style2ChalkCmd = {
   normal: 'white',

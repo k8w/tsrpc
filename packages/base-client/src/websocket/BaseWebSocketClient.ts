@@ -5,7 +5,7 @@ import {
   ServiceProto,
   TransportData,
   TransportOptions,
-} from 'tsrpc-base';
+} from '@tsrpc/base';
 import {
   BaseClient,
   BaseClientOptions,

@@ -1,7 +1,7 @@
+import { BaseServiceType, ServiceProto } from '@tsrpc/base';
+import { BaseServer } from '@tsrpc/base-server';
 import http from 'http';
 import https from 'https';
-import { BaseServiceType, ServiceProto } from 'tsrpc-base';
-import { BaseServer } from 'tsrpc-base-server';
 import { WebSocketServer as ws_WebSocketServer } from 'ws';
 import { defaultHttpServerOptions } from '../http/HttpServer';
 import {

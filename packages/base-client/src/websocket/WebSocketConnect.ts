@@ -1,4 +1,4 @@
-import { OpResultVoid } from 'tsrpc-base';
+import { OpResultVoid } from '@tsrpc/base';
 
 export type WebSocketConnect = (
   options: WebSocketConnectOptions

@@ -1,4 +1,7 @@
-import { BaseServerOptions, defaultBaseServerOptions } from 'tsrpc-base-server';
+import {
+  BaseServerOptions,
+  defaultBaseServerOptions,
+} from '@tsrpc/base-server';
 import { TerminalColorLogger } from '../models/TerminalColorLogger';
 import { NodeChalk } from './NodeChalk';
 

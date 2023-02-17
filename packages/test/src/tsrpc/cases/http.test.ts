@@ -1,16 +1,16 @@
+import {
+  PrefixLogger,
+  ServiceProto,
+  TsrpcError,
+  TsrpcErrorType,
+} from '@tsrpc/base';
+import { BaseServer } from '@tsrpc/base-server';
 import assert from 'assert';
 import { ObjectId } from 'bson';
 import chalk from 'chalk';
 import 'k8w-extend-native';
 import * as path from 'path';
 import { HttpClient, HttpServer, TerminalColorLogger } from 'tsrpc';
-import {
-  PrefixLogger,
-  ServiceProto,
-  TsrpcError,
-  TsrpcErrorType,
-} from 'tsrpc-base';
-import { BaseServer } from 'tsrpc-base-server';
 import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
 import { ApiTest } from '../api/ApiTest';
 import { MsgChat } from '../proto/MsgChat';

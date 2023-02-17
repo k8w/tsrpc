@@ -1,7 +1,7 @@
 {
-  "name": "tsrpc-base-server",
+  "name": "@tsrpc/base",
   "version": "4.0.0-dev.0",
-  "description": "TSRPC Base Server",
+  "description": "TSRPC Base",
   "main": "./dist/index.js",
   "exports": {
     "require": "./dist/index.js",
@@ -15,36 +15,37 @@
     "dev": "rollup -c -w",
     "check": "tsc --noEmit",
     "lint": "eslint src/**/*.ts --fix",
-    "build": "shx rm -rf dist && rollup -c"
+    "build": "shx rm -rf dist && rollup -c",
+    "genTransportProto": "cd src/proto && npx tsbuffer-cli proto -i TransportDataSchema.ts -o TransportDataProto_temp.ts"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/k8w/tsrpc.git",
-    "directory": "packages/base-server"
+    "directory": "packages/base"
   },
   "author": "k8w",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/k8w/tsrpc/issues"
   },
-  "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base-server#readme",
+  "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base#readme",
   "dependencies": {
-    "tsrpc-base": "workspace:^"
+    "tsbuffer": "2.2.7"
   },
   "devDependencies": {
     "k8w-extend-native": "^1.4.6",
     "rollup": "^2.79.1",
-    "rollup-plugin-dts": "^4.2.2",
-    "rollup-plugin-typescript2": "^0.32.1",
-    "tsbuffer": "^2.2.5",
+    "rollup-plugin-dts": "^4.2.3",
+    "rollup-plugin-typescript2": "^0.34.1",
     "tsbuffer-schema": "^2.2.0",
-    "tslib": "^2.4.0",
-    "typescript": "^4.8.4"
+    "tsbuffer-validator": "^2.1.1",
+    "tslib": "^2.4.1",
+    "typescript": "^4.9.3"
   },
   "peerDependencies": {
     "k8w-extend-native": "^1.4.6",
-    "tsbuffer": "^2.2.5",
     "tsbuffer-schema": "^2.2.0",
+    "tsbuffer-validator": "^2.1.0",
     "tslib": "^2.4.0"
   }
 }

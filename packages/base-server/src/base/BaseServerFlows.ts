@@ -1,5 +1,5 @@
+import { BaseConnectionFlows, Flow, MsgFlow, SendDataFlow } from '@tsrpc/base';
 import { Overwrite } from 'tsbuffer-schema';
-import { BaseConnectionFlows, Flow, MsgFlow, SendDataFlow } from 'tsrpc-base';
 import { BaseServerConnection } from './BaseServerConnection';
 
 export type BaseServerFlows<Conn extends BaseServerConnection> = Overwrite<

@@ -1,4 +1,4 @@
-import { ApiCall } from 'tsrpc-base';
+import { ApiCall } from '@tsrpc/base';
 import { ReqObjId, ResObjId } from '../proto/PtlObjId';
 
 export async function ApiObjId(call: ApiCall<ReqObjId, ResObjId>) {

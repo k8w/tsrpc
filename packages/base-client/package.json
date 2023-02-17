@@ -1,5 +1,5 @@
 {
-  "name": "tsrpc-base-client",
+  "name": "@tsrpc/base-client",
   "version": "4.0.0-dev.0",
   "description": "TSRPC Base Client",
   "main": "./dist/index.js",
@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/k8w/tsrpc/tree/main/packages/base-client#readme",
   "dependencies": {
-    "tsrpc-base": "workspace:^"
+    "@tsrpc/base": "workspace:^"
   },
   "devDependencies": {
     "rollup": "^2.79.1",
