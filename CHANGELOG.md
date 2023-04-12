@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.13] - 2023-04-12
+### Fixed
+- Change log level of `[SendReturnErr]` to `debug` when ws connection is closed
+
 ## [3.4.12] - 2023-02-07
 ### Added
 - Add `closeTimeout` for `WsConnection.close`

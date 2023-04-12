@@ -1,5 +1,5 @@
 import { ApiReturn, BaseServiceType } from 'tsrpc-proto';
-import { ApiCall, ApiCallOptions, SendReturnMethod } from '../base/ApiCall';
+import { ApiCall, ApiCallOptions } from '../base/ApiCall';
 import { ConnectionStatus } from '../base/BaseConnection';
 import { WsConnection } from './WsConnection';
 
@@ -17,7 +17,7 @@ export class ApiCallWs<Req = any, Res = any, ServiceType extends BaseServiceType
 
     protected async _prepareReturn(ret: ApiReturn<Res>): Promise<void> {
         if (this.conn.status !== ConnectionStatus.Opened) {
-            this.logger.error('[SendReturnErr]', 'WebSocket is not opened', ret);
+            this.logger.debug('[SendReturnErr]', 'WebSocket is not opened', ret);
             this._return = ret;
             return;
         }
