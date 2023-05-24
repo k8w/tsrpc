@@ -4,14 +4,14 @@ import { ApiReturn } from '../proto/ApiReturn';
 import {
   ProtoInfo,
   TsrpcErrorData,
-  TsrpcErrorType,
+  TsrpcErrorType
 } from '../proto/TransportDataSchema';
 import { TsrpcError } from '../proto/TsrpcError';
 import {
   BaseConnection,
   ConnectionStatus,
   LocalApiName,
-  PROMISE_ABORTED,
+  PROMISE_ABORTED
 } from './BaseConnection';
 
 // 每一次 Api 调用都会生成一个 ApiCall（Server & Client）
@@ -196,6 +196,8 @@ export class ApiCall<
           return await this._internalError({ message: op.errMsg });
         }
       }
+    } else {
+      this.logger.debug(`[SendReturnCanceled] The connection is broken already.`);
     }
 
     // Log Res
