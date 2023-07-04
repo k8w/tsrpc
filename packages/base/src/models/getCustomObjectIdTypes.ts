@@ -16,7 +16,7 @@ export function getCustomObjectIdTypes(classObjectId: {
             errMsg: `Expected type to be \`string\`, actually \`${typeof value}\`.`,
           };
         }
-        if (!/[0-9a-fA-F]{24}/.test(value)) {
+        if (!/^[0-9a-fA-F]{24}$/.test(value)) {
           return {
             isSucc: false,
             errMsg: 'ObjectId must be a string of 24 hex characters',
