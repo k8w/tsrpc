@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.14-dev.0] - 2023-12-25
+### Fixed
+- Update dependencies
+
 ## [3.4.13] - 2023-04-12
 ### Fixed
 - Change log level of `[SendReturnErr]` to `debug` when ws connection is closed
