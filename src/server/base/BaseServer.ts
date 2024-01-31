@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import * as path from "path";
 import { TSBuffer } from 'tsbuffer';
+import {  CustomTypeSchema } from "tsbuffer-schema";
 import { Counter, Flow, getCustomObjectIdTypes, MsgHandlerManager, MsgService, ParsedServerInput, ServiceMap, ServiceMapUtil, TransportDataUtil } from 'tsrpc-base-client';
 import { ApiReturn, ApiServiceDef, BaseServiceType, Logger, LogLevel, ServerInputData, ServiceProto, setLogLevel, TsrpcError, TsrpcErrorType } from 'tsrpc-proto';
 import { getClassObjectId } from "../../models/getClassObjectId";
@@ -170,7 +171,8 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
             // Support mongodb/ObjectId
             ...getCustomObjectIdTypes(getClassObjectId())
         }, {
-            strictNullChecks: this.options.strictNullChecks
+            strictNullChecks: this.options.strictNullChecks,
+            customTypes: this.options.customTypes,
         });
         this.serviceMap = ServiceMapUtil.getServiceMap(proto);
         this.logger = this.options.logger;
@@ -967,6 +969,11 @@ export interface BaseServerOptions<ServiceType extends BaseServiceType> {
      * If `NODE_ENV` equals to `production`, the default value is `false`, otherwise is `true`.
      */
     returnInnerError: boolean;
+
+    /**
+     * Customize the protocol data type
+     */
+    customTypes?: { [schemaId: string]: CustomTypeSchema }
 }
 
 export const defaultBaseServerOptions: BaseServerOptions<any> = {
