@@ -630,7 +630,7 @@ describe('WS Server & Client basic', function () {
 
         // 人为制造一个延迟
         const now = Date.now();
-        while (Date.now() - now < 1000) { }
+        while (Date.now() - now < 100) { }
 
         client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
         assert.strictEqual(client.status, WsClientStatus.Opened)

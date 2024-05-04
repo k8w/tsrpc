@@ -7,10 +7,10 @@ import { BaseServer, TerminalColorLogger, TransportDataUtil, WsClientStatus, WsC
 import { WsClient } from '../../src/client/ws/WsClient';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import { WsServer } from '../../src/server/ws/WsServer';
-import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
 import { ApiTest } from '../api/ApiTest';
+import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
 import { MsgChat } from '../proto/MsgChat';
-import { serviceProto, ServiceType } from '../proto/serviceProto';
+import { ServiceType, serviceProto } from '../proto/serviceProto';
 
 const serverLogger = new PrefixLogger({
     prefixs: [chalk.bgGreen.white(' Server ')],
@@ -824,7 +824,7 @@ describe('WS JSON Server & Client basic', function () {
         // 人为制造一个延迟
         console.log('人为制造一个延迟')
         const now = Date.now();
-        while (Date.now() - now < 1000) { }
+        while (Date.now() - now < 100) { }
         console.log('延迟结束')
 
         client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
