@@ -823,9 +823,8 @@ describe('WS JSON Server & Client basic', function () {
 
         // 人为制造一个延迟
         console.log('人为制造一个延迟')
-        for (let i = 0; i < 1000000; ++i) {
-            let a = {};
-        }
+        const now = Date.now();
+        while (Date.now() - now < 1000) { }
         console.log('延迟结束')
 
         client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);

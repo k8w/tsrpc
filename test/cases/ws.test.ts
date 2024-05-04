@@ -606,9 +606,8 @@ describe('WS Server & Client basic', function () {
         await new Promise(rs => { setTimeout(rs, 2000) });
 
         // 人为制造一个延迟
-        for (let i = 0; i < 100000; ++i) {
-            let a = {};
-        }
+        const now = Date.now();
+        while (Date.now() - now < 1000) { }
 
         client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
         assert.strictEqual(client.status, WsClientStatus.Opened)

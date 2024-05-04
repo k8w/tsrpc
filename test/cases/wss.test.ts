@@ -8,10 +8,10 @@ import { BaseServer, TerminalColorLogger, TransportDataUtil, WsClientStatus, WsC
 import { WsClient } from '../../src/client/ws/WsClient';
 import { PrefixLogger } from '../../src/server/models/PrefixLogger';
 import { WsServer } from '../../src/server/ws/WsServer';
-import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
 import { ApiTest } from '../api/ApiTest';
+import { ApiTest as ApiAbcTest } from '../api/a/b/c/ApiTest';
 import { MsgChat } from '../proto/MsgChat';
-import { serviceProto, ServiceType } from '../proto/serviceProto';
+import { ServiceType, serviceProto } from '../proto/serviceProto';
 
 // 允许自签名证书（方便测试）
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
@@ -629,9 +629,8 @@ describe('WS Server & Client basic', function () {
         await new Promise(rs => { setTimeout(rs, 2000) });
 
         // 人为制造一个延迟
-        for (let i = 0; i < 100000; ++i) {
-            let a = {};
-        }
+        const now = Date.now();
+        while (Date.now() - now < 1000) { }
 
         client.logger?.log('lastHeartbeatLatency', client.lastHeartbeatLatency);
         assert.strictEqual(client.status, WsClientStatus.Opened)

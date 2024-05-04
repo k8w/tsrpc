@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.16] - 2024-05-05
+### Fixed
+- Update dependencies `tsbuffer`
+
 ## [3.4.14] - 2023-12-28
 ### Fixed
 - Update dependencies
