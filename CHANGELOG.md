@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.17] - 2024-11-11
+### Added
+- `server.inputJSON` support `logger` param
+
 ## [3.4.16] - 2024-05-05
 ### Fixed
 - Update dependencies `tsbuffer`

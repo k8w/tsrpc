@@ -12,6 +12,7 @@ import { TerminalColorLogger } from '../models/TerminalColorLogger';
 import { ApiCall } from './ApiCall';
 import { BaseConnection } from './BaseConnection';
 import { MsgCall } from './MsgCall';
+import { PrefixLogger } from "../models/PrefixLogger";
 
 /**
  * Abstract base class for TSRPC Server.
@@ -717,9 +718,10 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
      * Both the input and output is pure JSON, ArrayBuffer/Date/ObjectId are encoded to string automatically.
      * @param apiName - Parsed from URL
      * @param req - Pure JSON
+     * @param logger - Custom logger
      * @returns - Pure JSON
      */
-    async inputJSON(apiName: string, req: object): Promise<ApiReturn<object>> {
+    async inputJSON(apiName: string, req: object, logger?: PrefixLogger): Promise<ApiReturn<object>> {
         if (apiName.startsWith('/')) {
             apiName = apiName.slice(1);
         }
@@ -744,7 +746,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
                     type: 'json',
                     rs: rs
                 }
-            });
+            }, logger);
 
             this._onRecvData(conn, req, service.id);
         })

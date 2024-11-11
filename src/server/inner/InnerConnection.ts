@@ -25,8 +25,8 @@ export class InnerConnection<ServiceType extends BaseServiceType = any> extends 
 
     return!: InnerConnectionOptions<any>['return'];
 
-    constructor(options: InnerConnectionOptions<ServiceType>) {
-        super(options, new PrefixLogger({
+    constructor(options: InnerConnectionOptions<ServiceType>, logger?: PrefixLogger) {
+        super(options, logger ?? new PrefixLogger({
             logger: options.server.logger,
             prefixs: [chalk.gray(`Inner #${options.id}`)]
         }));
