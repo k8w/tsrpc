@@ -55,6 +55,14 @@ export class HttpProxy implements IHttpProxy {
             });
         });
 
+        // Timeout
+        httpReq.on('timeout', () => {
+            rs({
+                isSucc: false,
+                err: new TsrpcError('Request timeout', { type: TsrpcError.Type.NetworkError, code: 'ECONNABORTED' })
+            });
+        });
+
         let buf = options.data;
         httpReq.end(typeof buf === 'string' ? buf : Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength));
 
