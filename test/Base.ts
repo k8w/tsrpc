@@ -1,1 +1,1 @@
-import 'k8w-extend-native';
+import "k8w-extend-native"

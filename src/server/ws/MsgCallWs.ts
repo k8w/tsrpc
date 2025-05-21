@@ -1,16 +1,18 @@
-import { BaseServiceType } from "tsrpc-proto";
-import { MsgCall, MsgCallOptions } from "../base/MsgCall";
-import { WsConnection } from "./WsConnection";
+import { BaseServiceType } from "tsrpc-proto"
+import { MsgCall, MsgCallOptions } from "../base/MsgCall"
+import { WsConnection } from "./WsConnection"
 
-export interface MsgCallWsOptions<Msg, ServiceType extends BaseServiceType> extends MsgCallOptions<Msg, ServiceType> {
-    conn: WsConnection<ServiceType>;
+export interface MsgCallWsOptions<Msg, ServiceType extends BaseServiceType>
+  extends MsgCallOptions<Msg, ServiceType> {
+  conn: WsConnection<ServiceType>
 }
-export class MsgCallWs<Msg = any, ServiceType extends BaseServiceType = any> extends MsgCall<Msg, ServiceType> {
+export class MsgCallWs<Msg = any, ServiceType extends BaseServiceType = any> extends MsgCall<
+  Msg,
+  ServiceType
+> {
+  readonly conn!: WsConnection<ServiceType>
 
-    readonly conn!: WsConnection<ServiceType>;
-
-    constructor(options: MsgCallWsOptions<Msg, ServiceType>) {
-        super(options);
-    }
-
+  constructor(options: MsgCallWsOptions<Msg, ServiceType>) {
+    super(options)
+  }
 }

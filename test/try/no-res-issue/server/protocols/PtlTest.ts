@@ -1,7 +1,7 @@
 export interface ReqTest {
-    name: string
+  name: string
 }
 
 export interface ResTest {
-    reply: string
+  reply: string
 }

@@ -1,0 +1,18 @@
+# 构建产物
+dist
+build
+
+# 依赖目录
+node_modules
+
+# 其他不需要格式化的文件
+.cache
+.vscode
+.idea
+*.min.js
+*.min.css
+*.svg
+*.ico
+package-lock.json
+yarn.lock
+pnpm-lock.yaml 

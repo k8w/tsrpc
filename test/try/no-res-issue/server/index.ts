@@ -1,10 +1,10 @@
-import { TsrpcServer } from '../../../index';
-import { serviceProto } from './protocols/proto';
+import { TsrpcServer } from "../../../index"
+import { serviceProto } from "./protocols/proto"
 
 let server = new TsrpcServer({
-    proto: serviceProto,
-});
+  proto: serviceProto,
+})
 
-server.autoImplementApi('src/api');
+server.autoImplementApi("src/api")
 
-server.start();
+server.start()
