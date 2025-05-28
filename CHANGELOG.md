@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.18] - 2025-05-28
+### Added
+- `wsOptions` for `WsServer`
+
 ## [3.4.17] - 2024-11-11
 ### Added
 - `server.inputJSON` support `logger` param

@@ -54,6 +54,7 @@ export class WsServer<ServiceType extends BaseServiceType = any> extends BaseSer
       // Create WebSocket Server
       this._wsServer = new WebSocketServer({
         server: this._httpServer,
+        ...this.options.wsOptions,
       })
       this._wsServer.on("connection", this._onClientConnect)
 
@@ -316,6 +317,11 @@ export interface WsServerOptions<ServiceType extends BaseServiceType>
    * @defaultValue `undefined`
    */
   heartbeatWaitTime?: number
+
+  /**
+   * WebSocket server options, transfer to 'ws' package.
+   */
+  wsOptions?: WebSocket.ServerOptions
 }
 
 const defaultWsServerOptions: WsServerOptions<any> = {
