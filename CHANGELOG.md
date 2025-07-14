@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.4.19] - 2025-07-14
+### Fixed
+- @qianlv: Fixed an issue in `gracefulStop` where `resolve` would never be called if `_pendingApiCallNum` was 0. Resolves #63
+
 ## [3.4.18] - 2025-05-28
 ### Added
 - `wsOptions` for `WsServer`
