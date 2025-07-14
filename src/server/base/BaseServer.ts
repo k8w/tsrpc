@@ -734,7 +734,7 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
         }, maxWaitTime)
       }
 
-      promiseWaitApi.then(() => {
+      const stopResult = promiseWaitApi.then(() => {
         this.logger.log("All ApiCall finished, continue stop server.")
         if (maxWaitTimer) {
           clearTimeout(maxWaitTimer)
@@ -747,6 +747,10 @@ export abstract class BaseServer<ServiceType extends BaseServiceType = BaseServi
           })
         }
       })
+      if (this._pendingApiCallNum === 0) {
+        this._gracefulStop?.rs()
+      }
+      return stopResult
     })
   }
 
